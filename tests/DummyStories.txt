@@ -1,0 +1,12 @@
+This is a story.
+<end>
+
+This is also a story.
+<end>
+
+"This is a quote in story 3".
+<end>
+
+test.
+<end>
+
