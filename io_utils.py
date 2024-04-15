@@ -45,5 +45,6 @@ if __name__ == "__main__":
     stories = load_from_file("data/100stories.txt")
     token_dict = get_vocabulary(stories)
     print("Stories:", stories)
+    #print(len(stories))
     print(f"Number of tokens: {len(token_dict)}")
     print("Token frequency:", {k: v for k, v in sorted(token_dict.items(), key=lambda item: item[1], reverse=True)})
