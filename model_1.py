@@ -1,5 +1,6 @@
 import torch
 from torch import nn, Tensor
+import torch.nn.functional as F
 
 device = (
     "cuda" if torch.cuda.is_available()
@@ -55,16 +56,30 @@ def get_batch() -> Tensor:
 if __name__ == '__main__':
     from io_utils import get_vocabulary_idx, load_from_file, map_story_to_tensor
     from torchtext.data.utils import get_tokenizer
+    from time import perf_counter
 
     stories = load_from_file("data/100stories.txt")
     vocabulary = get_vocabulary_idx(stories)
+    vocabulary_rev = {k: v for v, k in vocabulary.items()}
     tokenizer = get_tokenizer('basic_english')
 
-    model = TransformerModel(len(vocabulary), 100).to(device)  # or torch.load('trained_models/model.pth')
-    input = map_story_to_tensor(stories[0], vocabulary, tokenizer)
-    pred = model(input)
-    print("Embedding:", pred, sep="\n")  # Prints the embedding of the tokens from the first story
-
+    model = TransformerModel(len(vocabulary), len(vocabulary)).to(device)  # or torch.load('trained_models/model.pth')
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), learning_rate)
+
+    story_tokens = map_story_to_tensor(stories[0], vocabulary, tokenizer)
+
+    # Dummy demonstration of evaluation function
+    x = story_tokens[19]
+    y = torch.Tensor(story_tokens[20]).to(torch.int64)
+    t0 = perf_counter()
+    dummy_loss = evaluate([(x, y)], model, loss_fn)
+    print(f"Evaluation time: {round(perf_counter() - t0, 5)}s")
+    print(f"Evaluation loss: {dummy_loss}\n")
+
+    # Dummy output
+    embed = model(x)
+    probs = F.softmax(embed)
+    pred = torch.argmax(probs)
+    print("Predicted next word:", vocabulary_rev[pred.item()])
     # torch.save(model, 'model.pth')
