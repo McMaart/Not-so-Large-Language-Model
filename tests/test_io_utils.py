@@ -5,13 +5,11 @@ from unittest.mock import patch, mock_open, MagicMock, call
 import torch
 
 
-
 class TestIO(unittest.TestCase):
     def setUp(self):
         self.dummy_stories = ['This is a story.', 'This is also a story.', '"This is a quote in story 3".', 'test.']
         self.dummy_token_dict = {'this': 3, 'is': 3, 'a': 3, 'story': 3, '.': 4, 'also': 1, 'quote': 1, 'in': 1, '3': 1,
                                  'test': 1}
-
 
     def tearDown(self):
         pass
@@ -43,12 +41,6 @@ class TestIO(unittest.TestCase):
         created_dict = io_utils.get_vocabulary_frequencies(self.dummy_stories)
         self.assertEqual(10, len(created_dict))
         #print(io_utils.get_vocabulary(self.dummy_stories))
-        self.assertDictEqual(self.dummy_token_dict, created_dict)
-
-    def test_get_vocabulary_frequencies_2(self):
-        created_dict = io_utils.get_vocabulary_frequencies_2(self.dummy_stories)
-        self.assertEqual(10, len(created_dict))
-        #print(io_utils.get_vocabulary_frequencies(self.dummy_stories))
         self.assertDictEqual(self.dummy_token_dict, created_dict)
 
     def test_get_vocabulary_idx(self):
