@@ -56,7 +56,7 @@ def map_story_to_tensor(story: str, vocab: dict, tokenizer) -> Tensor:
     """
     Maps a story to a Tensor of Integers, according to the index in the vocabulary
     """
-    return Tensor([vocab[word] for word in tokenizer(story)]).to(torch.int)
+    return torch.tensor([vocab[word] for word in tokenizer(story)], dtype=torch.int64)
 
 
 def clean_stories(story_list: list[str]) -> list[str]:
@@ -70,7 +70,7 @@ def clean_stories(story_list: list[str]) -> list[str]:
             story = story.replace('â€™', "'")
             story = story.replace('â€', '"')
             story_list[idx] = story
-    return [story for story in story_list if not story.isascii()]
+    return [story for story in story_list if story.isascii()]
 
 
 def tokens_to_story(token_list: list[str]) -> str:
@@ -79,10 +79,10 @@ def tokens_to_story(token_list: list[str]) -> str:
 
 
 if __name__ == "__main__":
-    # stories = load_tiny_stories(100000)
-    # save_to_file("data/100stories.txt", stories)
+    # stories = load_tiny_stories(100)
     stories = load_from_file("data/100stories.txt")
     stories = clean_stories(stories)
+    # save_to_file("data/100stories.txt", stories)
     print("Number of stories:", len(stories))
 
     token_dict = get_vocabulary_frequencies(stories)
