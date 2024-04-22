@@ -1,6 +1,9 @@
 import customtkinter as ctk
 import datetime
 
+import model_1 as m1
+
+
 ctk.set_default_color_theme("dark-blue")
 ctk.set_appearance_mode("system")
 
@@ -71,11 +74,20 @@ class Training(ctk.CTkFrame):
     def start_training(self):
         start = datetime.datetime.now()
         self.training_info.insert("end", f"Training started at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+
         # TODO function for training
+        t,avg,len,l = m1.do_training()
+
+        #self.training_info.insert("end", f"{l}")
+        self.training_info.insert("end",f"\nModel 1 Training time: {t:.5}s ({t / len:.4}s per batch)\n")
+        self.training_info.insert("end", f"Average Loss: {avg:.5}\n")
+        self.training_info.insert("end", f"Average Loss: {avg:.5f}\n\n")
+
         self.training_info.insert("end", f"Model saved at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         end = datetime.datetime.now()
         self.training_info.insert("end", "Training time: " + str(end-start) + "\n\n")
         return
+
     def cancel_training(self):
         self.training_info.insert("end", "Training canceled\n")
         return
@@ -149,5 +161,6 @@ class Interaction(ctk.CTkFrame):
         self.eval.insert("end", "\n\n")
         return
 
-app = GUI()
-app.mainloop()
+if __name__ == "__main__":
+    app = GUI()
+    app.mainloop()

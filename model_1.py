@@ -29,6 +29,7 @@ class TransformerModel(nn.Module):
 def train(data: list, model, loss_fn, optimizer):
     model.train()
     total_loss = 0.
+    l = []
     for batch, (x, y) in enumerate(data, 1):
         x, y = x.to(device), y.to(device)
         pred = model(x)
@@ -40,8 +41,10 @@ def train(data: list, model, loss_fn, optimizer):
         optimizer.step()
 
         if batch % 500 == 0:
-            print(batch, f"loss: {total_loss / batch:.6}")
-    return total_loss / len(data)
+            print("Batch:",batch, f"loss: {total_loss / batch:.6}")
+            l.append(f"Batch: {batch} loss: {total_loss / batch:.6}")
+
+    return total_loss / len(data), l
 
 
 def evaluate(data, model, loss_fn):
@@ -60,14 +63,14 @@ def get_batch(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Tensor
     """
     Returns a batch for the training process
     """
+    from io_utils import map_story_to_tensor
     data = map_story_to_tensor(story_list[idx], vocab, tokenizer)
     max_idx = min(max_seq_len, data.size(0)) - 1
     x = data[:max_idx]
     y = data[1:max_idx + 1]
     return x, y
 
-
-if __name__ == '__main__':
+def do_training():
     from io_utils import get_vocabulary_idx, map_story_to_tensor, load_tiny_stories, clean_stories
     from torchtext.data.utils import get_tokenizer
     from time import perf_counter
@@ -85,9 +88,13 @@ if __name__ == '__main__':
 
     train_data = [get_batch(stories, i, vocabulary, tokenizer) for i in range(19000)]
     t0 = perf_counter()
-    avg_loss = train(train_data, model, loss_fn, optimizer)
+    avg_loss,l = train(train_data, model, loss_fn, optimizer)
     t = perf_counter() - t0
-    print(f"\nTraining time: {t:.5}s ({t/len(train_data):.4}s per batch)")
+    print(f"\nTraining time: {t:.5}s ({t / len(train_data):.4}s per batch)")
     print(f"Average Loss: {avg_loss:.5}")
     print(f"Average Loss: {avg_loss:.5f}")
     # torch.save(model, 'trained_models/model.pth')
+    return t, avg_loss, len(train_data),l
+
+if __name__ == '__main__':
+    do_training()

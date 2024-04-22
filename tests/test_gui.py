@@ -25,7 +25,7 @@ class TestGUIComponents(unittest.TestCase):
 
 
     def test_training_initialization(self):
-        """Test Training component is initialized correctly."""
+        """Test Trainingcomponent is initialized correctly."""
         self.assertIsNotNone(self.training_instance)
         self.assertTrue(getattr(self.training_instance, "controller"))
         self.assertTrue(getattr(self.training_instance, "datasets"))
