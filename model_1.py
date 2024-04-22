@@ -29,7 +29,7 @@ class TransformerModel(nn.Module):
 def train(data: list, model, loss_fn, optimizer):
     model.train()
     total_loss = 0.
-    l = []
+    batch_list = []
     for batch, (x, y) in enumerate(data, 1):
         x, y = x.to(device), y.to(device)
         pred = model(x)
@@ -42,9 +42,9 @@ def train(data: list, model, loss_fn, optimizer):
 
         if batch % 500 == 0:
             print("Batch:",batch, f"loss: {total_loss / batch:.6}")
-            l.append(f"Batch: {batch} loss: {total_loss / batch:.6}")
+            batch_list.append(f"Batch: {batch} loss: {total_loss / batch:.6}")
 
-    return total_loss / len(data), l
+    return total_loss / len(data), batch_list
 
 
 def evaluate(data, model, loss_fn):
