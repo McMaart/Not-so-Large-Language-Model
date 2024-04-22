@@ -1,19 +1,16 @@
-from threading import Thread
-
 import customtkinter as ctk
-import datetime
 
-import model_1 as m1
 
 ctk.set_default_color_theme("dark-blue")
 ctk.set_appearance_mode("system")
 
 
 class GUI(ctk.CTk):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, mvc_controller, *args, **kwargs):
         ctk.CTk.__init__(self, *args, **kwargs)
         self.title("Language Model Project")
         self.geometry("1600x800")
+        self.mvc_controller = mvc_controller
 
         container = ctk.CTkFrame(self)
         container.pack(side="top", fill="both", expand=True, anchor="n")
@@ -28,14 +25,15 @@ class GUI(ctk.CTk):
         self.interaction.grid(row=1, column=0, sticky="nsew", columnspan=3)
 
         # Training frame
-        self.training = Training(container, self)
+        self.training = Training(container, self, mvc_controller)
         self.training.grid(row=0, column=0, sticky="nsew", columnspan=3)
 
 
 class Training(ctk.CTkFrame):
-    def __init__(self, parent, controller):
+    def __init__(self, parent, controller, mvc_controller):
         ctk.CTkFrame.__init__(self, parent)
         self.controller = controller
+        self.mvc_controller = mvc_controller
 
         # TODO function that returns available datasets
         self.datasets = ["TinyStories 1", "TinyStories 2", "TinyStories 3"]  # dummy
@@ -71,59 +69,17 @@ class Training(ctk.CTkFrame):
         self.dropdown.grid(row=2, column=0)
 
         self.is_training = False
+        # Buttons for starting/canceling training
         self.start_training_button = ctk.CTkButton(self, text="Start Training",
-                                                   command=lambda: self.start_training() if self.is_training == False
-                                                   else self.cancel_training())
+                                                   command=lambda:self.mvc_controller.start_training() if self.is_training == False
+                                                   else self.mvc_controller.cancel_training())
         self.start_training_button.grid(row=3, column=0)
+        #self.cancel_training = ctk.CTkButton(self, text="Cancel Training", command=self.cancel_training)
+        #self.cancel_training.grid(row=5, column=0)
 
         # Field for displaying information
         self.training_info = ctk.CTkTextbox(self)
         self.training_info.grid(row=2, column=1, rowspan=2, sticky="nsew")
-
-    def start_training(self):
-        start = datetime.datetime.now()
-        self.is_training = True
-        #self.start_training_button.configure(text="Cancel Training")
-        self.training_info.insert("end",
-                                  f"Training started at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        training_thread = Thread(target=self.run_model)
-        training_thread.start()
-
-
-        self.training_info.insert("end", f"Model saved at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        end = datetime.datetime.now()
-        self.training_info.insert("end", "Training time: " + str(end - start) + "\n\n")
-        self.start_training_button.configure(text="Start Training")
-        return
-
-    def cancel_training(self):
-        #TODO stop training
-        self.training_info.insert("end", "Training canceled\n")
-        self.is_training = False
-        self.start_training_button.configure(text="Start Training")
-        return
-
-    def run_model(self):
-        self.start_training_button.configure(text="Cancel Training")
-        # TODO function for training with different data sets (tuple with 9 cases ("Model 1" TinyStories 1"...)
-        print(self.model_selection.get())
-        match self.model_selection.get():
-            case "Model 1":
-                self.training_info.insert("end", "MODEL 1!\n\n")
-                t, avg, len, l = m1.do_training()
-                # self.training_info.insert("end", f"{l}")
-                self.training_info.insert("end", f"\nModel 1 Training time: {t:.5}s ({t / len:.4}s per batch)\n")
-                self.training_info.insert("end", f"Average Loss: {avg:.5}\n")
-                self.training_info.insert("end", f"Average Loss: {avg:.5f}\n\n")
-            case "Model 2":
-                self.training_info.insert("end", "MODEL 2 not implemented yet!\n\n")
-            case "Model 3":
-                self.training_info.insert("end", "MODEL 3 not implemented yet!\n\n")
-            case _:
-                self.training_info.insert("end", "No Model selected!\n\n")
-
-    #def change_Button(self):
-        #self.start_training_button.configure(text="Cancel Training")
 
 class Interaction(ctk.CTkFrame):
     def __init__(self, parent, controller):
@@ -196,5 +152,7 @@ class Interaction(ctk.CTkFrame):
 
 
 if __name__ == "__main__":
-    app = GUI()
+    import controller_mvc.py as c
+    import model_1
+    app = GUI(c.Controller(model_1))
     app.mainloop()
