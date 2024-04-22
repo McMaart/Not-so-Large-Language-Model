@@ -87,7 +87,7 @@ class Training(ctk.CTkFrame):
         self.training_info.insert("end",
                                   f"Training started at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
 
-        # TODO function for training with different data sets (tuple with 9 cases ("Model 1" TinyStories 1"...)
+        #TODO function for training with different data sets (tuple with 9 cases ("Model 1" TinyStories 1"...)
         print(self.model_selection.get())
         match self.model_selection.get():
             case "Model 1":
