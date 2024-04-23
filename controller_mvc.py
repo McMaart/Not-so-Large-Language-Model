@@ -1,7 +1,6 @@
 from threading import Thread
-
 import gui_mvc
-import model_1
+import training
 import datetime
 from io_utils import get_vocabulary_idx, map_story_to_tensor, load_tiny_stories, clean_stories
 from torchtext.data.utils import get_tokenizer
@@ -53,13 +52,13 @@ class Controller:
                 tokenizer = get_tokenizer('basic_english')
 
                 # model = torch.load('trained_models/model.pth').to(device)
-                model = model_1.TransformerModel(len(vocabulary)).to(device)
-                loss_fn = model_1.nn.CrossEntropyLoss()
+                model = training.TransformerModel(len(vocabulary)).to(device)
+                loss_fn = training.nn.CrossEntropyLoss()
                 optimizer = torch.optim.Adam(model.parameters(), learning_rate)
 
-                train_data = [model_1.get_batch(stories, i, vocabulary, tokenizer) for i in range(19000)]
+                train_data = [training.get_batch(stories, i, vocabulary, tokenizer) for i in range(19000)]
                 t0 = perf_counter()
-                avg_loss, batch_list = model_1.train(train_data, model, loss_fn, optimizer)
+                avg_loss, batch_list = training.train(train_data, model, loss_fn, optimizer)
                 t = perf_counter() - t0
 
                 print(f"Average Loss: {avg_loss:.5}")
@@ -67,7 +66,7 @@ class Controller:
                 # torch.save(model, 'trained_models/model.pth')
                 self.view.training.training_info.insert("end",
                                                         f"Training started at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                # t, avg, len, l = model_1.do_training()
+                # t, avg, len, l = training.do_training()
                 self.view.training.training_info.insert("end", f"{batch_list}")
                 self.view.training.training_info.insert("end",
                                                         f"\nTraining time: {t:.5}s ({t / len(train_data):.4}s per batch)")
@@ -89,7 +88,6 @@ class Controller:
         pass
 
 
-
 if __name__ == '__main__':
 
     device = (
@@ -101,7 +99,7 @@ if __name__ == '__main__':
     # batch_size = 16
     max_seq_len = 16
 
-    c = Controller(model_1)
+    c = Controller(training)
     # c.setup_callbacks()
     gui_thread = Thread(target=c.view.mainloop())
     gui_thread.start()

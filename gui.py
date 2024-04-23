@@ -1,9 +1,7 @@
 from threading import Thread
-
 import customtkinter as ctk
 import datetime
-
-import model_1 as m1
+import training as m1
 
 ctk.set_default_color_theme("dark-blue")
 ctk.set_appearance_mode("system")
