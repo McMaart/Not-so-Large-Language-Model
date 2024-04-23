@@ -1,3 +1,4 @@
+import pickle
 import torch
 from datasets import load_dataset
 from torchtext.data import get_tokenizer
@@ -44,11 +45,18 @@ def get_vocabulary_frequencies(story_list: list[str]) -> dict[str, int]:
     return vocabulary
 
 
-def get_vocabulary_idx(story_list: list) -> dict[str, int]:
+def get_vocabulary_idx(story_list: list, max_words: int | None = None) -> dict[str, int]:
     """
     Assigns an index to each word that appears in the list of stories
     """
     vocab_freq = get_vocabulary_frequencies(story_list)
+    if max_words is not None:
+        vocab = {}
+        for _, (k, v) in zip(range(max_words-1), sorted(vocab_freq.items(), key=lambda item: item[1], reverse=True)):
+            vocab[k] = v
+        vocab_freq = vocab
+
+    vocab_freq['<unk>'] = 0
     return {k: idx for idx, k in enumerate(vocab_freq.keys())}
 
 
@@ -56,7 +64,8 @@ def map_story_to_tensor(story: str, vocab: dict, tokenizer) -> Tensor:
     """
     Maps a story to a Tensor of Integers, according to the index in the vocabulary
     """
-    return torch.tensor([vocab[word] for word in tokenizer(story)], dtype=torch.int64)
+    default = vocab["<unk>"]
+    return torch.tensor([vocab.get(word, default) for word in tokenizer(story)], dtype=torch.int64)
 
 
 def clean_stories(story_list: list[str]) -> list[str]:
@@ -76,6 +85,16 @@ def clean_stories(story_list: list[str]) -> list[str]:
 def tokens_to_story(token_list: list[str]) -> str:
     # ToDo: Remove whitespace after punctuation
     return " ".join(token_list)
+
+
+def save_vocabulary(vocab: dict[str, int], filename="trained_models/vocabulary.pkl"):
+    with open(filename, 'wb') as f:
+        pickle.dump(vocab, f)
+
+
+def load_vocabulary(filename="trained_models/vocabulary.pkl") -> dict:
+    with open(filename, 'rb') as f:
+        return pickle.load(f)
 
 
 if __name__ == "__main__":
