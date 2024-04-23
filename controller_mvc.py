@@ -1,6 +1,7 @@
 from threading import Thread
 import gui_mvc
 import training
+import model_1
 import datetime
 from io_utils import get_vocabulary_idx, map_story_to_tensor, load_tiny_stories, clean_stories
 from torchtext.data.utils import get_tokenizer
@@ -52,7 +53,7 @@ class Controller:
                 tokenizer = get_tokenizer('basic_english')
 
                 # model = torch.load('trained_models/model.pth').to(device)
-                model = training.TransformerModel(len(vocabulary)).to(device)
+                model = model_1.TransformerModel(len(vocabulary)).to(device)
                 loss_fn = training.nn.CrossEntropyLoss()
                 optimizer = torch.optim.Adam(model.parameters(), learning_rate)
 

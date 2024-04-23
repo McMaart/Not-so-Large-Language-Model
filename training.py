@@ -4,6 +4,7 @@ from torch import nn, Tensor
 from io_utils import get_vocabulary_idx, map_story_to_tensor, load_tiny_stories, clean_stories
 from torchtext.data.utils import get_tokenizer
 from time import perf_counter
+from model_1 import TransformerModel
 # import torch.nn.functional as F
 
 device = (
@@ -14,20 +15,6 @@ device = (
 learning_rate = 1e-3
 # batch_size = 16
 max_seq_len = 16
-
-
-class TransformerModel(nn.Module):
-    def __init__(self, vocab_size: int, embed_size: int = 32):
-        super().__init__()
-        self.vocab_size = vocab_size
-        self.embed_size = embed_size
-
-        self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
-        self.linear = nn.Linear(self.embed_size, self.vocab_size)
-
-    def forward(self, x: Tensor) -> Tensor:
-        embedding = self.embedding(x)
-        return self.linear(embedding)
 
 
 def train(data: list, model, loss_fn, optimizer, epochs: int = 1):
