@@ -17,7 +17,7 @@ batch_size = 16
 max_seq_len = 32
 
 
-def train(data: list, model, loss_fn, optimizer, epochs: int = 1):
+def train(data: list, model, loss_fn, optimizer, epochs: int = 1, flag_list = None):
     model.train()
     total_loss = 0.
     batch_loss = []
@@ -39,6 +39,9 @@ def train(data: list, model, loss_fn, optimizer, epochs: int = 1):
             if batch % 500 == 0:
                 print("Batch:", batch, f"loss: {total_loss / batch:.6}")
                 batch_loss.append(f"Batch: {batch} loss: {total_loss / batch:.6}")
+
+                if flag_list is not None and flag_list[0] == False:
+                    return total_loss / len(data), batch_loss
 
     return total_loss / len(data), batch_loss
 
@@ -75,7 +78,7 @@ def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Ten
     return data[:-1], data[1:]
 
 
-def do_training(end: int = 30000, start: int = 0):
+def do_training(end: int = 30000, start: int = 0, flag_list = None):
     stories = load_tiny_stories(end, start)
     stories = clean_stories(stories)
     print("Stories have been loaded")
@@ -92,7 +95,7 @@ def do_training(end: int = 30000, start: int = 0):
 
     train_data = [get_sequence(stories, i, vocabulary, tokenizer) for i in range(len(stories))]
     t0 = perf_counter()
-    avg_loss, batch_loss = train(train_data, model, loss_fn, optimizer)
+    avg_loss, batch_loss = train(train_data, model, loss_fn, optimizer, flag_list = flag_list)
     t = perf_counter() - t0
     print(f"\nTraining time: {t:.5}s ({t / len(train_data):.4}s per batch)")
     print(f"Average Loss: {avg_loss:.5}")
