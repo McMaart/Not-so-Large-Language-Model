@@ -1,7 +1,7 @@
 import random
 import torch
 from torch import nn, Tensor
-from io_utils import get_vocabulary_idx, map_story_to_tensor, load_tiny_stories, clean_stories
+from io_utils import get_vocabulary_idx, map_story_to_tensor, load_tiny_stories, clean_stories, save_vocabulary
 from torchtext.data.utils import get_tokenizer
 from time import perf_counter
 from model_1 import TransformerModel
@@ -13,8 +13,8 @@ device = (
     else "cpu"
 )
 learning_rate = 1e-3
-# batch_size = 16
-max_seq_len = 16
+batch_size = 16
+max_seq_len = 32
 
 
 def train(data: list, model, loss_fn, optimizer, epochs: int = 1):
@@ -75,11 +75,14 @@ def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Ten
     return data[:-1], data[1:]
 
 
-def do_training(num_stories: int = 20000):
-    stories = load_tiny_stories(num_stories)
+def do_training(end: int = 30000, start: int = 0):
+    stories = load_tiny_stories(end, start)
     stories = clean_stories(stories)
-    vocabulary = get_vocabulary_idx(stories)
-    vocabulary_rev = {k: v for v, k in vocabulary.items()}
+    print("Stories have been loaded")
+
+    vocabulary = get_vocabulary_idx(stories, 1536)
+    save_vocabulary(vocabulary)
+    # vocabulary_rev = {k: v for v, k in vocabulary.items()}
     tokenizer = get_tokenizer('basic_english')
 
     # model = torch.load('trained_models/model.pth').to(device)
@@ -87,15 +90,15 @@ def do_training(num_stories: int = 20000):
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), learning_rate)
 
-    train_data = [get_batch(stories, i, vocabulary, tokenizer) for i in range(len(stories))]
+    train_data = [get_sequence(stories, i, vocabulary, tokenizer) for i in range(len(stories))]
     t0 = perf_counter()
     avg_loss, batch_loss = train(train_data, model, loss_fn, optimizer)
     t = perf_counter() - t0
     print(f"\nTraining time: {t:.5}s ({t / len(train_data):.4}s per batch)")
     print(f"Average Loss: {avg_loss:.5}")
-    # torch.save(model, 'trained_models/model.pth')
+    torch.save(model, 'trained_models/model.pth')
     return t, avg_loss, len(train_data), batch_loss
 
 
 if __name__ == '__main__':
-    do_training()
+    do_training(50000)
