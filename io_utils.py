@@ -3,6 +3,9 @@ import torch
 from datasets import load_dataset
 from torchtext.data import get_tokenizer
 from torch import Tensor
+import nltk
+from nltk.tokenize.treebank import TreebankWordDetokenizer
+import re
 
 
 def load_tiny_stories(end: int, start: int = 0, split="train"):
@@ -83,8 +86,19 @@ def clean_stories(story_list: list[str]) -> list[str]:
 
 
 def tokens_to_story(token_list: list[str]) -> str:
-    # ToDo: Remove whitespace after punctuation
-    return " ".join(token_list)
+    if not nltk.download('punkt', quiet=True):
+        nltk.download('punkt')
+    sentence = TreebankWordDetokenizer().detokenize(token_list)
+    sentence = re.sub(r'\s([?.!,"](?:\s|$))', r'\1', sentence)
+
+    tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+    sentences = tokenizer.tokenize(sentence)
+
+    story = " ".join([s.capitalize() for s in sentences])
+    story = re.sub(r'\si\s', r' I ', story) # Fix capitalization of 'i'
+    story = re.sub(r"n' t", "n't", story) # Fix contraction
+    story = re.sub(r"' s", "'s", story) # Fix possessive
+    return story
 
 
 def save_vocabulary(vocab: dict[str, int], filename="trained_models/vocabulary.pkl"):

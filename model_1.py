@@ -28,7 +28,7 @@ class TransformerModel(nn.Module):
 
 
 if __name__ == '__main__':
-    from io_utils import load_vocabulary
+    from io_utils import load_vocabulary, tokens_to_story
 
     vocab = load_vocabulary()
     vocab_rev = {k: v for v, k in vocab.items()}
@@ -38,5 +38,8 @@ if __name__ == '__main__':
         model = TransformerModel(len(vocab))
 
     tl = model.generate_tokens(torch.tensor(vocab["there"], dtype=torch.int64), 40)
+    token_list = []
     for val in tl:
-        print(vocab_rev[val.item()], end=" ")
+        # print(vocab_rev[val.item()], end=" ")
+        token_list.append(vocab_rev[val.item()])
+    print("\n",tokens_to_story(token_list))
