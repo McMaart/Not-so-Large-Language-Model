@@ -28,18 +28,6 @@ class TransformerModel(nn.Module):
 
 
 if __name__ == '__main__':
-    from io_utils import load_vocabulary, tokens_to_story
-
-    vocab = load_vocabulary()
-    vocab_rev = {k: v for v, k in vocab.items()}
-    try:
-        model: TransformerModel = torch.load('trained_models/model.pth')
-    except FileNotFoundError:
-        model = TransformerModel(len(vocab))
-
-    tl = model.generate_tokens(torch.tensor(vocab["there"], dtype=torch.int64), 40)
-    token_list = []
-    for val in tl:
-        # print(vocab_rev[val.item()], end=" ")
-        token_list.append(vocab_rev[val.item()])
-    print("\n",tokens_to_story(token_list))
+    from io_utils import prompt_model
+    story = prompt_model("model", "there", 40)
+    print("\n", story)
