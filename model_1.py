@@ -1,6 +1,16 @@
 import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
+import math
+
+device = (
+    "cuda" if torch.cuda.is_available()
+    else "mps" if torch.backends.mps.is_available()
+    else "cpu"
+)
+learning_rate = 1e-3
+batch_size = 16
+max_seq_len = 64
 
 
 class TransformerModel(nn.Module):
@@ -10,13 +20,15 @@ class TransformerModel(nn.Module):
         self.embed_size = embed_size
 
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
+        self.pos_encoding = PositionalEncoding(embed_size)
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
 
     def forward(self, x: Tensor) -> Tensor:
-        embedding = self.embedding(x)
+        embedding: Tensor = self.embedding(x)
+        embedding = self.pos_encoding(embedding)
         return self.linear(embedding)
 
-    def generate_tokens(self, start_token: Tensor|int, length: int) -> list:
+    def generate_tokens(self, start_token: Tensor | int, length: int) -> list:
         x = start_token
         token_list = [x]
         for _ in range(length):
@@ -25,6 +37,21 @@ class TransformerModel(nn.Module):
             token_list.append(pred)
             x = pred
         return token_list
+
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, embed_size: int):
+        super().__init__()
+        self.pos_encoding = torch.empty(max_seq_len, embed_size)
+
+        position = torch.arange(max_seq_len).unsqueeze(dim=1)
+        div_term = 10000**(-1/embed_size*torch.arange(0, embed_size, 2))
+        leterm = position * div_term
+        self.pos_encoding[:, 0::2] = torch.sin(leterm)
+        self.pos_encoding[:, 1::2] = torch.cos(leterm)
+
+    def forward(self, x: Tensor) -> Tensor:
+        return x + self.pos_encoding[:x.size(0)]
 
 
 if __name__ == '__main__':

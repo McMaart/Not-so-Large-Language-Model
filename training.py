@@ -4,25 +4,17 @@ from torch import nn, Tensor
 from io_utils import get_vocabulary_idx, map_story_to_tensor, load_tiny_stories, clean_stories, save_vocabulary
 from torchtext.data.utils import get_tokenizer
 from time import perf_counter
-from model_1 import TransformerModel
+from model_1 import TransformerModel, device, learning_rate, max_seq_len
 # import torch.nn.functional as F
 
-device = (
-    "cuda" if torch.cuda.is_available()
-    else "mps" if torch.backends.mps.is_available()
-    else "cpu"
-)
-learning_rate = 1e-3
-batch_size = 16
-max_seq_len = 32
 
-
-def train(data: list, model, loss_fn, optimizer, epochs: int = 1, flag_list = None):
+def train(data: list, model, loss_fn, optimizer, epochs: int = 1, flags: list = None):
     model.train()
     total_loss = 0.
+    curr_loss = 0.
     batch_loss = []
 
-    for epoch in range(1, epochs+1):
+    for epoch in range(1, epochs + 1):
         if epoch > 1:
             random.shuffle(data)
 
@@ -33,14 +25,16 @@ def train(data: list, model, loss_fn, optimizer, epochs: int = 1, flag_list = No
             optimizer.zero_grad()
             loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
             total_loss += loss.item()
+            curr_loss += loss.item()
             loss.backward()
             optimizer.step()
 
             if batch % 500 == 0:
-                print("Batch:", batch, f"loss: {total_loss / batch:.6}")
+                print(f"Batch: {batch:5}, avg. loss: {total_loss / batch:.5f}, current loss: {curr_loss/500:.5f}")
                 batch_loss.append(f"Batch: {batch} loss: {total_loss / batch:.6}")
+                curr_loss = 0.
 
-                if flag_list is not None and flag_list[0] == False:
+                if flags is not None and flags[0] is False:
                     return total_loss / len(data), batch_loss
 
     return total_loss / len(data), batch_loss
@@ -78,7 +72,7 @@ def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Ten
     return data[:-1], data[1:]
 
 
-def do_training(end: int = 30000, start: int = 0, flag_list = None):
+def do_training(end: int = 30000, start: int = 0, flags: list = None):
     stories = load_tiny_stories(end, start)
     stories = clean_stories(stories)
     print("Stories have been loaded")
@@ -93,15 +87,19 @@ def do_training(end: int = 30000, start: int = 0, flag_list = None):
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), learning_rate)
 
-    train_data = [get_sequence(stories, i, vocabulary, tokenizer) for i in range(len(stories))]
+    train_data = [get_batch(stories, i, vocabulary, tokenizer) for i in range(len(stories))]
     t0 = perf_counter()
-    avg_loss, batch_loss = train(train_data, model, loss_fn, optimizer, flag_list = flag_list)
+    avg_loss, batch_loss = train(train_data, model, loss_fn, optimizer, flags=flags)
     t = perf_counter() - t0
     print(f"\nTraining time: {t:.5}s ({t / len(train_data):.4}s per batch)")
     print(f"Average Loss: {avg_loss:.5}")
     torch.save(model, 'trained_models/model.pth')
+
+    # eval_stories = load_tiny_stories(120000, 100000)
+    # eval_data = [get_batch(eval_stories, i, vocabulary, tokenizer) for i in range(len(eval_stories))]
+    # print(evaluate(eval_data, model, loss_fn))
     return t, avg_loss, len(train_data), batch_loss
 
 
 if __name__ == '__main__':
-    do_training(50000)
+    do_training()
