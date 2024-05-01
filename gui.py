@@ -2,6 +2,8 @@ from threading import Thread
 import customtkinter as ctk
 import datetime
 import training as m1
+import glob
+import os
 
 ctk.set_default_color_theme("dark-blue")
 ctk.set_appearance_mode("system")
@@ -137,8 +139,8 @@ class Interaction(ctk.CTkFrame):
         self.grid_columnconfigure(3, weight=4)
         self.grid_columnconfigure(4, weight=1)
 
-        # TODO function for returning available models
-        self.models = ["Model 1", "Model 2", "Model 3"]
+        self.models = glob.glob(os.path.join("trained_models", "*.pth"))
+        # self.models = ["Model 1", "Model 2", "Model 3"]
 
         # Prompt and response history
         self.history = []
