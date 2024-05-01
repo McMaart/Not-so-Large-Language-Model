@@ -3,6 +3,9 @@ import torch
 from datasets import load_dataset
 from torchtext.data import get_tokenizer
 from torch import Tensor
+import nltk
+from nltk.tokenize.treebank import TreebankWordDetokenizer
+import re
 
 
 def load_tiny_stories(end: int, start: int = 0, split="train"):
@@ -83,8 +86,43 @@ def clean_stories(story_list: list[str]) -> list[str]:
 
 
 def tokens_to_story(token_list: list[str]) -> str:
-    # ToDo: Remove whitespace after punctuation
-    return " ".join(token_list)
+    if not nltk.download('punkt', quiet=True):
+        nltk.download('punkt')
+    sentence = TreebankWordDetokenizer().detokenize(token_list)
+    sentence = re.sub(r'\s([?.!,"](?:\s|$))', r'\1', sentence)
+
+    tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+    sentences = tokenizer.tokenize(sentence)
+
+    story = " ".join([s.capitalize() for s in sentences])
+    story = re.sub(r'\si\s', r' I ', story) # Fix capitalization of 'i'
+    story = re.sub(r"n' t", "n't", story) # Fix contraction
+    story = re.sub(r"' s", "'s", story) # Fix possessive
+    return story
+
+def prompt_model(model, start_token: str, length: int = 50) -> str:
+    vocab = load_vocabulary()
+    vocab_rev = {k: v for v, k in vocab.items()}
+    try:
+        model = torch.load(f'trained_models/{model}.pth')
+    except FileNotFoundError:
+        model = TransformerModel(len(vocab))
+    
+    tl = model.generate_tokens(torch.tensor(vocab[start_token], dtype=torch.int64), length)
+    token_list = []
+    for val in tl:
+        token_list.append(vocab_rev[val.item()])
+    return tokens_to_story(token_list)
+
+
+def save_vocabulary(vocab: dict[str, int], filename="trained_models/vocabulary.pkl"):
+    with open(filename, 'wb') as f:
+        pickle.dump(vocab, f)
+
+
+def load_vocabulary(filename="trained_models/vocabulary.pkl") -> dict:
+    with open(filename, 'rb') as f:
+        return pickle.load(f)
 
 
 def save_vocabulary(vocab: dict[str, int], filename="trained_models/vocabulary.pkl"):
