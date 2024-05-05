@@ -66,21 +66,27 @@ def get_batch(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Tensor
     return data[:max_idx], data[1:max_idx + 1]
 
 
-def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Tensor, Tensor]:
+def get_sequence(story_list: list[str], idx: int, vocab, tokenizer, eos: bool = False) -> tuple[Tensor, Tensor]:
     """
     Returns a single batch (input, target) for training.
     Input and target Tensor are independent of max_seq_len (the size is equal to number of tokens - 1)
     """
     data = map_story_to_tensor(story_list[idx], vocab, tokenizer)
+    
+    # Add the EOS token to the sequence if eos is True
+    if eos:
+        eos_token_id = vocab['<eos>']
+        data = torch.cat((data, torch.tensor([eos_token_id])), dim=0)
+    
     return data[:-1], data[1:]
 
 
-def do_training(end: int = 30000, start: int = 0):
+def do_training(end: int = 30000, start: int = 0, eos: bool = False):
     stories = load_tiny_stories(end, start)
     stories = clean_stories(stories)
     print("Stories have been loaded")
 
-    vocabulary = get_vocabulary_idx(stories, 1536)
+    vocabulary = get_vocabulary_idx(stories, 1536, eos)
     save_vocabulary(vocabulary)
     # vocabulary_rev = {k: v for v, k in vocabulary.items()}
     tokenizer = get_tokenizer('basic_english')
@@ -90,7 +96,7 @@ def do_training(end: int = 30000, start: int = 0):
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), learning_rate)
 
-    train_data = [get_sequence(stories, i, vocabulary, tokenizer) for i in range(len(stories))]
+    train_data = [get_sequence(stories, i, vocabulary, tokenizer, eos) for i in range(len(stories))]
     t0 = perf_counter()
     avg_loss, batch_loss = train(train_data, model, loss_fn, optimizer)
     t = perf_counter() - t0
@@ -101,4 +107,4 @@ def do_training(end: int = 30000, start: int = 0):
 
 
 if __name__ == '__main__':
-    do_training(50000)
+    do_training(50000, eos=True)

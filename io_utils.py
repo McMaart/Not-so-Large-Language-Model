@@ -48,7 +48,7 @@ def get_vocabulary_frequencies(story_list: list[str]) -> dict[str, int]:
     return vocabulary
 
 
-def get_vocabulary_idx(story_list: list, max_words: int | None = None) -> dict[str, int]:
+def get_vocabulary_idx(story_list: list, max_words: int | None = None, eos: bool = False) -> dict[str, int]:
     """
     Assigns an index to each word that appears in the list of stories
     """
@@ -60,6 +60,9 @@ def get_vocabulary_idx(story_list: list, max_words: int | None = None) -> dict[s
         vocab_freq = vocab
 
     vocab_freq['<unk>'] = 0
+
+    if eos:
+        vocab_freq['<eos>'] = len(vocab_freq)
     return {k: idx for idx, k in enumerate(vocab_freq.keys())}
 
 
@@ -100,15 +103,20 @@ def tokens_to_story(token_list: list[str]) -> str:
     story = re.sub(r"' s", "'s", story) # Fix possessive
     return story
 
-def prompt_model(model, start_token: str, length: int = 50) -> str:
+def prompt_model(model, start_token: str, length: int = 50, end_on_eos: bool = False) -> str:
     vocab = load_vocabulary()
     vocab_rev = {k: v for v, k in vocab.items()}
+    if end_on_eos:
+        eos_idx = vocab['<eos>']
+    else:
+        eos_idx = None
+
     try:
         model = torch.load(f'trained_models/{model}.pth')
     except FileNotFoundError:
         model = TransformerModel(len(vocab))
     
-    tl = model.generate_tokens(torch.tensor(vocab[start_token], dtype=torch.int64), length)
+    tl = model.generate_tokens(torch.tensor(vocab[start_token], dtype=torch.int64), length, eos_idx)
     token_list = []
     for val in tl:
         token_list.append(vocab_rev[val.item()])

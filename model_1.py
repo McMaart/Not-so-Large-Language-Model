@@ -16,7 +16,7 @@ class TransformerModel(nn.Module):
         embedding = self.embedding(x)
         return self.linear(embedding)
 
-    def generate_tokens(self, start_token: Tensor|int, length: int) -> list:
+    def generate_tokens(self, start_token: Tensor|int, length: int, eos_idx: int = None) -> list:
         x = start_token
         token_list = [x]
         for _ in range(length):
@@ -24,10 +24,12 @@ class TransformerModel(nn.Module):
             pred = torch.multinomial(probs, 1)[0]
             token_list.append(pred)
             x = pred
+            if eos_idx is not None and pred == eos_idx:
+                break
         return token_list
 
 
 if __name__ == '__main__':
     from io_utils import prompt_model
-    story = prompt_model("model", "there", 40)
+    story = prompt_model("model", "there", 400, end_on_eos=True)
     print("\n", story)
