@@ -28,7 +28,9 @@ class TransformerModel(nn.Module):
         embedding = self.pos_encoding(embedding)
         return self.linear(embedding)
 
+    @torch.no_grad()
     def generate_tokens(self, start_token: Tensor | int, length: int) -> list:
+        self.eval()
         x = start_token
         token_list = [x]
         for _ in range(length):
@@ -40,18 +42,19 @@ class TransformerModel(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, embed_size: int):
+    def __init__(self, embed_size: int, dropout: float = 0.07):
         super().__init__()
         self.pos_encoding = torch.empty(max_seq_len, embed_size)
+        self.dropout = nn.Dropout(p=dropout)
 
-        position = torch.arange(max_seq_len).unsqueeze(dim=1)
-        div_term = 10000**(-1/embed_size*torch.arange(0, embed_size, 2))
-        leterm = position * div_term
-        self.pos_encoding[:, 0::2] = torch.sin(leterm)
-        self.pos_encoding[:, 1::2] = torch.cos(leterm)
+        pos = torch.arange(max_seq_len, dtype=torch.float).unsqueeze(dim=1)
+        inv_denominator = 10000**(-1/embed_size*torch.arange(0, embed_size, 2, dtype=torch.float))
+        pe_term = pos * inv_denominator
+        self.pos_encoding[:, 0::2] = torch.sin(pe_term)
+        self.pos_encoding[:, 1::2] = torch.cos(pe_term)
 
     def forward(self, x: Tensor) -> Tensor:
-        return x + self.pos_encoding[:x.size(0)]
+        return self.dropout(x + self.pos_encoding[:x.size(0)])
 
 
 if __name__ == '__main__':
@@ -64,6 +67,7 @@ if __name__ == '__main__':
     except FileNotFoundError:
         model = TransformerModel(len(vocab))
 
-    tl = model.generate_tokens(torch.tensor(vocab["there"], dtype=torch.int64), 40)
+    input_tensor = torch.tensor(vocab["once"], dtype=torch.int64).unsqueeze(0)
+    tl = model.generate_tokens(input_tensor, 40)
     for val in tl:
         print(vocab_rev[val.item()], end=" ")
