@@ -10,7 +10,7 @@ from time import perf_counter
 from model_1 import TransformerModel, device, learning_rate, max_seq_len
 # import torch.nn.functional as F
 
-
+# Alt für single Batch
 def train(data: list, model, loss_fn, optimizer, epochs: int = 1, flags: list = None):
     model.train()
     total_loss = 0.
@@ -80,7 +80,7 @@ def train_on_batches(story_list, vocab, tokenizer, model, loss_fn, optimizer, ba
 
             total_loss += loss.item()
 
-            if (batch_index + 1) % 500 == 0:
+            if (batch_index + 1) % 15 == 0:
                 avg_loss = total_loss / (batch_index + 1)
                 print(f"Batch {batch_index + 1}: Avg. Loss = {avg_loss:.5f}")
 
@@ -88,7 +88,7 @@ def train_on_batches(story_list, vocab, tokenizer, model, loss_fn, optimizer, ba
             batch_loss_list.append(loss.item())
 
             if flags is not None and not flags[0]:
-                break  # Optionally break out early for specific conditions
+                break  #noch nicht gecheckt..
 
     # Calculate average loss over all batches
     avg_total_loss = total_loss / total_batches
@@ -108,16 +108,17 @@ def evaluate(data, model, loss_fn):
     return total_loss / len(data)
 
 
-def get_batch(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Tensor, Tensor]:
+def get_batch(story_list: list[str], batch_size, vocab, tokenizer) -> tuple[Tensor, Tensor]:
     """
-    Returns a single batch (input, target) for training.
+    Returns a Tensor of batchsize (input, target) for training.
     Both input and target Tensor have sizes max_seq_len (for self-attention).
     """
-    #data = map_story_to_tensor(story_list[idx], vocab, tokenizer)
-    #if len(data) < 2:
-        #print("Unsuitable data found:", idx, data, story_list[idx], file=sys.stderr)
-    #max_idx = min(max_seq_len, data.size(0)) - 1
-    #return data[:max_idx], data[1:max_idx + 1]
+    # ohne batches
+    # data = map_story_to_tensor(story_list[idx], vocab, tokenizer)
+    # if len(data) < 2:
+    # print("Unsuitable data found:", idx, data, story_list[idx], file=sys.stderr)
+    # max_idx = min(max_seq_len, data.size(0)) - 1
+    # return data[:max_idx], data[1:max_idx + 1]
     # ToDo: stack multiple input/target tensor for more efficient training using GPU
     batch_x = []
     batch_y = []
@@ -135,19 +136,6 @@ def get_batch(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Tensor
     y_tensor = pad_sequence(batch_y, batch_first=True, padding_value=vocab['<pad>'])
 
     return x_tensor, y_tensor
-
-
-    #data = train_data if split == 'train' else val_data
-    #tensor_list = map_stories_to_tensor(story_list, vocab, tokenizer)
-    #max_length = max(tensor.size(0) for tensor in tensor_list)
-    #data = pad_sequence(tensor_list, batch_first=True, padding_value=vocab['<pad>'])
-    #indices = torch.randint(len(data) - max_seq_len, (batch_size,))
-    #x = torch.stack([data[i:i+max_seq_len] for i in indices])
-    #y = torch.stack([data[i+1:i+max_seq_len+1] for i in indices])
-    #x, y = x.to(device), y.to(device)
-    #print(x)
-    #print(y)
-    #return x, y
 
 
 def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Tensor, Tensor]:
@@ -180,21 +168,23 @@ def do_training(end: int = 30000, start: int = 0, load_model: bool = True, flags
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), learning_rate)
 
-    batch_size = 10
-    #indices = torch.randint(low=0, high=len(stories) - max_seq_len, size=(batch_size,))
-    #train_data = get_batch(stories, indices, batch_size, vocabulary, tokenizer)
-    #xb , yb = get_batch('train')
-    batch = get_batch(stories, batch_size=10, vocab=vocabulary, tokenizer=tokenizer)
-    print(type(batch))
-    print(batch[0].size())
-    print(batch[1].size())
-    print(batch[0])
-    print(batch[1])
+    #Mit Batches
+    batch_size = 512
+    #print(type(batch))
+    #print(batch[0].size())
+    #print(batch[1].size())
+    #print(batch[0])
+    #print(batch[1])
 
-    avg_loss, batch_loss = train_on_batches(stories, vocabulary, tokenizer, model, loss_fn, optimizer, batch_size, device=device)
+    t0 = perf_counter()
+    avg_loss, batch_loss = train_on_batches(stories, vocabulary, tokenizer, model, loss_fn, optimizer, batch_size,
+                                            epochs=5, device=device)
+    t = perf_counter() - t0
+    print(f"\nTraining time: {t:.5}s")
     print(f"Average Loss: {avg_loss:.5}")
     print(f"Batch Loss: {batch_loss}")
 
+    #Alt
     #train_data = [get_batch(stories, batch_size=2, vocab=vocabulary, tokenizer=tokenizer)for i in range(len(stories))]
     #train_data = [get_batch(stories, i,  vocabulary, tokenizer) for i in range(len(stories))]
     #t0 = perf_counter()
@@ -202,6 +192,7 @@ def do_training(end: int = 30000, start: int = 0, load_model: bool = True, flags
     #t = perf_counter() - t0
     #print(f"\nTraining time: {t:.5}s ({t / len(train_data):.4}s per batch)")
     #print(f"Average Loss: {avg_loss:.5}")
+
     #torch.save(model, 'trained_models/model.pth')
 
     #return t, avg_loss, len(train_data), batch_loss
