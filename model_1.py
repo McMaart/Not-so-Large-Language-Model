@@ -18,6 +18,7 @@ class TransformerModel(nn.Module):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
+        #self.mha = MultiHeadAttenion(model_dim, num_heads)
 
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
         self.pos_encoding = PositionalEncoding(embed_size)
@@ -37,15 +38,29 @@ class TransformerModel(nn.Module):
             token_list.append(pred)
             x = pred
         return token_list
+class MultiHeadAttenion(nn.Module):
+    def __init__(self, embed_dim:int, att_dim: int, num_heads: int):
+        super().__init__()
+
+        self.heads = nn.ModuleList()
+        for i in range(num_heads):
+            self.heads.append(SingleHeadAttention(embed_dim, att_dim // num_heads))
+
+    def forward(self, embed: Tensor) -> Tensor:
+        out=[]
+        for head in self.heads:
+            out.append(head(embed))
+        concat = torch.cat(out, dim=-1)
+        return torch.round(concat, decimals=5)
 
 class SingleHeadAttention(nn.Module):
     def __init(self, embed_dim, att_dim):
         super().__init__()
         self.keys = nn.Linear(embed_dim, att_dim)
         self.queries = nn.Linear(embed_dim, att_dim)
-        self.values =nn.Linear(embed_dim,att_dim)
+        self.values = nn.Linear(embed_dim, att_dim)
 
-    def forward(self, embed: TensorType[float]) -> Tensor:
+    def forward(self, embed: Tensor) -> Tensor:
         k = self.keys(embed)
         q = self.queries(embed)
         v = self.values(embed)
@@ -55,7 +70,7 @@ class SingleHeadAttention(nn.Module):
         dot_scores = dot_scores/(C**0.5)
 
         tril = torch.tril(torch.ones(T, T))
-        dot_scores= dot_scores.masked_fill(tril == 0, float('-inf'))
+        dot_scores = dot_scores.masked_fill(tril == 0, float('-inf'))
         dot_scores = nn.functional.softmax(dot_scores, dim=-1)
         transform = dot_scores @ v
         return torch.round(transform, decimals=5)
