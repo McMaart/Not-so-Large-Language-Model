@@ -11,14 +11,14 @@ device = (
 learning_rate = 1e-3
 batch_size = 16
 max_seq_len = 64
-
+num_heads = 2
 
 class TransformerModel(nn.Module):
     def __init__(self, vocab_size: int, embed_size: int = 64):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
-        #self.mha = MultiHeadAttenion(model_dim, num_heads)
+        self.mha = MultiHeadAttenion(embed_size, embed_size, num_heads)
 
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
         self.pos_encoding = PositionalEncoding(embed_size)
@@ -28,6 +28,7 @@ class TransformerModel(nn.Module):
         #Änderung mit Batches
         x = self.embedding(x)  # [batch_size, seq_len, embed_size]
         x = self.pos_encoding(x)  # Add positional encoding
+        x = self.mha(x)  # Apply multi heat attention
         return self.linear(x)
 
         #embedding: Tensor = self.embedding(x).to(device)
@@ -48,39 +49,35 @@ class TransformerModel(nn.Module):
 class MultiHeadAttenion(nn.Module):
     def __init__(self, embed_dim:int, att_dim: int, num_heads: int):
         super().__init__()
+        assert att_dim % num_heads == 0, "att_dim must be divisible by num_heads"
+        self.num_heads = num_heads
+        self.att_dim = att_dim // num_heads
 
-        self.heads = nn.ModuleList()
-        for i in range(num_heads):
-            self.heads.append(SingleHeadAttention(embed_dim, att_dim // num_heads))
-
-    def forward(self, embed: Tensor) -> Tensor:
-        out=[]
-        for head in self.heads:
-            out.append(head(embed))
-        concat = torch.cat(out, dim=-1)
-        return torch.round(concat, decimals=5)
-
-class SingleHeadAttention(nn.Module):
-    def __init(self, embed_dim, att_dim):
-        super().__init__()
-        self.keys = nn.Linear(embed_dim, att_dim)
-        self.queries = nn.Linear(embed_dim, att_dim)
-        self.values = nn.Linear(embed_dim, att_dim)
+        self.heads = nn.ModuleList([self.SingleHeadAttention(embed_dim, self.att_dim) for _ in range(num_heads)])
+        self.linear = nn.Linear(num_heads * self.att_dim, embed_dim)
 
     def forward(self, embed: Tensor) -> Tensor:
-        k = self.keys(embed)
-        q = self.queries(embed)
-        v = self.values(embed)
+        head_outputs = [head(embed) for head in self.heads]
+        concat = torch.cat(head_outputs, dim=-1)
+        result = self.linear(concat)
+        return result
 
-        dot_scores = q @ torch.transpose(k, -2, -1)
-        B,T,C = k.shape
-        dot_scores = dot_scores/(C**0.5)
+    class SingleHeadAttention(nn.Module):
+        def __init__(self, embed_dim, att_dim):
+            super().__init__()
+            self.keys = nn.Linear(embed_dim, att_dim)
+            self.queries = nn.Linear(embed_dim, att_dim)
+            self.values = nn.Linear(embed_dim, att_dim)
 
-        tril = torch.tril(torch.ones(T, T))
-        dot_scores = dot_scores.masked_fill(tril == 0, float('-inf'))
-        dot_scores = nn.functional.softmax(dot_scores, dim=-1)
-        transform = dot_scores @ v
-        return torch.round(transform, decimals=5)
+        def forward(self, embed: Tensor) -> Tensor:
+            k = self.keys(embed)
+            q = self.queries(embed)
+            v = self.values(embed)
+
+            scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(k.size(-1))
+            attention = F.softmax(scores, dim=-1)
+            output = torch.matmul(attention, v)
+            return output
 
 class PositionalEncoding(nn.Module):
     def __init__(self, embed_size: int, dropout: float = 0.07):

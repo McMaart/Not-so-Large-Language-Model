@@ -178,7 +178,7 @@ def do_training(end: int = 30000, start: int = 0, load_model: bool = True, flags
 
     t0 = perf_counter()
     avg_loss, batch_loss = train_on_batches(stories, vocabulary, tokenizer, model, loss_fn, optimizer, batch_size,
-                                            epochs=5, device=device)
+                                            epochs=30, device=device)
     t = perf_counter() - t0
     print(f"\nTraining time: {t:.5}s")
     print(f"Average Loss: {avg_loss:.5}")
@@ -193,7 +193,7 @@ def do_training(end: int = 30000, start: int = 0, load_model: bool = True, flags
     #print(f"\nTraining time: {t:.5}s ({t / len(train_data):.4}s per batch)")
     #print(f"Average Loss: {avg_loss:.5}")
 
-    #torch.save(model, 'trained_models/model.pth')
+    torch.save(model, 'trained_models/model.pth')
 
     #return t, avg_loss, len(train_data), batch_loss
 
