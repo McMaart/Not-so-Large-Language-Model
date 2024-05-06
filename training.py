@@ -52,12 +52,32 @@ def evaluate(data, model, loss_fn):
     return total_loss / len(data)
 
 
-def get_batch(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Tensor, Tensor]:
+def get_batch(story_list: list[str], idx: int,  vocab, tokenizer) -> tuple[Tensor, Tensor]:
     """
     Returns a single batch (input, target) for training.
     Both input and target Tensor have sizes max_seq_len (for self-attention).
     """
     # ToDo: stack multiple input/target tensor for more efficient training using GPU
+    #data = map_story_to_tensor(story_list[idx], vocab, tokenizer)
+    #max_idx = min(max_seq_len, data.size(0)) - 1
+    #indices = torch.randint(low=0, high=max_idx, size=(batch_size, ))
+    #X = []
+    #Y = []
+    #for idx in indices:
+        #X.append(data[:max_idx])
+       # Y.append(data[1:max_idx + 1])
+
+    #X = torch.stack([torch.nn.functional.pad(t, (0, max_seq_len - t.size(0))) for t in X])
+    #Y = torch.stack([torch.nn.functional.pad(t, (0, max_seq_len - t.size(0))) for t in Y])
+    # return X, Y
+
+    #for idx in range(batch_size):
+     #   data = map_story_to_tensor(story_list[idx], vocab, tokenizer)
+      #  max_idx = min(max_seq_len, data.size(0)) - 1
+       # x = torch.stack([data[i:i + max_idx] for i in indices])  # input: first maxidx characters starting at i for every i in indices --> stack all 1dimensional tensors as rows
+        #y = torch.stack([data[i + 1:i + max_idx + 1] for i in indices])  # target sequence offset by one index
+    #return x,y
+
     data = map_story_to_tensor(story_list[idx], vocab, tokenizer)
     max_idx = min(max_seq_len, data.size(0)) - 1
     return data[:max_idx], data[1:max_idx + 1]
@@ -87,7 +107,11 @@ def do_training(end: int = 30000, start: int = 0, flags: list = None):
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), learning_rate)
 
-    train_data = [get_batch(stories, i, vocabulary, tokenizer) for i in range(len(stories))]
+    #batch_size = 512
+    #indices = torch.randint(low=0, high=len(stories) - max_seq_len, size=(batch_size,))
+    #train_data = get_batch(stories, indices, batch_size, vocabulary, tokenizer)
+
+    train_data = [get_batch(stories, i,  vocabulary, tokenizer) for i in range(len(stories))]
     t0 = perf_counter()
     avg_loss, batch_loss = train(train_data, model, loss_fn, optimizer, flags=flags)
     t = perf_counter() - t0

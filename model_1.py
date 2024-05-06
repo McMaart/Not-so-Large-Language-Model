@@ -1,5 +1,5 @@
 import torch
-from torch import nn, Tensor
+from torch import nn, Tensor, TensorType
 import torch.nn.functional as F
 import math
 
@@ -25,7 +25,7 @@ class TransformerModel(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         embedding: Tensor = self.embedding(x)
-        embedding = self.pos_encoding(embedding)
+        embedding = self.pos_encoding(embedding).to(device)
         return self.linear(embedding)
 
     def generate_tokens(self, start_token: Tensor | int, length: int) -> list:
@@ -38,6 +38,27 @@ class TransformerModel(nn.Module):
             x = pred
         return token_list
 
+class SingleHeadAttention(nn.Module):
+    def __init(self, embed_dim, att_dim):
+        super().__init__()
+        self.keys = nn.Linear(embed_dim, att_dim)
+        self.queries = nn.Linear(embed_dim, att_dim)
+        self.values =nn.Linear(embed_dim,att_dim)
+
+    def forward(self, embed: TensorType[float]) -> Tensor:
+        k = self.keys(embed)
+        q = self.queries(embed)
+        v = self.values(embed)
+
+        dot_scores = q @ torch.transpose(k, -2, -1)
+        B,T,C = k.shape
+        dot_scores = dot_scores/(C**0.5)
+
+        tril = torch.tril(torch.ones(T, T))
+        dot_scores= dot_scores.masked_fill(tril == 0, float('-inf'))
+        dot_scores = nn.functional.softmax(dot_scores, dim=-1)
+        transform = dot_scores @ v
+        return torch.round(transform, decimals=5)
 
 class PositionalEncoding(nn.Module):
     def __init__(self, embed_size: int):
@@ -51,7 +72,7 @@ class PositionalEncoding(nn.Module):
         self.pos_encoding[:, 1::2] = torch.cos(leterm)
 
     def forward(self, x: Tensor) -> Tensor:
-        return x + self.pos_encoding[:x.size(0)]
+        return x + self.pos_encoding[:x.size(0)].to(device)
 
 
 if __name__ == '__main__':
