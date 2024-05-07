@@ -19,15 +19,17 @@ class TransformerModel(nn.Module):
         self.vocab_size = vocab_size
         self.embed_size = embed_size
 
-        self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
-        self.pos_encoding = PositionalEncoding(embed_size)
-        encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=8)
-        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
-        self.linear = nn.Linear(self.embed_size, self.vocab_size)
+        self.embedding = nn.Embedding(self.vocab_size, self.embed_size).to(device)
+        self.pos_encoding = PositionalEncoding(embed_size).to(device)
+        encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=8).to(device)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=6).to(device)
+        self.linear = nn.Linear(self.embed_size, self.vocab_size).to(device)
+        #self.to(device)
 
     def forward(self, x: Tensor) -> Tensor:
-        embedding: Tensor = self.embedding(x)
-        embedding = self.pos_encoding(embedding)
+        x = x.to(device)
+        embedding: Tensor = self.embedding(x).to(device)
+        embedding = self.pos_encoding(embedding).to(device)
         src_mask = nn.Transformer.generate_square_subsequent_mask(x.size(0)).to(device)
         embedding = self.encoder(embedding, mask=src_mask, is_causal=True)
         return self.linear(embedding)
@@ -49,16 +51,17 @@ class PositionalEncoding(nn.Module):
     def __init__(self, embed_size: int, dropout: float = 0.07):
         super().__init__()
         self.pos_encoding = torch.empty(max_seq_len, embed_size)
-        self.dropout = nn.Dropout(p=dropout)
+        self.dropout = nn.Dropout(p=dropout).to(device)
 
-        pos = torch.arange(max_seq_len, dtype=torch.float).unsqueeze(dim=1)
-        inv_denominator = 10000**(-1/embed_size*torch.arange(0, embed_size, 2, dtype=torch.float))
+        pos = torch.arange(max_seq_len, dtype=torch.float, device= device).unsqueeze(dim=1)
+        inv_denominator = 10000**(-1/embed_size*torch.arange(0, embed_size, 2, dtype=torch.float)).to(device)
         pe_term = pos * inv_denominator
         self.pos_encoding[:, 0::2] = torch.sin(pe_term)
         self.pos_encoding[:, 1::2] = torch.cos(pe_term)
 
     def forward(self, x: Tensor) -> Tensor:
-        return self.dropout(x + self.pos_encoding[:x.size(0)])
+        x = x.to(device)
+        return self.dropout(x + self.pos_encoding[:x.size(0)].to(device)).to(device)
 
 
 if __name__ == '__main__':
