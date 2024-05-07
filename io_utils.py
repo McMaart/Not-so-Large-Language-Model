@@ -6,6 +6,7 @@ from torch import Tensor
 import nltk
 from nltk.tokenize.treebank import TreebankWordDetokenizer
 import re
+from model_1 import TransformerModel
 
 
 def load_tiny_stories(end: int, start: int = 0, split="train"):
@@ -100,6 +101,7 @@ def tokens_to_story(token_list: list[str]) -> str:
     story = re.sub(r"' s", "'s", story) # Fix possessive
     return story
 
+
 def prompt_model(model, start_token: str, length: int = 50) -> str:
     vocab = load_vocabulary()
     vocab_rev = {k: v for v, k in vocab.items()}
@@ -113,16 +115,6 @@ def prompt_model(model, start_token: str, length: int = 50) -> str:
     for val in tl:
         token_list.append(vocab_rev[val.item()])
     return tokens_to_story(token_list)
-
-
-def save_vocabulary(vocab: dict[str, int], filename="trained_models/vocabulary.pkl"):
-    with open(filename, 'wb') as f:
-        pickle.dump(vocab, f)
-
-
-def load_vocabulary(filename="trained_models/vocabulary.pkl") -> dict:
-    with open(filename, 'rb') as f:
-        return pickle.load(f)
 
 
 def save_vocabulary(vocab: dict[str, int], filename="trained_models/vocabulary.pkl"):

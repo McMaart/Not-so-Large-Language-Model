@@ -71,6 +71,7 @@ class Training(ctk.CTkFrame):
         self.dropdown.grid(row=2, column=0)
 
         self.is_training = False
+        self.flag_list = [self.is_training]
         self.start_training_button = ctk.CTkButton(self, text="Start Training",
                                                    command=lambda: self.start_training() if self.is_training == False
                                                    else self.cancel_training())
@@ -83,6 +84,7 @@ class Training(ctk.CTkFrame):
     def start_training(self):
         start = datetime.datetime.now()
         self.is_training = True
+        self.flag_list[0] = True
         #self.start_training_button.configure(text="Cancel Training")
         self.training_info.insert("end",
                                   f"Training started at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
@@ -100,6 +102,7 @@ class Training(ctk.CTkFrame):
         #TODO stop training
         self.training_info.insert("end", "Training canceled\n")
         self.is_training = False
+        self.flag_list[0] = False
         self.start_training_button.configure(text="Start Training")
         return
 
@@ -110,7 +113,7 @@ class Training(ctk.CTkFrame):
         match self.model_selection.get():
             case "Model 1":
                 self.training_info.insert("end", "MODEL 1!\n\n")
-                t, avg, len, l = m1.do_training()
+                t, avg, len, l = m1.do_training(flag_list=self.flag_list)
                 # self.training_info.insert("end", f"{l}")
                 self.training_info.insert("end", f"\nModel 1 Training time: {t:.5}s ({t / len:.4}s per batch)\n")
                 self.training_info.insert("end", f"Average Loss: {avg:.5}\n")
