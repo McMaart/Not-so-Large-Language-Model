@@ -93,13 +93,13 @@ def do_training(end: int = 30000, start: int = 0, model_name: str = "model", loa
             print(f"Model/vocabulary does not exist!\n{err}", file=sys.stderr)
             sys.exit(1)
     else:
-        vocabulary = get_vocabulary_idx(stories, 1536)
+        vocabulary = get_vocabulary_idx(stories, 2048)
         save_vocabulary(vocabulary)
         model = TransformerModel(len(vocabulary)).to(device)
 
     tokenizer = get_tokenizer('basic_english')
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), learning_rate)
+    optimizer = torch.optim.AdamW(model.parameters(), learning_rate)
 
     train_data = [get_batch(stories, i, vocabulary, tokenizer) for i in range(len(stories))]
     t0 = perf_counter()
@@ -126,4 +126,4 @@ def eval_setup(model_name: str = "model"):
 
 
 if __name__ == '__main__':
-    do_training(load_model=False)
+    do_training(end=100000, load_model=False)

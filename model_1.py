@@ -8,24 +8,28 @@ device = (
     else "mps" if torch.backends.mps.is_available()
     else "cpu"
 )
-learning_rate = 1e-3
+learning_rate = 5e-4
 batch_size = 16
-max_seq_len = 64
+max_seq_len = 384
 
 
 class TransformerModel(nn.Module):
-    def __init__(self, vocab_size: int, embed_size: int = 64):
+    def __init__(self, vocab_size: int, embed_size: int = 128):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
 
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
         self.pos_encoding = PositionalEncoding(embed_size)
+        encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=8)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
 
     def forward(self, x: Tensor) -> Tensor:
         embedding: Tensor = self.embedding(x)
         embedding = self.pos_encoding(embedding)
+        src_mask = nn.Transformer.generate_square_subsequent_mask(x.size(0)).to(device)
+        embedding = self.encoder(embedding, mask=src_mask, is_causal=True)
         return self.linear(embedding)
 
     @torch.no_grad()
@@ -60,8 +64,8 @@ class PositionalEncoding(nn.Module):
 if __name__ == '__main__':
     from io_utils import prompt_model, load_vocabulary
 
-    story = prompt_model("model", "there", 40)
-    print("\n", story)
+    # story = prompt_model("model", "there", 40)
+    # print("\n", story)
 
     vocab = load_vocabulary()
     vocab_rev = {k: v for v, k in vocab.items()}
@@ -70,7 +74,7 @@ if __name__ == '__main__':
     except FileNotFoundError:
         model = TransformerModel(len(vocab))
 
-    input_tensor = torch.tensor(vocab["once"], dtype=torch.int64).unsqueeze(0)
-    tl = model.generate_tokens(input_tensor, 40)
+    input_tensor = torch.tensor(vocab["there"], dtype=torch.int64).unsqueeze(0)
+    tl = model.generate_tokens(input_tensor, 42)
     for val in tl:
         print(vocab_rev[val.item()], end=" ")
