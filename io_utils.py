@@ -9,10 +9,15 @@ import re
 from model_1 import TransformerModel
 
 
-def load_tiny_stories(end: int, start: int = 0, split="train"):
+def load_tiny_stories(end: int, start: int = 0, split: str = "train") -> list[str]:
     """
     (Down-)Loads the TinyStories Dataset and returns the entries 'start' to 'end - 1' from the chosen split
     (i.e., returns 'end - start' many stories).
+    :param end: The index of the story after the last story to be loaded from the dataset (story with index 'end' will
+        not be returned)
+    :param start: The index of the first story to be loaded from the dataset
+    :param split: Choice between 'train' or 'validation' split
+    :return: List of stories
     """
     return load_dataset("roneneldan/TinyStories")[split][start:end]['text']
 
@@ -60,7 +65,7 @@ def get_vocabulary_idx(story_list: list, max_words: int | None = None) -> dict[s
             vocab[k] = v
         vocab_freq = vocab
 
-    vocab_freq['<unk>'] = 0
+    vocab_freq['<unk>'] = 0   # Placeholder for tokens that do not appear in the story
     return {k: idx for idx, k in enumerate(vocab_freq.keys())}
 
 
@@ -74,8 +79,8 @@ def map_story_to_tensor(story: str, vocab: dict, tokenizer) -> Tensor:
 
 def clean_stories(story_list: list[str]) -> list[str]:
     """
-    Fixes certain encoding errors in the stories and removes all stories that continue to have non-ascii characters.
-    Removes approximately 0.8% of all stories (802 of first 100K stories).
+    Fixes certain encoding errors in the stories and removes all stories that either are empty or still contain
+    non-ascii characters. Removes approximately 0.8% of all stories (802 of first 100K stories).
     """
     for idx, story in enumerate(story_list):
         if 'â' in story:
@@ -83,7 +88,7 @@ def clean_stories(story_list: list[str]) -> list[str]:
             story = story.replace('â€™', "'")
             story = story.replace('â€', '"')
             story_list[idx] = story
-    return [story for story in story_list if story.isascii()]
+    return [story for story in story_list if story.isascii() and len(story) > 1]
 
 
 def tokens_to_story(token_list: list[str]) -> str:
@@ -128,7 +133,6 @@ def load_vocabulary(filename="trained_models/vocabulary.pkl") -> dict:
 
 
 if __name__ == "__main__":
-    # stories = load_tiny_stories(100)
     stories = load_from_file("data/100stories.txt")
     stories = clean_stories(stories)
     # save_to_file("data/100stories.txt", stories)

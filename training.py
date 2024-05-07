@@ -79,7 +79,8 @@ def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Ten
     return data[:-1], data[1:]
 
 
-def do_training(end: int = 30000, start: int = 0, load_model: bool = True, flags: list = None):
+def do_training(end: int = 30000, start: int = 0, model_name: str = "model", load_model: bool = True,
+                flags: list[bool] = None):
     stories = load_tiny_stories(end, start)
     stories = clean_stories(stories)
     print("Stories have been loaded")
@@ -87,7 +88,7 @@ def do_training(end: int = 30000, start: int = 0, load_model: bool = True, flags
     if load_model is True:
         try:
             vocabulary = load_vocabulary()
-            model = torch.load('trained_models/model.pth').to(device)
+            model = torch.load(f'trained_models/{model_name}.pth').to(device)
         except FileNotFoundError as err:
             print(f"Model/vocabulary does not exist!\n{err}", file=sys.stderr)
             sys.exit(1)
@@ -104,11 +105,24 @@ def do_training(end: int = 30000, start: int = 0, load_model: bool = True, flags
     t0 = perf_counter()
     avg_loss, batch_loss = train(train_data, model, loss_fn, optimizer, flags=flags)
     t = perf_counter() - t0
-    print(f"\nTraining time: {t:.5}s ({t / len(train_data):.4}s per batch)")
+    print(f"\nTotal training time: {t:.5}s ({t / len(train_data):.4}s per batch)")
     print(f"Average Loss: {avg_loss:.5}")
-    torch.save(model, 'trained_models/model.pth')
+    torch.save(model, f'trained_models/{model_name}.pth')
 
     return t, avg_loss, len(train_data), batch_loss
+
+
+def eval_setup(model_name: str = "model"):
+    # make sure that the model didn't use these stories for training
+    stories = load_tiny_stories(1400000, 1200000)
+    stories = clean_stories(stories)
+    model = torch.load(f'trained_models/{model_name}.pth').to(device)
+    vocabulary = load_vocabulary()
+    tokenizer = get_tokenizer('basic_english')
+    data = [get_batch(stories, i, vocabulary, tokenizer) for i in range(len(stories))]
+
+    loss_fn = nn.CrossEntropyLoss()
+    print(evaluate(data, model, loss_fn))
 
 
 if __name__ == '__main__':
