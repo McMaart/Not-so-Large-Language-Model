@@ -26,7 +26,8 @@ class TransformerModel(nn.Module):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
-        #self.mha = MultiHeadAttenion(embed_size, embed_size, num_heads)
+        #encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=8).to(device)
+        #self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=6).to(device)
 
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
         self.pos_encoding = PositionalEncoding(embed_size)
@@ -38,6 +39,7 @@ class TransformerModel(nn.Module):
         #Änderung mit Batches
         x = self.embedding(x)  # [batch_size, seq_len, embed_size]
         x = self.pos_encoding(x)  # Add positional encoding
+        #src_mask = nn.Transformer.generate_square_subsequent_mask(x.size(0)).to(device
         #x = self.mha(x)  # Apply multi heat attention
         for layer in self.layers:
             x = layer(x)
