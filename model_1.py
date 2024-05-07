@@ -39,7 +39,8 @@ class TransformerModel(nn.Module):
         #Änderung mit Batches
         x = self.embedding(x)  # [batch_size, seq_len, embed_size]
         x = self.pos_encoding(x)  # Add positional encoding
-        #src_mask = nn.Transformer.generate_square_subsequent_mask(x.size(0)).to(device
+        #src_mask = nn.Transformer.generate_square_subsequent_mask(x.size(0)).to(device)
+        #embedding = self.encoder(embedding, mask=src_mask, is_causal=True)
         #x = self.mha(x)  # Apply multi heat attention
         for layer in self.layers:
             x = layer(x)
