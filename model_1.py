@@ -9,26 +9,37 @@ device = (
     else "cpu"
 )
 learning_rate = 1e-3
-batch_size = 16
+batch_size = 512
 max_seq_len = 64
 num_heads = 2
+temperature = 4
+d_model = 64  # assuming the embedding size is 64
+d_ff = 256    # a common choice is to make this 4 times d_model
+dropout = 0.1  # typical dropout value
+num_layers = 1.5  # a small model with 3 layers
+
 
 class TransformerModel(nn.Module):
     def __init__(self, vocab_size: int, embed_size: int = 64):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
-        self.mha = MultiHeadAttenion(embed_size, embed_size, num_heads)
+        #self.mha = MultiHeadAttenion(embed_size, embed_size, num_heads)
 
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
         self.pos_encoding = PositionalEncoding(embed_size)
+        self.layers = nn.ModuleList([TransformerBlock(embed_size, num_heads, d_ff, dropout) for _ in range(num_layers)])
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
+        self.norm = nn.LayerNorm(self.embed_size)
         self.to(device)
     def forward(self, x: Tensor) -> Tensor:
         #Änderung mit Batches
         x = self.embedding(x)  # [batch_size, seq_len, embed_size]
         x = self.pos_encoding(x)  # Add positional encoding
-        x = self.mha(x)  # Apply multi heat attention
+        #x = self.mha(x)  # Apply multi heat attention
+        for layer in self.layers:
+            x = layer(x)
+        x = self.norm(x)  # Normalize
         return self.linear(x)
 
         #embedding: Tensor = self.embedding(x).to(device)
@@ -41,12 +52,35 @@ class TransformerModel(nn.Module):
         x = start_token.to(device)
         token_list = [x]
         for _ in range(length):
-            probs = F.softmax(self(x), dim=-1).to(device)
+            logits = self(x)  # Directly use logits to adjust temperature
+            probs = F.softmax(logits / temperature, dim=-1).to(device)  # Apply temperature
             pred = torch.multinomial(probs, 1)[0]
             token_list.append(pred)
             x = pred
         return token_list
-class MultiHeadAttenion(nn.Module):
+
+class TransformerBlock(nn.Module):
+    def __init__(self, embed_dim, num_heads, d_ff, dropout=0.1):
+        super(TransformerBlock, self).__init__()
+        self.attention = MultiHeadAttention(embed_dim, embed_dim, num_heads)
+        self.norm1 = nn.LayerNorm(embed_dim)
+        self.ffn = PositionwiseFeedforward(embed_dim, d_ff, dropout)
+        self.norm2 = nn.LayerNorm(embed_dim)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x):
+        # Apply attention
+        attn_output = self.attention(x)
+        # Add & norm
+        x = self.norm1(x + self.dropout(attn_output))
+        # Apply feedforward network
+        ffn_output = self.ffn(x)
+        # Another add & norm
+        x = self.norm2(x + self.dropout(ffn_output))
+        return x
+
+
+class MultiHeadAttention(nn.Module):
     def __init__(self, embed_dim:int, att_dim: int, num_heads: int):
         super().__init__()
         assert att_dim % num_heads == 0, "att_dim must be divisible by num_heads"
@@ -55,10 +89,12 @@ class MultiHeadAttenion(nn.Module):
 
         self.heads = nn.ModuleList([self.SingleHeadAttention(embed_dim, self.att_dim) for _ in range(num_heads)])
         self.linear = nn.Linear(num_heads * self.att_dim, embed_dim)
+        self.norm = nn.LayerNorm(embed_dim)  # Add layer normalization
 
     def forward(self, embed: Tensor) -> Tensor:
         head_outputs = [head(embed) for head in self.heads]
         concat = torch.cat(head_outputs, dim=-1)
+        concat = self.norm(concat) # Normalize
         result = self.linear(concat)
         return result
 
@@ -112,6 +148,22 @@ class PositionalEncoding(nn.Module):
     #def forward(self, x: Tensor) -> Tensor:
         #return self.dropout(x + self.pos_encoding[:x.size(0)]).to(device)
 
+class PositionwiseFeedforward(nn.Module):
+    def __init__(self, d_model, d_ff, dropout=0.1):
+        super(PositionwiseFeedforward, self).__init__()
+        # First fully connected layer
+        self.fc1 = nn.Linear(d_model, d_ff)
+        # Second fully connected layer that outputs the d_model dimensions
+        self.fc2 = nn.Linear(d_ff, d_model)
+        # Dropout and activation function
+        self.dropout = nn.Dropout(dropout)
+        self.activation = nn.ReLU()
+
+    def forward(self, x):
+        x = self.activation(self.fc1(x))
+        x = self.dropout(x)
+        x = self.fc2(x)
+        return x
 
 if __name__ == '__main__':
     from io_utils import load_vocabulary
@@ -119,7 +171,8 @@ if __name__ == '__main__':
     vocab = load_vocabulary()
     vocab_rev = {k: v for v, k in vocab.items()}
     try:
-        model: TransformerModel = torch.load('trained_models/model.pth').to(device)
+        #model: TransformerModel = torch.load('trained_models/model.pth').to(device)
+        model: TransformerModel = torch.load('trained_models/model2.pth').to(device)
     except FileNotFoundError:
         model = TransformerModel(len(vocab))
 
