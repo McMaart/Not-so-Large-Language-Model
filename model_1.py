@@ -8,21 +8,21 @@ device = (
     else "mps" if torch.backends.mps.is_available()
     else "cpu"
 )
-learning_rate = 2e-3
-batch_size = 512
-max_seq_len = 64
-num_heads = 2
-temperature = 1
+learning_rate = 1e-3
+batch_size = 64
+max_seq_len = 300
+num_heads = 8
+temperature = 1.75
 #d_model = 64  #
-embed_size = 128
+embed_size = 256
 d_ff = 4 * embed_size    # 4 times model
 dropout = 0.1
-num_layers = 5
+num_layers = 4
 
 
 
 class TransformerModel(nn.Module):
-    def __init__(self, vocab_size: int, embed_size: int = 128):
+    def __init__(self, vocab_size: int, embed_size: int = embed_size):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
@@ -129,6 +129,9 @@ class PositionalEncoding(nn.Module):
         pos_encoding[:, 0::2] = torch.sin(position * div_term)
         pos_encoding[:, 1::2] = torch.cos(position * div_term)
 
+        # Scale the positional encodings
+        self.scale = math.sqrt(embed_size)
+
         # Register the positional encodings as a buffer correctly
         self.register_buffer('pe', pos_encoding)
 
@@ -137,7 +140,7 @@ class PositionalEncoding(nn.Module):
         x: Tensor, shape [batch_size, seq_len, embed_size]
         """
         # Use the registered buffer, ensuring we only apply as many positions as the current x's sequence length
-        x = x + self.pe[:x.size(1)]
+        x = x + self.pe[:x.size(1)] * self.scale
         return self.dropout(x)
 
         # Code vorher
@@ -182,5 +185,3 @@ if __name__ == '__main__':
     tl = model.generate_tokens(input_tensor, 60)
     for val in tl:
         print(vocab_rev[val.item()], end=" ")
-
-
