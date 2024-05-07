@@ -8,19 +8,21 @@ device = (
     else "mps" if torch.backends.mps.is_available()
     else "cpu"
 )
-learning_rate = 1e-3
+learning_rate = 2e-3
 batch_size = 512
 max_seq_len = 64
 num_heads = 2
-temperature = 4
-d_model = 64  # assuming the embedding size is 64
-d_ff = 256    # a common choice is to make this 4 times d_model
-dropout = 0.1  # typical dropout value
-num_layers = 1.5  # a small model with 3 layers
+temperature = 1
+#d_model = 64  #
+embed_size = 128
+d_ff = 4 * embed_size    # 4 times model
+dropout = 0.1
+num_layers = 5
+
 
 
 class TransformerModel(nn.Module):
-    def __init__(self, vocab_size: int, embed_size: int = 64):
+    def __init__(self, vocab_size: int, embed_size: int = 128):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size

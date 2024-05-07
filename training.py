@@ -178,7 +178,7 @@ def do_training(end: int = 1000000, start: int = 0, load_model: bool = True, fla
 
     t0 = perf_counter()
     avg_loss, batch_loss = train_on_batches(stories, vocabulary, tokenizer, model, loss_fn, optimizer, batch_size,
-                                            epochs=1, device=device)
+                                            epochs=2, device=device)
     t = perf_counter() - t0
     print(f"\nTraining time: {t:.5}s")
     print(f"Average Loss: {avg_loss:.5}")
