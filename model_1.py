@@ -26,21 +26,26 @@ class TransformerModel(nn.Module):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
-        #encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=8).to(device)
-        #self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=6).to(device)
+        #Pytorch Transformer
+        encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=8).to(device)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=6).to(device)
 
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
         self.pos_encoding = PositionalEncoding(embed_size)
-        self.layers = nn.ModuleList([TransformerBlock(embed_size, num_heads, d_ff, dropout) for _ in range(num_layers)])
+        #self.layers = nn.ModuleList([TransformerBlock(embed_size, num_heads, d_ff, dropout) for _ in range(num_layers)])
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
         self.norm = nn.LayerNorm(self.embed_size)
         self.to(device)
     def forward(self, x: Tensor) -> Tensor:
         #Änderung mit Batches
-        x = self.embedding(x)  # [batch_size, seq_len, embed_size]
-        x = self.pos_encoding(x)  # Add positional encoding
-        #src_mask = nn.Transformer.generate_square_subsequent_mask(x.size(0)).to(device)
-        #embedding = self.encoder(embedding, mask=src_mask, is_causal=True)
+        #x = self.embedding(x)  # [batch_size, seq_len, embed_size]
+        #x = self.pos_encoding(x)  # Add positional encoding
+        #x = x.to(device)
+        #Pytorch Transformer
+        embedding: Tensor = self.embedding(x).to(device)
+        embedding = self.pos_encoding(embedding).to(device)
+        src_mask = nn.Transformer.generate_square_subsequent_mask(x.size(0)).to(device)
+        embedding = self.encoder(embedding, mask=src_mask, is_causal=True)
         #x = self.mha(x)  # Apply multi heat attention
         for layer in self.layers:
             x = layer(x)
