@@ -22,10 +22,12 @@ class TransformerModel(nn.Module):
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
         self.pos_encoding = PositionalEncoding(embed_size)
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
+        self.to(device)
 
     def forward(self, x: Tensor) -> Tensor:
-        embedding: Tensor = self.embedding(x)
-        embedding = self.pos_encoding(embedding)
+        x = x.to(device)
+        embedding: Tensor = self.embedding(x).to(device)
+        embedding = self.pos_encoding(embedding).to(device)
         return self.linear(embedding)
 
     @torch.no_grad()
@@ -54,7 +56,7 @@ class PositionalEncoding(nn.Module):
         self.pos_encoding[:, 1::2] = torch.cos(pe_term)
 
     def forward(self, x: Tensor) -> Tensor:
-        return self.dropout(x + self.pos_encoding[:x.size(0)])
+        return self.dropout(x + self.pos_encoding[:x.size(0)].to(device)).to(device)
 
 
 if __name__ == '__main__':
