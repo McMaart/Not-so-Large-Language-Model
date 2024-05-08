@@ -52,6 +52,7 @@ def train_on_batches(story_list, vocab, tokenizer, model, loss_fn, optimizer, ba
 
     num_samples = len(story_list)
     total_batches = num_samples // batch_size
+    has_remaining_batch = num_samples % batch_size != 0  # Check if there's a remaining batch
     batch_loss_list = []
 
     for epoch in range(1, epochs + 1):
@@ -65,7 +66,13 @@ def train_on_batches(story_list, vocab, tokenizer, model, loss_fn, optimizer, ba
         for batch_index in range(total_batches):
             start_index = batch_index * batch_size
             end_index = start_index + batch_size
-            batch_indices = indices[start_index:end_index]
+
+            if batch_index == total_batches and has_remaining_batch:  # Handle remaining data points
+                batch_indices = indices[start_index:]  # Use remaining indices
+            else:
+                batch_indices = indices[start_index:end_index]
+
+            #batch_indices = indices[start_index:end_index]
             batch_stories = [story_list[i] for i in batch_indices]  # Extract stories for this batch
 
             x, y = get_batch(batch_stories, batch_size, vocab, tokenizer)  # Get a batch
@@ -75,7 +82,7 @@ def train_on_batches(story_list, vocab, tokenizer, model, loss_fn, optimizer, ba
 
             optimizer.zero_grad()  # Clear gradients before each backward pass
             pred = model(x)  # Compute predictions
-            mask = (y != pad_token_id) # mask pad token for loss function
+            mask = (y != pad_token_id)  # mask pad token for loss function
             loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))  # Calculate loss without reduction
             loss = (loss * mask.view(-1).float()).mean()  # Apply mask and calculate mean loss with mean
             #loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))  # Compute loss
@@ -84,7 +91,7 @@ def train_on_batches(story_list, vocab, tokenizer, model, loss_fn, optimizer, ba
 
             total_loss += loss.item()
 
-            if (batch_index + 1) % 1000 == 0:
+            if (batch_index + 1) % 25 == 0:
                 avg_loss = total_loss / (batch_index + 1)
                 print(f"Batch {batch_index + 1}: Avg. Loss = {avg_loss:.5f}")
 
@@ -95,9 +102,11 @@ def train_on_batches(story_list, vocab, tokenizer, model, loss_fn, optimizer, ba
                 break  #noch nicht gecheckt..
 
     # Calculate average loss over all batches
-    avg_total_loss = total_loss / total_batches
+    #avg_total_loss = total_loss / total_batches
 
-    return avg_total_loss, batch_loss_list
+    #return avg_total_loss, batch_loss_list
+    avg_total_loss = total_loss / (total_batches + (1 if has_remaining_batch else 0))
+    return avg_total_loss
 
 
 def evaluate(data, model, loss_fn):
@@ -171,8 +180,8 @@ def do_training(end: int = 40000, start: int = 0, load_model: bool = True, flags
     tokenizer = get_tokenizer('basic_english')
     loss_fn = nn.CrossEntropyLoss(reduction='none')  # Initialize loss function with 'none' reduction
     #loss_fn = nn.CrossEntropyLoss()
-    #optimizer = torch.optim.Adam(model.parameters(), learning_rate)
-    optimizer = torch.optim.AdamW(model.parameters(), learning_rate)
+    optimizer = torch.optim.Adam(model.parameters(), learning_rate)
+    #optimizer = torch.optim.AdamW(model.parameters(), learning_rate)
 
     #Mit Batches
     #batch_size = 64
@@ -183,12 +192,14 @@ def do_training(end: int = 40000, start: int = 0, load_model: bool = True, flags
     #print(batch[1])
 
     t0 = perf_counter()
-    avg_loss, batch_loss = train_on_batches(stories, vocabulary, tokenizer, model, loss_fn, optimizer, batch_size,
-                                            epochs=1, device=device)
+    #avg_loss, batch_loss = train_on_batches(stories, vocabulary, tokenizer, model, loss_fn, optimizer, batch_size,
+                                            #epochs=6, device=device)
+    avg_loss = train_on_batches(stories, vocabulary, tokenizer, model, loss_fn, optimizer, batch_size,
+                                            epochs=6, device=device)
     t = perf_counter() - t0
     print(f"\nTraining time: {t:.5}s")
     print(f"Average Loss: {avg_loss:.5}")
-    print(f"Batch Loss: {batch_loss}")
+    #print(f"Batch Loss: {batch_loss}")
 
     #Alt
     #train_data = [get_batch(stories, batch_size=2, vocab=vocabulary, tokenizer=tokenizer)for i in range(len(stories))]

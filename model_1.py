@@ -8,16 +8,16 @@ device = (
     else "mps" if torch.backends.mps.is_available()
     else "cpu"
 )
-learning_rate = 1e-3
+learning_rate = 3e-4 #1e-3
 batch_size = 64
-max_seq_len = 60 # needs to be max story length from batch or max sequence length
+max_seq_len = 64  # needs to be max story length from batch or max sequence length
 num_heads = 8
 temperature = 1
 #d_model = 64  #
-embed_size = 256
+embed_size = 64
 d_ff = 4 * embed_size    # 4 times model
-dropout = 0.1
-num_layers = 6
+dropout = 0.01
+num_layers = 1
 
 
 
@@ -83,7 +83,7 @@ class TransformerModel(nn.Module):
         return token_list
 
     class TransformerBlock(nn.Module):
-        def __init__(self, mod_dim, num_heads, d_ff, dropout=0.1):
+        def __init__(self, mod_dim, num_heads, d_ff, dropout=0.01):
             super().__init__()
             self.attention = self.MultiHeadAttention(mod_dim, mod_dim, num_heads)
             self.norm1 = nn.LayerNorm(mod_dim)
@@ -186,7 +186,7 @@ class PositionalEncoding(nn.Module):
         #return self.dropout(x + self.pos_encoding[:x.size(0)]).to(device)
 
 class PositionwiseFeedforward(nn.Module):
-    def __init__(self, d_model, d_ff, dropout=0.1):
+    def __init__(self, d_model, d_ff, dropout=0.01):
         super(PositionwiseFeedforward, self).__init__()
         # First fully connected layer
         self.fc1 = nn.Linear(d_model, d_ff)
