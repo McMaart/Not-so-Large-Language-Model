@@ -109,6 +109,7 @@ def tokens_to_story(token_list: list[str]) -> str:
 
 def prompt_model(model, start_token: str, length: int = 50) -> str:
     vocab = load_vocabulary()
+    names = {"bob", "lilly", "sarah", "tom"}    # In an
     vocab_rev = {k: v for v, k in vocab.items()}
     try:
         model = torch.load(f'trained_models/{model}.pth')
@@ -118,7 +119,10 @@ def prompt_model(model, start_token: str, length: int = 50) -> str:
     tl = model.generate_tokens(torch.tensor(vocab[start_token], dtype=torch.int64), length)
     token_list = []
     for val in tl:
-        token_list.append(vocab_rev[val.item()])
+        token = vocab_rev[val.item()]
+        if token in names:
+            token = token.title()
+        token_list.append(token)
     return tokens_to_story(token_list)
 
 
