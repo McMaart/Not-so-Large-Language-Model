@@ -10,14 +10,14 @@ device = (
 )
 learning_rate = 1e-3
 batch_size = 64
-max_seq_len = 300
+max_seq_len = 60 # needs to be max story length from batch or max sequence length
 num_heads = 8
-temperature = 1.75
+temperature = 1
 #d_model = 64  #
 embed_size = 256
 d_ff = 4 * embed_size    # 4 times model
 dropout = 0.1
-num_layers = 4
+num_layers = 6
 
 
 
@@ -26,31 +26,44 @@ class TransformerModel(nn.Module):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
-        #Pytorch Transformer
-        encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=8).to(device)
-        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=6).to(device)
-
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
         self.pos_encoding = PositionalEncoding(embed_size)
-        #self.layers = nn.ModuleList([TransformerBlock(embed_size, num_heads, d_ff, dropout) for _ in range(num_layers)])
+        #self.pos_encoding = nn.Embedding(max_seq_len, embed_size)
+
+        #Pytorch Transformer
+        #encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=8).to(device)
+        #self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=6).to(device)
+
+        self.layers = nn.Sequential(*(self.TransformerBlock(embed_size, num_heads, d_ff, dropout) for _ in range(num_layers)))
+        #for i in range(num_layers):
+            #self.layers.append((self.TransformerBlock(embed_size, num_heads, d_ff, dropout)))
+        #nn.ModuleList([self.TransformerBlock(embed_size, num_heads, d_ff, dropout) for _ in range(num_layers)])
+        self.norm = nn.LayerNorm(self.embed_size) # B*T*E
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
-        self.norm = nn.LayerNorm(self.embed_size)
         self.to(device)
     def forward(self, x: Tensor) -> Tensor:
+        x = x.to(device)
         #Änderung mit Batches
-        #x = self.embedding(x)  # [batch_size, seq_len, embed_size]
-        #x = self.pos_encoding(x)  # Add positional encoding
+        x = self.embedding(x)  # [batch_size, seq_len, embed_size] B*T*E
+        x = self.pos_encoding(x)  # Add positional encoding
+        #B,T,E = x.shape   #shape for generate function ?
+        #pos_embeds = self.pos_encoding(torch.arange(T).to(device)).to(device)
+        #x = x + pos_embeds
         #x = x.to(device)
+        #for layer in self.layers:
+            #x = layer(x)
+        #x = self.norm(x)  # Normalize
+        #return self.linear(x)
+        un_norm = self.linear(self.norm(self.layers(x)))
+        probs = nn.functional.softmax(un_norm, dim =-1).to(device)
+        return torch.round(probs)
+
         #Pytorch Transformer
-        embedding: Tensor = self.embedding(x).to(device)
-        embedding = self.pos_encoding(embedding).to(device)
-        src_mask = nn.Transformer.generate_square_subsequent_mask(x.size(0)).to(device)
-        embedding = self.encoder(embedding, mask=src_mask, is_causal=True)
-        #x = self.mha(x)  # Apply multi heat attention
-        for layer in self.layers:
-            x = layer(x)
-        x = self.norm(x)  # Normalize
-        return self.linear(x)
+        #embedding: Tensor = self.embedding(x).to(device)
+        #embedding = self.pos_encoding(embedding).to(device)
+        #src_mask = nn.Transformer.generate_square_subsequent_mask(x.size(0)).to(device)
+        #embedding = self.encoder(embedding, mask=src_mask, is_causal=True)
+
 
         #embedding: Tensor = self.embedding(x).to(device)
         #embedding = self.pos_encoding(embedding).to(device)
@@ -69,61 +82,72 @@ class TransformerModel(nn.Module):
             x = pred
         return token_list
 
-class TransformerBlock(nn.Module):
-    def __init__(self, embed_dim, num_heads, d_ff, dropout=0.1):
-        super(TransformerBlock, self).__init__()
-        self.attention = MultiHeadAttention(embed_dim, embed_dim, num_heads)
-        self.norm1 = nn.LayerNorm(embed_dim)
-        self.ffn = PositionwiseFeedforward(embed_dim, d_ff, dropout)
-        self.norm2 = nn.LayerNorm(embed_dim)
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, x):
-        # Apply attention
-        attn_output = self.attention(x)
-        # Add & norm
-        x = self.norm1(x + self.dropout(attn_output))
-        # Apply feedforward network
-        ffn_output = self.ffn(x)
-        # Another add & norm
-        x = self.norm2(x + self.dropout(ffn_output))
-        return x
-
-
-class MultiHeadAttention(nn.Module):
-    def __init__(self, embed_dim:int, att_dim: int, num_heads: int):
-        super().__init__()
-        assert att_dim % num_heads == 0, "att_dim must be divisible by num_heads"
-        self.num_heads = num_heads
-        self.att_dim = att_dim // num_heads
-
-        self.heads = nn.ModuleList([self.SingleHeadAttention(embed_dim, self.att_dim) for _ in range(num_heads)])
-        self.linear = nn.Linear(num_heads * self.att_dim, embed_dim)
-        self.norm = nn.LayerNorm(embed_dim)  # Add layer normalization
-
-    def forward(self, embed: Tensor) -> Tensor:
-        head_outputs = [head(embed) for head in self.heads]
-        concat = torch.cat(head_outputs, dim=-1)
-        concat = self.norm(concat) # Normalize
-        result = self.linear(concat)
-        return result
-
-    class SingleHeadAttention(nn.Module):
-        def __init__(self, embed_dim, att_dim):
+    class TransformerBlock(nn.Module):
+        def __init__(self, mod_dim, num_heads, d_ff, dropout=0.1):
             super().__init__()
-            self.keys = nn.Linear(embed_dim, att_dim)
-            self.queries = nn.Linear(embed_dim, att_dim)
-            self.values = nn.Linear(embed_dim, att_dim)
+            self.attention = self.MultiHeadAttention(mod_dim, mod_dim, num_heads)
+            self.norm1 = nn.LayerNorm(mod_dim)
+            self.norm2 = nn.LayerNorm(mod_dim)
+            #self.ff = self.VanillaNeuralNetwork(mod_dim)
+            self.ffn = PositionwiseFeedforward(mod_dim, d_ff, dropout)
+            self.dropout = nn.Dropout(dropout)
 
-        def forward(self, embed: Tensor) -> Tensor:
-            k = self.keys(embed)
-            q = self.queries(embed)
-            v = self.values(embed)
+        def forward(self, x: Tensor):
+            # Apply attention
+            attn_output = self.attention(x)
+            # Add & norm
+            x = self.norm1(x + self.dropout(attn_output))
+            # Apply feedforward network
+            #ff_output = self.ff(x)
+            ffn_output = self.ffn(x)
+            # Another add & norm
+            #x = self.norm2(x + self.dropout(ff_output))
+            x = self.norm2(x + self.dropout(ffn_output))
+            return torch.round(x, decimals=4)
 
-            scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(k.size(-1))
-            attention = F.softmax(scores, dim=-1)
-            output = torch.matmul(attention, v)
-            return output
+
+        class MultiHeadAttention(nn.Module):
+            def __init__(self, embed_dim:int, att_dim: int, num_heads: int):
+                super().__init__()
+                assert att_dim % num_heads == 0, "att_dim must be divisible by num_heads"
+                self.num_heads = num_heads
+                self.att_dim = att_dim // num_heads
+
+                self.heads = nn.ModuleList([self.SingleHeadAttention(embed_dim, self.att_dim) for _ in range(num_heads)])
+                self.linear = nn.Linear(num_heads * self.att_dim, embed_dim)
+                self.norm = nn.LayerNorm(embed_dim)  # Add layer normalization
+
+            def forward(self, embed: Tensor) -> Tensor:
+                head_outputs = [head(embed) for head in self.heads] # each element B*T*headsize (att //num_heads)
+                concat = torch.cat(head_outputs, dim=-1) # Concatenate to B*T*A
+                concat = self.norm(concat)  # Normalize
+                result = self.linear(concat)
+                return torch.round(result)
+
+            class SingleHeadAttention(nn.Module):
+                def __init__(self, embed_dim, att_dim):
+                    super().__init__()
+                    self.keys = nn.Linear(embed_dim, att_dim, bias=False)
+                    self.queries = nn.Linear(embed_dim, att_dim, bias=False)
+                    self.values = nn.Linear(embed_dim, att_dim, bias=False)
+
+                def forward(self, embed: Tensor) -> Tensor:
+                    #print(f"embed size: {embed.size()}") # B*T*E
+                    k = self.keys(embed)
+                    #print(f"Keys size: {k.size()}") # B*T*A  A = E/number_heads
+                    q = self.queries(embed)
+                    v = self.values(embed)
+
+                    #scores = (q @ torch.transpose(k, 1, 2))
+                    #B, T, A = k.shape
+                    #scores = scores / (A**0.5) # scaled by att_dim
+                    scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(k.size(-1))
+                    mask = torch.tril(torch.ones(max_seq_len, max_seq_len)).to(device)  # T*T #ToDo Get T to match max_idx from get_batch()
+                    mask = mask == 0
+                    scores = scores.masked_fill(mask, float('-inf')) # B*T*T
+                    attention = F.softmax(scores, dim=-1)
+                    output = attention @ v #torch.matmul(attention, v)
+                    return torch.round(output, decimals=4)
 
 class PositionalEncoding(nn.Module):
     def __init__(self, embed_size: int, dropout: float = 0.07):
@@ -138,7 +162,7 @@ class PositionalEncoding(nn.Module):
         pos_encoding[:, 1::2] = torch.cos(position * div_term)
 
         # Scale the positional encodings
-        self.scale = math.sqrt(embed_size)
+        #self.scale = math.sqrt(embed_size)
 
         # Register the positional encodings as a buffer correctly
         self.register_buffer('pe', pos_encoding)
@@ -148,7 +172,7 @@ class PositionalEncoding(nn.Module):
         x: Tensor, shape [batch_size, seq_len, embed_size]
         """
         # Use the registered buffer, ensuring we only apply as many positions as the current x's sequence length
-        x = x + self.pe[:x.size(1)] * self.scale
+        x = x + self.pe[:x.size(1)] #* self.scale
         return self.dropout(x)
 
         # Code vorher

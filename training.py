@@ -7,7 +7,7 @@ from io_utils import (get_vocabulary_idx, map_story_to_tensor, load_tiny_stories
                       load_vocabulary)
 from torchtext.data.utils import get_tokenizer
 from time import perf_counter
-from model_1 import TransformerModel, device, learning_rate, max_seq_len
+from model_1 import TransformerModel, device, learning_rate, max_seq_len , batch_size
 # import torch.nn.functional as F
 
 # Alt für single Batch
@@ -48,6 +48,7 @@ def train(data: list, model, loss_fn, optimizer, epochs: int = 1, flags: list = 
 
 def train_on_batches(story_list, vocab, tokenizer, model, loss_fn, optimizer, batch_size, device, epochs: int = 1, flags: list = None):
     model.train()  # Set the model to training mode
+    pad_token_id = vocab['<pad>']  # Adjust as per your vocab
 
     num_samples = len(story_list)
     total_batches = num_samples // batch_size
@@ -74,7 +75,10 @@ def train_on_batches(story_list, vocab, tokenizer, model, loss_fn, optimizer, ba
 
             optimizer.zero_grad()  # Clear gradients before each backward pass
             pred = model(x)  # Compute predictions
-            loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))  # Compute loss
+            mask = (y != pad_token_id) # mask pad token for loss function
+            loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))  # Calculate loss without reduction
+            loss = (loss * mask.view(-1).float()).mean()  # Apply mask and calculate mean loss with mean
+            #loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))  # Compute loss
             loss.backward()  # Backpropagate the gradients
             optimizer.step()  # Update model parameters
 
@@ -125,7 +129,7 @@ def get_batch(story_list: list[str], batch_size, vocab, tokenizer) -> tuple[Tens
 
     for i in range(batch_size):
         data = map_story_to_tensor(story_list[i], vocab, tokenizer)
-        max_idx = min(max_seq_len, data.size(0)) - 1
+        max_idx = min(max_seq_len, data.size(0)) # - 1
         x = data[:max_idx]
         y = data[1:max_idx + 1]
         batch_x.append(x)
@@ -147,7 +151,7 @@ def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Ten
     return data[:-1], data[1:]
 
 
-def do_training(end: int = 2000000, start: int = 0, load_model: bool = True, flags: list = None):
+def do_training(end: int = 40000, start: int = 0, load_model: bool = True, flags: list = None):
     stories = load_tiny_stories(end, start)
     stories = clean_stories(stories)
     print("Stories have been loaded")
@@ -165,12 +169,13 @@ def do_training(end: int = 2000000, start: int = 0, load_model: bool = True, fla
         model = TransformerModel(len(vocabulary)).to(device)
 
     tokenizer = get_tokenizer('basic_english')
-    loss_fn = nn.CrossEntropyLoss()
+    loss_fn = nn.CrossEntropyLoss(reduction='none')  # Initialize loss function with 'none' reduction
+    #loss_fn = nn.CrossEntropyLoss()
     #optimizer = torch.optim.Adam(model.parameters(), learning_rate)
     optimizer = torch.optim.AdamW(model.parameters(), learning_rate)
 
     #Mit Batches
-    batch_size = 64
+    #batch_size = 64
     #print(type(batch))
     #print(batch[0].size())
     #print(batch[1].size())
