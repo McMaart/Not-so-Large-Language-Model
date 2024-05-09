@@ -2,7 +2,6 @@ import customtkinter as ctk
 import glob
 import os
 
-
 ctk.set_default_color_theme("dark-blue")
 ctk.set_appearance_mode("system")
 
@@ -48,23 +47,23 @@ class Training(ctk.CTkFrame):
         self.grid_rowconfigure(1, weight=0)
         self.grid_rowconfigure(2, weight=0)
         self.grid_rowconfigure(3, weight=0)
-        #self.grid_rowconfigure(4, weight=0)
-        #self.grid_rowconfigure(5, weight=0)
-        #self.grid_rowconfigure(6, weight=0)
+        # self.grid_rowconfigure(4, weight=0)
+        # self.grid_rowconfigure(5, weight=0)
+        # self.grid_rowconfigure(6, weight=0)
 
         # Label for training
         self.label = ctk.CTkLabel(self, text="Training")
         self.label.grid(row=0, column=0, columnspan=1)
 
-        #self.model_label = ctk.CTkLabel(self, width=1, height=1, text="Model")
-        #self.model_label.grid(row=1, column=0, rowspan=1)
+        # self.model_label = ctk.CTkLabel(self, width=1, height=1, text="Model")
+        # self.model_label.grid(row=1, column=0, rowspan=1)
         self.model_selection = ctk.StringVar(value=self.models[0])
         self.dropdown = ctk.CTkOptionMenu(self, values=self.models, variable=self.model_selection)
         self.dropdown.grid(row=1, column=0)
 
         # Label for dataset selection
-        #self.dataset_label = ctk.CTkLabel(self, text="Dataset")
-        #self.dataset_label.grid(row=3, column=0)
+        # self.dataset_label = ctk.CTkLabel(self, text="Dataset")
+        # self.dataset_label.grid(row=3, column=0)
         # Dropdown for choosing dataset
         self.selection = ctk.StringVar(value=self.datasets[0])
         self.dropdown = ctk.CTkOptionMenu(self, values=self.datasets, variable=self.selection)
@@ -72,16 +71,18 @@ class Training(ctk.CTkFrame):
 
         self.is_training = False
         # Buttons for starting/canceling training
-        self.start_training_button = ctk.CTkButton(self, text="Start Training",
-                                                   command=lambda:self.mvc_controller.start_training() if self.is_training == False
-                                                   else self.mvc_controller.cancel_training())
+        self.start_training_button \
+            = ctk.CTkButton(self, text="Start Training",
+                            command=lambda: self.mvc_controller.start_training()
+                            if self.is_training is False else self.mvc_controller.cancel_training())
         self.start_training_button.grid(row=3, column=0)
-        #self.cancel_training = ctk.CTkButton(self, text="Cancel Training", command=self.cancel_training)
-        #self.cancel_training.grid(row=5, column=0)
+        # self.cancel_training = ctk.CTkButton(self, text="Cancel Training", command=self.cancel_training)
+        # self.cancel_training.grid(row=5, column=0)
 
         # Field for displaying information
         self.training_info = ctk.CTkTextbox(self)
         self.training_info.grid(row=2, column=1, rowspan=2, sticky="nsew")
+
 
 class Interaction(ctk.CTkFrame):
     def __init__(self, parent, controller):
@@ -156,5 +157,6 @@ class Interaction(ctk.CTkFrame):
 if __name__ == "__main__":
     import controller_mvc.py as c
     import model_1
+
     app = GUI(c.Controller(model_1))
     app.mainloop()

@@ -1,7 +1,6 @@
 import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
-import math
 
 device = (
     "cuda" if torch.cuda.is_available()
@@ -15,24 +14,25 @@ num_special_tokens = 1
 
 
 class TransformerModel(nn.Module):
-    def __init__(self, vocab_size: int, embed_size: int = 128):
+    def __init__(self, vocab_size: int, embed_size: int = 128, nhead: int = 8, num_layers: int = 6):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
 
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
         self.pos_encoding = PositionalEncoding(embed_size)
-        encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=4)
-        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
+
+        # encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=nhead)
+        # self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
 
     def forward(self, x: Tensor) -> Tensor:
         embedding: Tensor = self.embedding(x)
         embedding = self.pos_encoding(embedding)
 
-        mask = nn.Transformer.generate_square_subsequent_mask(x.size(0))
-        attn_output = self.encoder(embedding, mask=mask, is_causal=True)
-        return self.linear(attn_output)
+        # mask = nn.Transformer.generate_square_subsequent_mask(x.size(0))
+        # embedding = self.encoder(embedding, mask=mask, is_causal=True)
+        return self.linear(embedding)
 
     @torch.no_grad()
     def generate_tokens(self, start_token: Tensor | int, length: int) -> list:

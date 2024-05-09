@@ -1,13 +1,13 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 import gui
+
 
 class TestGUIComponents(unittest.TestCase):
 
-
     def setUp(self):
         self.parent = MagicMock()
-        #self.controller = MagicMock()
+        # self.controller = MagicMock()
         controller = gui.GUI()
 
         self.training_instance = gui.Training(controller, controller)
@@ -21,8 +21,6 @@ class TestGUIComponents(unittest.TestCase):
         self.assertTrue(getattr(controller, "geometry"))
         self.assertTrue(getattr(controller, "training"))
         self.assertTrue(getattr(controller, "interaction"))
-
-
 
     def test_training_initialization(self):
         """Test Trainingcomponent is initialized correctly."""
@@ -48,7 +46,7 @@ class TestGUIComponents(unittest.TestCase):
 
         self.assertTrue(getattr(self.interaction_instance, "models"))
 
-        #self.assertTrue(getattr(self.interaction_instance, "history"))
+        # self.assertTrue(getattr(self.interaction_instance, "history"))
 
         self.assertTrue(getattr(self.interaction_instance, "model_label"))
         self.assertTrue(getattr(self.interaction_instance, "model_selection"))
@@ -62,6 +60,7 @@ class TestGUIComponents(unittest.TestCase):
 
         self.assertTrue(getattr(self.interaction_instance, "eval_label"))
         self.assertTrue(getattr(self.interaction_instance, "eval"))
+
 
 if __name__ == '__main__':
     unittest.main()

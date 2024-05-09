@@ -63,8 +63,8 @@ class Training(ctk.CTkFrame):
         self.dropdown.grid(row=1, column=0)
 
         # Label for dataset selection
-        #self.dataset_label = ctk.CTkLabel(self, text="Dataset")
-        #self.dataset_label.grid(row=3, column=0)
+        # self.dataset_label = ctk.CTkLabel(self, text="Dataset")
+        # self.dataset_label.grid(row=3, column=0)
         # Dropdown for choosing dataset
         self.selection = ctk.StringVar(value=self.datasets[0])
         self.dropdown = ctk.CTkOptionMenu(self, values=self.datasets, variable=self.selection)
@@ -73,7 +73,7 @@ class Training(ctk.CTkFrame):
         self.is_training = False
         self.flag_list = [self.is_training]
         self.start_training_button = ctk.CTkButton(self, text="Start Training",
-                                                   command=lambda: self.start_training() if self.is_training == False
+                                                   command=lambda: self.start_training() if self.is_training is False
                                                    else self.cancel_training())
         self.start_training_button.grid(row=3, column=0)
 
@@ -85,12 +85,11 @@ class Training(ctk.CTkFrame):
         start = datetime.datetime.now()
         self.is_training = True
         self.flag_list[0] = True
-        #self.start_training_button.configure(text="Cancel Training")
+        # self.start_training_button.configure(text="Cancel Training")
         self.training_info.insert("end",
                                   f"Training started at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         training_thread = Thread(target=self.run_model)
         training_thread.start()
-
 
         self.training_info.insert("end", f"Model saved at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         end = datetime.datetime.now()
@@ -125,8 +124,9 @@ class Training(ctk.CTkFrame):
             case _:
                 self.training_info.insert("end", "No Model selected!\n\n")
 
-    #def change_Button(self):
-        #self.start_training_button.configure(text="Cancel Training")
+    # def change_Button(self):
+    # self.start_training_button.configure(text="Cancel Training")
+
 
 class Interaction(ctk.CTkFrame):
     def __init__(self, parent, controller):
