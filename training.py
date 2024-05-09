@@ -66,7 +66,7 @@ def get_batch(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Tensor
     data = map_story_to_tensor(story_list[idx], vocab, tokenizer)
     if len(data) < 2:
         print("Unsuitable data found:", idx, data, story_list[idx], file=sys.stderr)
-    max_idx = min(max_seq_len, data.size(0)) - 1
+    max_idx = min(max_seq_len, data.size(0)-1)
     return data[:max_idx], data[1:max_idx + 1]
 
 

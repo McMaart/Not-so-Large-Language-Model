@@ -6,7 +6,7 @@ from torch import Tensor
 import nltk
 from nltk.tokenize.treebank import TreebankWordDetokenizer
 import re
-from model_1 import TransformerModel
+from model_1 import TransformerModel, device
 
 
 def load_tiny_stories(end: int, start: int = 0, split: str = "train") -> list[str]:
@@ -61,11 +61,11 @@ def get_vocabulary_idx(story_list: list, max_words: int | None = None) -> dict[s
     vocab_freq = get_vocabulary_frequencies(story_list)
     if max_words is not None:
         vocab = {}
-        for _, (k, v) in zip(range(max_words-1), sorted(vocab_freq.items(), key=lambda item: item[1], reverse=True)):
+        for k, v in sorted(vocab_freq.items(), key=lambda item: item[1], reverse=True):
             vocab[k] = v
         vocab_freq = vocab
 
-    vocab_freq['<unk>'] = 0   # Placeholder for tokens that do not appear in the story
+    vocab_freq['<unk>'] = 0  # Placeholder for tokens that do not appear in the story
     return {k: idx for idx, k in enumerate(vocab_freq.keys())}
 
 
@@ -101,33 +101,35 @@ def tokens_to_story(token_list: list[str]) -> str:
     sentences = tokenizer.tokenize(sentence)
 
     story = " ".join([s.capitalize() for s in sentences])
-    story = re.sub(r'\si\s', r' I ', story) # Fix capitalization of 'i'
-    story = re.sub(r"n' t", "n't", story) # Fix contraction
-    story = re.sub(r"' s", "'s", story) # Fix possessive
+    story = re.sub(r'\si\s', r' I ', story)  # Fix capitalization of 'i'
+    story = re.sub(r"n' t", "n't", story)  # Fix contraction
+    story = re.sub(r"' s", "'s", story)  # Fix possessive
     return story
 
 
-def prompt_model(model, start_token: str, length: int = 50) -> str:
+def prompt_model(model_name: str, start_token: str, length: int = 50) -> str:
     vocab = load_vocabulary()
     vocab_rev = {k: v for v, k in vocab.items()}
     try:
-        model = torch.load(f'trained_models/{model}.pth')
+        model: TransformerModel = torch.load(f'trained_models/{model_name}.pth').to(device)
     except FileNotFoundError:
-        model = TransformerModel(len(vocab))
-    
-    tl = model.generate_tokens(torch.tensor(vocab[start_token], dtype=torch.int64), length)
+        model = TransformerModel(len(vocab)).to(device)
+
+    input_tensor = torch.tensor(vocab[start_token], dtype=torch.int64).unsqueeze(0)
+    tl = model.generate_tokens(input_tensor.to(device), length)
+
     token_list = []
     for val in tl:
         token_list.append(vocab_rev[val.item()])
     return tokens_to_story(token_list)
 
 
-def save_vocabulary(vocab: dict[str, int], filename="trained_models/vocabulary.pkl"):
+def save_vocabulary(vocab: dict[str, int], filename: str = "trained_models/vocabulary.pkl"):
     with open(filename, 'wb') as f:
         pickle.dump(vocab, f)
 
 
-def load_vocabulary(filename="trained_models/vocabulary.pkl") -> dict:
+def load_vocabulary(filename: str = "trained_models/vocabulary.pkl") -> dict:
     with open(filename, 'rb') as f:
         return pickle.load(f)
 
