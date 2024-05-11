@@ -35,13 +35,13 @@ class TransformerModel(nn.Module):
         return self.linear(embedding)
 
     @torch.no_grad()
-    def generate_tokens(self, start_token: Tensor | int, length: int) -> list:
+    def generate_tokens(self, start_token: Tensor | int, length: int) -> list[torch.Tensor]:
         self.eval()
         x = start_token
         token_list = [x]
         for _ in range(length):
             probs = F.softmax(self(x), dim=-1)
-            pred = torch.multinomial(probs[:-num_special_tokens], 1)[0]  # The last token is "<unk>"
+            pred = torch.multinomial(probs[0][:-num_special_tokens], 1)  # The last token is "<unk>"
             token_list.append(pred)
             x = pred
         return token_list
@@ -53,17 +53,17 @@ class PositionalEncoding(nn.Module):
         pos_enc = torch.empty(max_seq_len, embed_size, dtype=torch.float)
         self.dropout = nn.Dropout(p=dropout)
 
-        pos = torch.arange(max_seq_len, dtype=torch.float, device=device).unsqueeze(dim=1)
+        pos = torch.arange(max_seq_len, dtype=torch.float).unsqueeze(dim=1)
         inv_denominator = 10000 ** (-1 / embed_size * torch.arange(0, embed_size, 2, dtype=torch.float))
         pe_term = pos * inv_denominator
-        self.pos_encoding[:, 0::2] = torch.sin(pe_term)
-        self.pos_encoding[:, 1::2] = torch.cos(pe_term)
+        pos_enc[:, 0::2] = torch.sin(pe_term)
+        pos_enc[:, 1::2] = torch.cos(pe_term)
 
         # Register as buffer so the positional encoding is not passed to the optimizer
         self.register_buffer("pos_enc", pos_enc)
 
     def forward(self, x: Tensor) -> Tensor:
-        return self.dropout(x + self.pos_encoding[:x.size(0)])
+        return self.dropout(x + self.pos_enc[:x.size(0)])
 
 
 if __name__ == '__main__':
