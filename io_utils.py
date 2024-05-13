@@ -1,14 +1,13 @@
 import pickle
 import torch
-from torch.nn.utils.rnn import pad_sequence
 from datasets import load_dataset
 from torchtext.data import get_tokenizer
 from torch import Tensor
 import nltk
 from nltk.tokenize.treebank import TreebankWordDetokenizer
 import re
+from model_1 import TransformerModel, device
 
-from model_1 import TransformerModel
 
 
 def load_tiny_stories(end: int, start: int = 0, split="train"):
@@ -77,30 +76,6 @@ def map_story_to_tensor(story: str, vocab: dict, tokenizer) -> Tensor:
     default = vocab["<unk>"]
     return torch.tensor([vocab.get(word, default) for word in tokenizer(story)], dtype=torch.int64)
 
-
-def map_stories_to_tensor(stories, vocab, tokenizer, max_length=None) -> Tensor:
-    """
-    Converts a list of stories to a batched tensor.
-
-    Args:
-        stories (list of str): The list of story strings to convert.
-        vocab (dict): A dictionary mapping words to indices.
-        tokenizer (callable): Function to tokenize each story.
-        max_length (int, optional): The maximum length of the stories in the batch. If not provided, use the length of the longest story.
-
-    Returns:
-        torch.Tensor: A batched tensor of shape (batch_size, max_length).
-    """
-    tensor_list = [map_story_to_tensor(story, vocab, tokenizer) for story in stories]
-
-    if max_length is not None:
-        tensors = [tensor[:max_length] for tensor in tensor_list]  # Truncate to max_length if specified
-    else:
-        max_length = max(tensor.size(0) for tensor in tensor_list)  # Find the longest tensor
-
-    #tensor = pad_sequence(tensor_list, batch_first=True, padding_value=vocab['<pad>'])
-    return tensor_list
-
 def clean_stories(story_list: list[str]) -> list[str]:
     """
     Fixes certain encoding errors in the stories and removes all stories that continue to have non-ascii characters.
@@ -130,23 +105,24 @@ def tokens_to_story(token_list: list[str]) -> str:
     story = re.sub(r"' s", "'s", story) # Fix possessive
     return story
 
-def prompt_model(model, start_token: str, length: int = 50, end_on_eos: bool = False) -> str:
+def prompt_model(model_name: str, start_token: str, length: int = 50) -> str:
     vocab = load_vocabulary()
+    names = {"bob", "lilly", "sarah", "tom", "lucy"}
     vocab_rev = {k: v for v, k in vocab.items()}
-    if end_on_eos:
-        eos_idx = vocab['<eos>']
-    else:
-        eos_idx = None
-
     try:
-        model = torch.load(f'trained_models/{model}.pth')
+        model: TransformerModel = torch.load(f'trained_models/{model_name}.pth').to(device)
     except FileNotFoundError:
-        model = TransformerModel(len(vocab))
-    
-    tl = model.generate_tokens(torch.tensor(vocab[start_token], dtype=torch.int64), length, eos_idx)
+        model = TransformerModel(len(vocab)).to(device)
+
+    input_tensor = torch.tensor(vocab[start_token], dtype=torch.int64).unsqueeze(0)
+    tl = model.generate_tokens(input_tensor.to(device), length)
+
     token_list = []
     for val in tl:
-        token_list.append(vocab_rev[val.item()])
+        token = vocab_rev[val.item()]
+        if token in names:
+            token = token.title()
+        token_list.append(token)
     return tokens_to_story(token_list)
 
 
@@ -160,14 +136,6 @@ def load_vocabulary(filename="trained_models/vocabulary.pkl") -> dict:
         return pickle.load(f)
 
 
-def save_vocabulary(vocab: dict[str, int], filename="trained_models/vocabulary.pkl"):
-    with open(filename, 'wb') as f:
-        pickle.dump(vocab, f)
-
-
-def load_vocabulary(filename="trained_models/vocabulary.pkl") -> dict:
-    with open(filename, 'rb') as f:
-        return pickle.load(f)
 
 
 if __name__ == "__main__":
