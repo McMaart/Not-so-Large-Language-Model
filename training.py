@@ -8,6 +8,7 @@ from io_utils import (get_vocabulary_idx, map_story_to_tensor, load_tiny_stories
 from torchtext.data.utils import get_tokenizer
 from time import perf_counter
 from model_1 import TransformerModel, device, learning_rate, max_seq_len , batch_size
+from model_2 import RNNModel, device, learning_rate_rnn, max_seq_len_rnn, batch_size_rnn
 # import torch.nn.functional as F
 
 # Alt für single Batch
@@ -46,7 +47,7 @@ def train(data: list, model, loss_fn, optimizer, epochs: int = 1, flags: list = 
 
     return total_loss / len(data), batch_loss
 
-def train_on_batches(story_list, vocab, tokenizer, model, loss_fn, optimizer, batch_size, device, epochs: int = 1, flags: list = None):
+def train_on_batches(story_list, vocab, tokenizer, model, loss_fn, optimizer, batch_size, device, epochs: int = 1, flags: list = None, is_rnn: bool = False):
     model.train()  # Set the model to training mode
     pad_token_id = vocab['<pad>']  # Adjust as per your vocab
 
@@ -62,6 +63,11 @@ def train_on_batches(story_list, vocab, tokenizer, model, loss_fn, optimizer, ba
 
         total_loss = 0.0  # Reset total loss for each epoch
 
+        # Initialize h if the model is RNN
+        h = None
+        if is_rnn:
+            h = torch.zeros(model.num_layers, batch_size, model.hidden_size).to(device)
+
         for batch_index in range(total_batches):
             start_index = batch_index * batch_size
             end_index = start_index + batch_size
@@ -74,7 +80,13 @@ def train_on_batches(story_list, vocab, tokenizer, model, loss_fn, optimizer, ba
             x, y = x.to(device), y.to(device)
 
             optimizer.zero_grad()  # Clear gradients before each backward pass
-            pred = model(x)  # Compute predictions
+
+            # Compute predictions
+            if is_rnn:
+                pred, h = model(x, h.detach())  # Detach h before passing it to the model
+            else:
+                pred = model(x)
+
             mask = (y != pad_token_id) # mask pad token for loss function
             loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))  # Calculate loss without reduction
             loss = (loss * mask.view(-1).float()).mean()  # Apply mask and calculate mean loss with mean
@@ -204,6 +216,39 @@ def do_training(end: int = 40000, start: int = 0, load_model: bool = True, flags
 
     #return t, avg_loss, len(train_data), batch_loss
 
+def do_training_rnn(end: int = 1000, start: int = 0, load_model: bool = True, flags: list = None):
+    stories = load_tiny_stories(end, start)
+    stories = clean_stories(stories)
+    print("Stories have been loaded")
+
+    if load_model is True:
+        try:
+            vocabulary = load_vocabulary()
+            model = torch.load('trained_models/rnn_model.pth').to(device)
+        except FileNotFoundError as err:
+            print(f"Model/vocabulary does not exist!\n{err}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        vocabulary = get_vocabulary_idx(stories, 1536)
+        save_vocabulary(vocabulary)
+        model = RNNModel(len(vocabulary)).to(device)
+
+    tokenizer = get_tokenizer('basic_english')
+    loss_fn = nn.CrossEntropyLoss(reduction='none')  # Initialize loss function with 'none' reduction
+    optimizer = torch.optim.AdamW(model.parameters(), learning_rate_rnn)
+
+    t0 = perf_counter()
+    avg_loss, batch_loss = train_on_batches(stories, vocabulary, tokenizer, model, loss_fn, optimizer,device=device, batch_size=batch_size_rnn, epochs=1,  is_rnn=True)
+    t = perf_counter() - t0
+    print(f"\nTraining time: {t:.5}s")
+    print(f"Average Loss: {avg_loss:.5}")
+    print(f"Batch Loss: {batch_loss}")
+
+    torch.save(model, 'trained_models/rnn_model.pth')
 
 if __name__ == '__main__':
-    do_training(load_model=False)
+    from sys import argv
+    if len(argv) > 1 and argv[1] == 'rnn':
+        do_training_rnn(end = 30000, load_model=False)
+    else:
+        do_training(load_model=False)

@@ -144,11 +144,12 @@ def prompt_model(model, start_token: str, length: int = 50, end_on_eos: bool = F
         model = TransformerModel(len(vocab))
     
     tl = model.generate_tokens(torch.tensor(vocab[start_token], dtype=torch.int64), length, eos_idx)
+    # print(f"Generated tokens: {tl}")  # Debug print statement
+
     token_list = []
     for val in tl:
         token_list.append(vocab_rev[val.item()])
     return tokens_to_story(token_list)
-
 
 def save_vocabulary(vocab: dict[str, int], filename="trained_models/vocabulary.pkl"):
     with open(filename, 'wb') as f:

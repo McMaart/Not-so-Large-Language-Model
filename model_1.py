@@ -70,7 +70,7 @@ class TransformerModel(nn.Module):
         #return self.linear(embedding).to(device)
 
     @torch.no_grad()
-    def generate_tokens(self, start_token: Tensor | int, length: int) -> list:
+    def generate_tokens(self, start_token: Tensor | int, length: int, eos_idx: int = None) -> list:
         self.eval()
         x = start_token.to(device)
         token_list = [x]
@@ -80,6 +80,8 @@ class TransformerModel(nn.Module):
             pred = torch.multinomial(probs, 1)[0]
             token_list.append(pred)
             x = pred
+            if eos_idx is not None and pred == eos_idx:
+                break
         return token_list
 
     class TransformerBlock(nn.Module):
