@@ -60,7 +60,6 @@ class RNNModel(nn.Module):
                 break
         return token_list
 
-    @torch.no_grad()
 
 
 
