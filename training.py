@@ -123,7 +123,7 @@ def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Ten
     return data[:-1], data[1:]
 
 
-def do_training(end: int = 2000, start: int = 0, load_model: bool = True, flags: list = None):
+def do_training(end: int = 2000000, start: int = 0, load_model: bool = True, flags: list = None):
     stories = load_tiny_stories(end, start)
     stories = clean_stories(stories)
     print("Stories have been loaded")
@@ -156,14 +156,14 @@ def do_training(end: int = 2000, start: int = 0, load_model: bool = True, flags:
     t0 = perf_counter()
 
     avg_loss = train_on_batches(stories, vocabulary, tokenizer, model, loss_fn, optimizer, batch_size,
-                                            epochs=10, device=device)
+                                            epochs=2, device=device)
     t = perf_counter() - t0
     print(f"\nTraining time: {t:.5}s")
     print(f"Average Loss: {avg_loss:.5}")
 
 
-    #torch.save(model, 'trained_models/model.pth')
-    torch.save(model, 'trained_models/model2.pth')
+    torch.save(model, 'trained_models/model.pth')
+    #torch.save(model, 'trained_models/model2.pth')
 
     #return t, avg_loss, len(train_data), batch_loss
 

@@ -58,8 +58,8 @@ class TransformerModel(nn.Module):
                 probs = F.softmax(logits / temperature, dim=-1)  # Apply softmax to convert logits to probabilities
                 pred = torch.multinomial(probs, 1)  # Sample from the probability distribution
                 pred_item = pred.item()  # Convert tensor to integer
-                if pred_item == '<eos>':
-                    break
+                #if pred_item == eos_token_id: #ToDO integrate EOS token
+                   # break
                 token_list.append(pred_item)  # Add generated token to the list
                 x = torch.tensor([[pred_item]], dtype=torch.int64).to(device)  # Prepare input for next generation step
 
