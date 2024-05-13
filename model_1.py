@@ -61,7 +61,7 @@ class TransformerModel(nn.Module):
                 token_list.append(pred_item)  # Add generated token to the list
                 x = torch.tensor([[pred_item]], dtype=torch.int64).to(device)  # Prepare input for next generation step
 
-        return token_list  # This should be outside the loop
+        return token_list 
 
     class TransformerBlock(nn.Module):
         def __init__(self, mod_dim, num_heads, d_ff, dropout=0.01):
