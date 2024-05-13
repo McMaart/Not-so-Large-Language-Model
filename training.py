@@ -87,20 +87,22 @@ def evaluate(data, model, loss_fn):
     return total_loss / len(data)
 
 
-def get_batch(batch_stories: list[str], vocab, tokenizer) -> tuple[Tensor, Tensor]:
+def get_batch(batch_stories: list[str], vocab, tokenizer, use_eos=False) -> tuple[Tensor, Tensor]:
     """
-    Returns a Tensor of batchsize (input, target) for training.
-    Both input and target Tensor have sizes max_seq_len (for self-attention).
+    Converts batch stories into tensors, appending the <eos> token if required.
     """
-    # ToDo: stack multiple input/target tensor for more efficient training using GPU
     batch_x = []
     batch_y = []
 
     for story in batch_stories:
-        data = map_story_to_tensor(story, vocab, tokenizer)
-        max_idx = min(max_seq_len, data.size(0) - 1)
-        x = data[:max_idx]
-        y = data[1:max_idx + 1]
+        tokens = tokenizer(story) + (['<eos>'] if use_eos else [])
+        indices = [vocab.get(token, vocab['<unk>']) for token in tokens]
+        tensor = torch.tensor(indices, dtype=torch.int64)
+
+        max_idx = min(max_seq_len, tensor.size(0) - 1)
+        x = tensor[:max_idx]
+        y = tensor[1:max_idx + 1]
+
         batch_x.append(x)
         batch_y.append(y)
 
@@ -108,7 +110,8 @@ def get_batch(batch_stories: list[str], vocab, tokenizer) -> tuple[Tensor, Tenso
     x_tensor = pad_sequence(batch_x, batch_first=True, padding_value=vocab['<pad>'])
     y_tensor = pad_sequence(batch_y, batch_first=True, padding_value=vocab['<pad>'])
 
-    return x_tensor, y_tensor, #max_idx
+    return x_tensor, y_tensor
+
 
 
 def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Tensor, Tensor]:
@@ -120,7 +123,7 @@ def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Ten
     return data[:-1], data[1:]
 
 
-def do_training(end: int = 2000000, start: int = 0, load_model: bool = True, flags: list = None):
+def do_training(end: int = 2000, start: int = 0, load_model: bool = True, flags: list = None):
     stories = load_tiny_stories(end, start)
     stories = clean_stories(stories)
     print("Stories have been loaded")
@@ -153,7 +156,7 @@ def do_training(end: int = 2000000, start: int = 0, load_model: bool = True, fla
     t0 = perf_counter()
 
     avg_loss = train_on_batches(stories, vocabulary, tokenizer, model, loss_fn, optimizer, batch_size,
-                                            epochs=15, device=device)
+                                            epochs=10, device=device)
     t = perf_counter() - t0
     print(f"\nTraining time: {t:.5}s")
     print(f"Average Loss: {avg_loss:.5}")

@@ -58,6 +58,8 @@ class TransformerModel(nn.Module):
                 probs = F.softmax(logits / temperature, dim=-1)  # Apply softmax to convert logits to probabilities
                 pred = torch.multinomial(probs, 1)  # Sample from the probability distribution
                 pred_item = pred.item()  # Convert tensor to integer
+                if pred_item == '<eos>':
+                    break
                 token_list.append(pred_item)  # Add generated token to the list
                 x = torch.tensor([[pred_item]], dtype=torch.int64).to(device)  # Prepare input for next generation step
 
@@ -190,6 +192,6 @@ if __name__ == '__main__':
     # Create input tensor correctly
     input_tensor = torch.tensor([vocab["once"]], dtype=torch.int64).unsqueeze(0).to(device)
     # Pass the single integer value to generate_tokens
-    tl = model.generate_tokens(input_tensor[0][0].item(), 200)
+    tl = model.generate_tokens(input_tensor[0][0].item(), 32)
     for val in tl:
         print(vocab_rev[val], end=" ")

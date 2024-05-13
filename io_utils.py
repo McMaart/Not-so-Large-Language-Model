@@ -52,21 +52,27 @@ def get_vocabulary_frequencies(story_list: list[str]) -> dict[str, int]:
 
 def get_vocabulary_idx(story_list: list, max_words: int | None = None, eos: bool = False) -> dict[str, int]:
     """
-    Assigns an index to each word that appears in the list of stories
+    Assigns an index to each word that appears in the list of stories, including special tokens.
     """
     vocab_freq = get_vocabulary_frequencies(story_list)
+    sorted_vocab = sorted(vocab_freq.items(), key=lambda item: item[1], reverse=True)
+
+    # If a max_words limit is set, truncate the vocabulary
     if max_words is not None:
-        vocab = {}
-        for _, (k, v) in zip(range(max_words-1), sorted(vocab_freq.items(), key=lambda item: item[1], reverse=True)):
-            vocab[k] = v
-        vocab_freq = vocab
+        sorted_vocab = sorted_vocab[:max_words]
 
-    vocab_freq['<unk>'] = 0
-
+    # Add special tokens
+    vocab = {'<unk>': 0, '<pad>': 1}
     if eos:
-        vocab_freq['<eos>'] = len(vocab_freq)
-    vocab_freq['<pad>'] = len(vocab_freq)
-    return {k: idx for idx, k in enumerate(vocab_freq.keys())}
+        vocab['<eos>'] = 2
+        start_idx = 3
+    else:
+        start_idx = 2
+
+    # Add words to the vocab
+    vocab.update({word: i + start_idx for i, (word, freq) in enumerate(sorted_vocab)})
+
+    return vocab
 
 
 def map_story_to_tensor(story: str, vocab: dict, tokenizer) -> Tensor:
@@ -169,7 +175,4 @@ if __name__ == "__main__":
     print(f"Vocab Indices: {vocab_index}")
     print(f"Story Tensor: {story_tensor}")
 
-    stories_tensor = map_stories_to_tensor(stories, vocab_index, tokenizer)
-    print(f"Stories Tensor: {stories_tensor}")
-    #print(stories_tensor.size())
 
