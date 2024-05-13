@@ -1,5 +1,5 @@
 import pickle
-import time
+import sys
 import torch
 from datasets import load_dataset
 from torch.nn.utils.rnn import pad_sequence
@@ -64,7 +64,7 @@ def get_vocabulary_idx(story_list: list[str], max_words: int | None = None) -> d
     vocab_freq = get_vocabulary_frequencies(story_list)
     if max_words is not None:
         vocab = {}
-        for k, v in sorted(vocab_freq.items(), key=lambda item: item[1], reverse=True):
+        for _, (k, v) in zip(range(max_words - 2), sorted(vocab_freq.items(), key=lambda item: item[1], reverse=True)):
             vocab[k] = v
         vocab_freq = vocab
 
@@ -88,14 +88,19 @@ def clean_stories(story_list: list[str]) -> list[str]:
     """
     for idx, story in enumerate(story_list):
         if 'â' in story:
-            story = story.replace('â€™', "'")
-            story = story.replace("â€“", "-")
-            story = story.replace("â€”", " - ")
-            story = story.replace("â€š", ",")
-            story = story.replace("â€œ", '"')
-            story = story.replace('â€', '"')
+            story = remove_enc_errors(story)
             story_list[idx] = story
     return [story for story in story_list if story.isascii() and len(story) > 1]
+
+
+def remove_enc_errors(story: str) -> str:
+    story = story.replace('â€™', "'")
+    story = story.replace("â€“", "-")
+    story = story.replace("â€”", " - ")
+    story = story.replace("â€š", ",")
+    story = story.replace("â€œ", '"')
+    story = story.replace('â€', '"')
+    return story
 
 
 def tokens_to_story(token_list: list[str]) -> str:
@@ -116,15 +121,18 @@ def tokens_to_story(token_list: list[str]) -> str:
 
 def prompt_model(model_name: str, start_token: str, length: int = 50) -> str:
     vocab = load_vocabulary()
-    names = {"bob", "lilly", "sarah", "tom", "lucy"}
     vocab_rev = {k: v for v, k in vocab.items()}
     try:
         model: TransformerModel = torch.load(f'trained_models/{model_name}.pth').to(device)
     except FileNotFoundError:
         model = TransformerModel(len(vocab)).to(device)
 
-    input_tensor = torch.tensor(vocab[start_token], dtype=torch.int64).unsqueeze(0)
+    input_tensor = torch.tensor(vocab[start_token], dtype=torch.int64)
+    input_tensor = input_tensor.view(1, -1)
     tl = model.generate_tokens(input_tensor.to(device), length)
+
+    # List of all names in the vocabulary
+    names = {'ben', 'bob', 'emily', 'joe', 'john', 'lily', 'lucy', 'max', 'mia', 'sam', 'sara', 'sarah', 'timmy', 'tom'}
 
     token_list = []
     for val in tl:
@@ -136,17 +144,35 @@ def prompt_model(model_name: str, start_token: str, length: int = 50) -> str:
 
 
 class TinyStories(Dataset):
-    def __init__(self, vocabulary, tokenizer=get_tokenizer('basic_english'), split: str = "train", ):
+    def __init__(self, vocabulary, tokenizer=get_tokenizer('basic_english'), split: str = "train", max_seq_len=None):
         self.stories = load_dataset("roneneldan/TinyStories", num_proc=4, split=split)
-        self.default_token = vocab["<unk>"]
         self.vocab = vocabulary
         self.tokenizer = tokenizer
 
-    def __getitem__(self, index):
+        self.unk_token = self.vocab["<unk>"]
+        self.pad_token = self.vocab["<pad>"]
+        self.max_seq_len = max_seq_len
+
+    def get_batch(self, sequences) -> tuple[Tensor, Tensor]:
+        padded_seq = pad_sequence(sequences, batch_first=True, padding_value=self.pad_token)
+        return padded_seq[:, :-1].contiguous(), padded_seq[:, 1:].contiguous()
+
+    def __getitem__(self, index) -> Tensor:
         story = self.stories[index]['text']
-        story_list = clean_stories([story])
-        return torch.tensor([self.vocab.get(word, self.default_token) for word in self.tokenizer(story_list[0])],
-                            dtype=torch.int64) if len(story_list) else torch.tensor([], dtype=torch.int64)
+        if 'â' in story:
+            story = remove_enc_errors(story)
+
+        if self.max_seq_len is None:
+            token_list = [self.vocab.get(word, self.unk_token) for word in self.tokenizer(story)]
+        else:
+            token_list = []
+            for _, word in zip(range(self.max_seq_len + 1), self.tokenizer(story)):
+                token_list.append(self.vocab.get(word, self.unk_token))
+
+        data = torch.tensor(token_list, dtype=torch.int64)
+        if len(data) < 2:
+            print(f"'useless' story (of length {len(data)}) at index {index}", file=sys.stderr)
+        return data
 
     def __len__(self):
         return len(self.stories)
@@ -167,15 +193,8 @@ if __name__ == "__main__":
 
     vocab = load_vocabulary()
     data = TinyStories(vocab)
-    # ToDo: make sure pad_sequence pads with pad_token
-    dataloader = DataLoader(data, batch_size=32, collate_fn=pad_sequence, num_workers=8)
-
-    i = 0
-    for data in dataloader:
-        print(data.shape)
-        i += 1
-        if i == 40:
-            break
+    dataloader = DataLoader(data, batch_size=32, collate_fn=data.get_batch, num_workers=2)
+    print(len(dataloader))
 
     # stories = load_tiny_stories(1000)
     # stories = clean_stories(stories)

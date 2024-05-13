@@ -10,11 +10,11 @@ device = (
 learning_rate = 5e-4
 batch_size = 16
 max_seq_len = 256
-num_special_tokens = 1
+num_special_tokens = 2
 
 
 class TransformerModel(nn.Module):
-    def __init__(self, vocab_size: int, embed_size: int = 128, nhead: int = 8, num_layers: int = 6):
+    def __init__(self, vocab_size: int, embed_size: int = 128, nhead: int = 4, num_layers: int = 4):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
@@ -22,26 +22,26 @@ class TransformerModel(nn.Module):
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
         self.pos_encoding = PositionalEncoding(embed_size)
 
-        # encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=nhead)
-        # self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
+        encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=nhead, batch_first=True)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
 
     def forward(self, x: Tensor) -> Tensor:
         embedding: Tensor = self.embedding(x)
         embedding = self.pos_encoding(embedding)
 
-        # mask = nn.Transformer.generate_square_subsequent_mask(x.size(0))
-        # embedding = self.encoder(embedding, mask=mask, is_causal=True)
+        mask = nn.Transformer.generate_square_subsequent_mask(x.size(1))
+        embedding = self.encoder(embedding, mask=mask, is_causal=True)
         return self.linear(embedding)
 
     @torch.no_grad()
-    def generate_tokens(self, start_token: Tensor | int, length: int) -> list[torch.Tensor]:
+    def generate_tokens(self, start_token: Tensor, length: int) -> list[torch.Tensor]:
         self.eval()
         x = start_token
         token_list = [x]
         for _ in range(length):
             probs = F.softmax(self(x), dim=-1)
-            pred = torch.multinomial(probs[0][:-num_special_tokens], 1)  # The last token is "<unk>"
+            pred = torch.multinomial(probs[:, 0, :-num_special_tokens], 1)  # The last token is "<unk>"
             token_list.append(pred)
             x = pred
         return token_list
@@ -63,11 +63,16 @@ class PositionalEncoding(nn.Module):
         self.register_buffer("pos_enc", pos_enc)
 
     def forward(self, x: Tensor) -> Tensor:
-        return self.dropout(x + self.pos_enc[:x.size(0)])
+        """
+        Applies the positional encoding (and dropout) to the embedding.
+        :param x: Tensor of shape [batch_size, seq_len, embed_size]
+        :return: Tensor of shape [batch_size, seq_len, embed_size]
+        """
+        return self.dropout(x + self.pos_enc[:x.size(1)])
 
 
 if __name__ == '__main__':
     from io_utils import prompt_model
 
-    story = prompt_model("model", "there", 42)
+    story = prompt_model("model", "once", 42)
     print(f"\n{story}")
