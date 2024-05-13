@@ -8,16 +8,16 @@ device = (
     else "mps" if torch.backends.mps.is_available()
     else "cpu"
 )
-learning_rate = 3e-4 #1e-3
+learning_rate = 1e-3
 batch_size = 64
-max_seq_len = 64  # needs to be max story length from batch or max sequence length
+max_seq_len = 256  # needs to be max story length from batch or max sequence length
 num_heads = 8
 temperature = 1
 #d_model = 64  #
 embed_size = 64
-d_ff = 4 * embed_size    # 4 times model
-dropout = 0.01
-num_layers = 1
+d_ff = embed_size  * 4    # 4 times model
+dropout = 0.00
+num_layers = 4
 
 
 
@@ -28,16 +28,9 @@ class TransformerModel(nn.Module):
         self.embed_size = embed_size
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
         self.pos_encoding = PositionalEncoding(embed_size)
-        #self.pos_encoding = nn.Embedding(max_seq_len, embed_size)
 
-        #Pytorch Transformer
-        #encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=8).to(device)
-        #self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=6).to(device)
 
         self.layers = nn.Sequential(*(self.TransformerBlock(embed_size, num_heads, d_ff, dropout) for _ in range(num_layers)))
-        #for i in range(num_layers):
-            #self.layers.append((self.TransformerBlock(embed_size, num_heads, d_ff, dropout)))
-        #nn.ModuleList([self.TransformerBlock(embed_size, num_heads, d_ff, dropout) for _ in range(num_layers)])
         self.norm = nn.LayerNorm(self.embed_size) # B*T*E
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
         self.to(device)
@@ -46,41 +39,29 @@ class TransformerModel(nn.Module):
         #Änderung mit Batches
         x = self.embedding(x)  # [batch_size, seq_len, embed_size] B*T*E
         x = self.pos_encoding(x)  # Add positional encoding
-        #B,T,E = x.shape   #shape for generate function ?
-        #pos_embeds = self.pos_encoding(torch.arange(T).to(device)).to(device)
-        #x = x + pos_embeds
-        #x = x.to(device)
-        #for layer in self.layers:
-            #x = layer(x)
-        #x = self.norm(x)  # Normalize
-        #return self.linear(x)
         un_norm = self.linear(self.norm(self.layers(x)))
-        probs = nn.functional.softmax(un_norm, dim =-1).to(device)
-        return torch.round(probs)
-
-        #Pytorch Transformer
-        #embedding: Tensor = self.embedding(x).to(device)
-        #embedding = self.pos_encoding(embedding).to(device)
-        #src_mask = nn.Transformer.generate_square_subsequent_mask(x.size(0)).to(device)
-        #embedding = self.encoder(embedding, mask=src_mask, is_causal=True)
-
-
-        #embedding: Tensor = self.embedding(x).to(device)
-        #embedding = self.pos_encoding(embedding).to(device)
-        #return self.linear(embedding).to(device)
+        #probs = nn.functional.softmax(un_norm, dim=-1).to(device)
+        return un_norm
 
     @torch.no_grad()
     def generate_tokens(self, start_token: Tensor | int, length: int) -> list:
+
         self.eval()
-        x = start_token.to(device)
-        token_list = [x]
+        x = torch.as_tensor([start_token], dtype=torch.int64).unsqueeze(0).to(
+            device)  # Ensure x is [1, 1] if start_token is int
+        token_list = [start_token]  # Assuming start_token is already an integer here!
+
         for _ in range(length):
-            logits = self(x)  # Directly use logits to adjust temperature
-            probs = F.softmax(logits / temperature, dim=-1).to(device)  # Apply temperature
-            pred = torch.multinomial(probs, 1)[0]
-            token_list.append(pred)
-            x = pred
-        return token_list
+            logits = self(x)  # Generate logits
+            if logits.dim() == 3 and logits.size(1) == 1:
+                logits = logits.squeeze(1)  # Adjust shape from [1, 1, vocab_size] to [1, vocab_size]
+                probs = F.softmax(logits / temperature, dim=-1)  # Apply softmax to convert logits to probabilities
+                pred = torch.multinomial(probs, 1)  # Sample from the probability distribution
+                pred_item = pred.item()  # Convert tensor to integer
+                token_list.append(pred_item)  # Add generated token to the list
+                x = torch.tensor([[pred_item]], dtype=torch.int64).to(device)  # Prepare input for next generation step
+
+        return token_list  # This should be outside the loop
 
     class TransformerBlock(nn.Module):
         def __init__(self, mod_dim, num_heads, d_ff, dropout=0.01):
@@ -103,7 +84,7 @@ class TransformerModel(nn.Module):
             # Another add & norm
             #x = self.norm2(x + self.dropout(ff_output))
             x = self.norm2(x + self.dropout(ffn_output))
-            return torch.round(x, decimals=4)
+            return x
 
 
         class MultiHeadAttention(nn.Module):
@@ -122,7 +103,7 @@ class TransformerModel(nn.Module):
                 concat = torch.cat(head_outputs, dim=-1) # Concatenate to B*T*A
                 concat = self.norm(concat)  # Normalize
                 result = self.linear(concat)
-                return torch.round(result)
+                return result
 
             class SingleHeadAttention(nn.Module):
                 def __init__(self, embed_dim, att_dim):
@@ -132,25 +113,28 @@ class TransformerModel(nn.Module):
                     self.values = nn.Linear(embed_dim, att_dim, bias=False)
 
                 def forward(self, embed: Tensor) -> Tensor:
-                    #print(f"embed size: {embed.size()}") # B*T*E
+                    #print(f"embed size: {embed.size()}") # B*T*E,
                     k = self.keys(embed)
-                    #print(f"Keys size: {k.size()}") # B*T*A  A = E/number_heads
+                    #print(f"Keys size: {k.size()}") # B*T*A, A = E/number_heads
+                    #print(f"Attention Dimension: {k.size(-1)}")
                     q = self.queries(embed)
                     v = self.values(embed)
 
-                    #scores = (q @ torch.transpose(k, 1, 2))
-                    #B, T, A = k.shape
-                    #scores = scores / (A**0.5) # scaled by att_dim
+                    batch_size, max_seq_len, _ = embed.size()
+
                     scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(k.size(-1))
+                    #print(f"Scores size: {k.size()}") # B*T*A, A = E/number_heads
                     mask = torch.tril(torch.ones(max_seq_len, max_seq_len)).to(device)  # T*T #ToDo Get T to match max_idx from get_batch()
                     mask = mask == 0
+                    #print(f"Mask size: {mask.size()}")  # T*T
                     scores = scores.masked_fill(mask, float('-inf')) # B*T*T
+                    #print(f"Scores size after mask: {mask.size()}")  # B*T*A, A = E/number_heads
                     attention = F.softmax(scores, dim=-1)
                     output = attention @ v #torch.matmul(attention, v)
-                    return torch.round(output, decimals=4)
+                    return output
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, embed_size: int, dropout: float = 0.07):
+    def __init__(self, embed_size: int, dropout: float = 0.01):
         super().__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -174,16 +158,6 @@ class PositionalEncoding(nn.Module):
         # Use the registered buffer, ensuring we only apply as many positions as the current x's sequence length
         x = x + self.pe[:x.size(1)] #* self.scale
         return self.dropout(x)
-
-        # Code vorher
-        #pos = torch.arange(max_seq_len, dtype=torch.float).unsqueeze(dim=1)
-        #inv_denominator = 10000**(-1/embed_size*torch.arange(0, embed_size, 2, dtype=torch.float))
-        #pe_term = pos * inv_denominator
-        #self.pos_encoding[:, 0::2] = torch.sin(pe_term)
-        #self.pos_encoding[:, 1::2] = torch.cos(pe_term)
-
-    #def forward(self, x: Tensor) -> Tensor:
-        #return self.dropout(x + self.pos_encoding[:x.size(0)]).to(device)
 
 class PositionwiseFeedforward(nn.Module):
     def __init__(self, d_model, d_ff, dropout=0.01):
@@ -213,7 +187,9 @@ if __name__ == '__main__':
     except FileNotFoundError:
         model = TransformerModel(len(vocab))
 
-    input_tensor = torch.tensor(vocab["once"], dtype=torch.int64).unsqueeze(0)
-    tl = model.generate_tokens(input_tensor, 60)
+    # Create input tensor correctly
+    input_tensor = torch.tensor([vocab["once"]], dtype=torch.int64).unsqueeze(0).to(device)
+    # Pass the single integer value to generate_tokens
+    tl = model.generate_tokens(input_tensor[0][0].item(), 200)
     for val in tl:
-        print(vocab_rev[val.item()], end=" ")
+        print(vocab_rev[val], end=" ")
