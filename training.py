@@ -150,6 +150,7 @@ def objective(trial):
     learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-3, log=True)
     batch_size = trial.suggest_categorical('batch_size', [32, 64, 128, 256])
     dim_ff = trial.suggest_int('dim_ff', 512, 4096, step=256)
+    dropout = trial.suggest_float('dropout', 0.1, 0.5)
 
     # Load data
     stories = load_tiny_stories(40000)
@@ -158,7 +159,7 @@ def objective(trial):
     save_vocabulary(vocabulary)
     data = TinyStories(vocabulary, max_seq_len=max_seq_len)
 
-    model = TransformerModel(len(vocabulary), embed_size, nhead, num_layers, dim_ff=dim_ff).to(device)
+    model = TransformerModel(len(vocabulary), embed_size, nhead, num_layers, dim_ff=dim_ff, dropout=dropout).to(device)
     loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
