@@ -145,10 +145,11 @@ def eval_setup(model_name: str = "model", max_num_batches: int = 1000):
 def objective(trial):
     # Define hyperparameter search space
     embed_size = trial.suggest_categorical('embed_size', [128, 256, 512, 768])
-    nhead = trial.suggest_categorical('nhead', [2, 4, 8])
-    num_layers = trial.suggest_int('num_layers', 2, 6)
+    nhead = trial.suggest_categorical('nhead', [1, 2, 4, 8])
+    num_layers = trial.suggest_int('num_layers', 1, 2, 4)
     learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-3, log=True)
     batch_size = trial.suggest_categorical('batch_size', [32, 64, 128, 256])
+    dim_ff = trial.suggest_int('dim_ff', 512, 4096, step=256)
 
     # Load data
     stories = load_tiny_stories(40000)
@@ -157,7 +158,7 @@ def objective(trial):
     save_vocabulary(vocabulary)
     data = TinyStories(vocabulary, max_seq_len=max_seq_len)
 
-    model = TransformerModel(len(vocabulary), embed_size, nhead, num_layers).to(device)
+    model = TransformerModel(len(vocabulary), embed_size, nhead, num_layers, dim_ff=dim_ff).to(device)
     loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
@@ -167,6 +168,6 @@ def objective(trial):
 
 
 if __name__ == '__main__':
-    do_training(10000, load_model=False, hyper_search=True)
+    do_training(8000, load_model=False, hyper_search=True)
     print("Starting evaluation...")
     # eval_setup(max_num_batches=1000)
