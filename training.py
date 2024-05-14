@@ -158,7 +158,7 @@ def do_training(end: int = 64000, start: int = 0, load_model: bool = False, flag
 
     t0 = perf_counter()
 
-    avg_loss = train_on_batches(train_dataset, model, loss_fn, optimizer, batch_size, device, epochs=1, validation_dataset=val_dataset)
+    avg_loss = train_on_batches(train_dataset, model, loss_fn, optimizer, batch_size, device, epochs=2, validation_dataset=val_dataset)
     #avg_loss = train_on_batches(train_dataset, model, loss_fn, optimizer, batch_size, device, epochs=1,
                                     #validation_dataset=None)
 

@@ -15,7 +15,7 @@ num_heads = 8
 temperature = 1
 #d_model = 64  #
 embed_size = 768
-d_ff = embed_size * 4    # 4 times model
+d_ff = embed_size * 5    # 4 times model
 dropout = 0.1
 num_layers = 1
 
