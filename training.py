@@ -7,13 +7,14 @@ from torchtext.data.utils import get_tokenizer
 from time import perf_counter
 from model_1 import TransformerModel, device, learning_rate, max_seq_len
 from torch.utils.data import DataLoader
+import optuna
 
 
-def train(data, model, loss_fn, optimizer, epochs: int = 1, max_num_batches: int = None, flags: list = None):
+def train(data, model, loss_fn, optimizer, epochs: int = 1, max_num_batches: int = None, flags: list = None, batch_size=32):
     model.train()
     total_loss = 0.
     curr_loss = 0.
-    log_interval = 500
+    log_interval = 250
     batch_loss = []
 
     # just for IDE
@@ -22,7 +23,7 @@ def train(data, model, loss_fn, optimizer, epochs: int = 1, max_num_batches: int
 
     for epoch in range(1, epochs + 1):
         shuffle = True  # shuffle = False if epoch == 1 else True
-        dataloader = DataLoader(data, batch_size=32, collate_fn=data.get_batch, num_workers=2, shuffle=shuffle,
+        dataloader = DataLoader(data, batch_size=batch_size, collate_fn=data.get_batch, num_workers=2, shuffle=shuffle,
                                 pin_memory=True)
         if max_num_batches is None:
             max_num_batches = len(dataloader)
@@ -91,40 +92,46 @@ def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Ten
 
 
 def do_training(max_num_batches: int | None = 1000, model_name: str = "model", load_model: bool = True,
-                flags: list[bool] = None):
-
-    if load_model is True:
-        try:
-            vocabulary = load_vocabulary()
-            model = torch.load(f'trained_models/{model_name}.pth').to(device)
-        except FileNotFoundError as err:
-            print(f"Model/vocabulary does not exist!\n{err}", file=sys.stderr)
-            sys.exit(1)
+                flags: list[bool] = None, hyper_search: bool = False):
+    if hyper_search:
+        study = optuna.create_study(direction='minimize')
+        study.optimize(objective, n_trials=50)
+        print(f"Best trial: {study.best_trial.value}")
+        print(f"Best hyperparameters: {study.best_trial.params}")
     else:
-        print("Creating vocabulary...")
-        stories = load_tiny_stories(30000) # Number of stories used for creating the vocabulary, not the vocabulary size
-        stories = clean_stories(stories)
-        vocabulary = get_vocabulary_idx(stories, 2048)
-        save_vocabulary(vocabulary)
-        model = TransformerModel(len(vocabulary)).to(device)
+        if load_model is True:
+            try:
+                vocabulary = load_vocabulary()
+                model = torch.load(f'trained_models/{model_name}.pth').to(device)
+            except FileNotFoundError as err:
+                print(f"Model/vocabulary does not exist!\n{err}", file=sys.stderr)
+                sys.exit(1)
+        else:
+            print("Creating vocabulary...")
+            stories = load_tiny_stories(
+                300000)  # Number of stories used for creating the vocabulary, not the vocabulary size
+            stories = clean_stories(stories)
+            vocabulary = get_vocabulary_idx(stories, 2048)
+            save_vocabulary(vocabulary)
+            model = TransformerModel(len(vocabulary)).to(device)
 
-    data = TinyStories(vocabulary, max_seq_len=max_seq_len)
-    loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
-    optimizer = torch.optim.AdamW(model.parameters(), learning_rate)
-    print("Model and stories have been loaded")
+        data = TinyStories(vocabulary, max_seq_len=max_seq_len)
+        loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
+        optimizer = torch.optim.AdamW(model.parameters(), learning_rate)
+        print("Model and stories have been loaded")
 
-    t0 = perf_counter()
-    try:
-        avg_loss, batch_loss = train(data, model, loss_fn, optimizer, max_num_batches=max_num_batches, flags=flags)
-    except KeyboardInterrupt:
-        print("Cancelling training, loss statistics will not be available")
-        avg_loss = -1
-        batch_loss = []
-    t = perf_counter() - t0
-    print(f"Average Loss: {avg_loss:.5}")
-    torch.save(model, f'trained_models/{model_name}.pth')
+        t0 = perf_counter()
+        try:
+            avg_loss, batch_loss = train(data, model, loss_fn, optimizer, max_num_batches=max_num_batches, flags=flags)
+        except KeyboardInterrupt:
+            print("Cancelling training, loss statistics will not be available")
+            avg_loss = -1
+            batch_loss = []
+        t = perf_counter() - t0
+        print(f"Average Loss: {avg_loss:.5}")
+        torch.save(model, f'trained_models/{model_name}.pth')
 
-    return t, avg_loss, max_num_batches, batch_loss
+        return t, avg_loss, max_num_batches, batch_loss
 
 
 def eval_setup(model_name: str = "model", max_num_batches: int = 1000):
@@ -135,8 +142,31 @@ def eval_setup(model_name: str = "model", max_num_batches: int = 1000):
     loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
     print(evaluate(data, model, loss_fn, max_num_batches))
 
+def objective(trial):
+    # Define hyperparameter search space
+    embed_size = trial.suggest_categorical('embed_size', [128, 256, 512, 768])
+    nhead = trial.suggest_categorical('nhead', [2, 4, 8])
+    num_layers = trial.suggest_int('num_layers', 2, 6)
+    learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-3, log=True)
+    batch_size = trial.suggest_categorical('batch_size', [32, 64, 128, 256])
+
+    # Load data
+    stories = load_tiny_stories(40000)
+    stories = clean_stories(stories)
+    vocabulary = get_vocabulary_idx(stories, 2048)
+    save_vocabulary(vocabulary)
+    data = TinyStories(vocabulary, max_seq_len=max_seq_len)
+
+    model = TransformerModel(len(vocabulary), embed_size, nhead, num_layers).to(device)
+    loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
+    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+
+    # Train model
+    avg_loss, _ = train(data, model, loss_fn, optimizer, epochs=1, max_num_batches=10000, batch_size=batch_size)
+    return avg_loss
+
 
 if __name__ == '__main__':
-    do_training(9000, load_model=False)
+    do_training(10000, load_model=False, hyper_search=True)
     print("Starting evaluation...")
     # eval_setup(max_num_batches=1000)
