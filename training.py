@@ -14,7 +14,7 @@ def train(data, model, loss_fn, optimizer, epochs: int = 1, max_num_batches: int
     model.train()
     total_loss = 0.
     curr_loss = 0.
-    log_interval = 250
+    log_interval = 125
     batch_loss = []
 
     # just for IDE
