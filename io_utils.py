@@ -2,6 +2,8 @@ import pickle
 import torch
 from datasets import load_dataset
 from torchtext.data import get_tokenizer
+from torch.utils.data import Dataset, DataLoader
+from torch.nn.utils.rnn import pad_sequence
 from torch import Tensor
 import nltk
 from nltk.tokenize.treebank import TreebankWordDetokenizer
@@ -141,7 +143,31 @@ def load_vocabulary(filename="trained_models/vocabulary.pkl") -> dict:
     with open(filename, 'rb') as f:
         return pickle.load(f)
 
+class StoryDataset(Dataset):
+    def __init__(self, stories, vocab, tokenizer, max_seq_len):
+        self.stories = stories
+        self.vocab = vocab
+        self.tokenizer = tokenizer
+        self.max_seq_len = max_seq_len
 
+    def __len__(self):
+        return len(self.stories)
+
+    def __getitem__(self, idx):
+        story = self.stories[idx]
+        tokens = self.tokenizer(story) + ['<eos>']
+        indices = [self.vocab.get(token, self.vocab['<unk>']) for token in tokens]
+        tensor = torch.tensor(indices, dtype=torch.int64)
+        max_idx = min(self.max_seq_len, tensor.size(0) - 1)
+        x = tensor[:max_idx]
+        y = tensor[1:max_idx + 1]
+        return x, y
+
+def collate_fn(batch):
+    x_batch, y_batch = zip(*batch)
+    x_batch = pad_sequence(x_batch, batch_first=True, padding_value=0)
+    y_batch = pad_sequence(y_batch, batch_first=True, padding_value=0)
+    return x_batch, y_batch
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ device = (
     else "cpu"
 )
 learning_rate = 1e-3
-batch_size = 128
+batch_size = 256
 max_seq_len = 256  # needs to be max story length from batch or max sequence length
 num_heads = 8
 temperature = 1
@@ -17,7 +17,7 @@ temperature = 1
 embed_size = 256
 d_ff = embed_size  * 4    # 4 times model
 dropout = 0.1
-num_layers = 8
+num_layers = 4
 
 
 
@@ -185,19 +185,11 @@ if __name__ == '__main__':
     vocab_rev = {k: v for v, k in vocab.items()}
     try:
         #model: TransformerModel = torch.load('trained_models/model.pth').to(device)
-        model: TransformerModel = torch.load('trained_models/model2.pth').to(device)
+        #model: TransformerModel = torch.load('trained_models/model2.pth').to(device)
+        model = TransformerModel(len(vocab)).to(device)
+        model.load_state_dict(torch.load('trained_models/model3.pth'))
     except FileNotFoundError:
         model = TransformerModel(len(vocab))
-
-    # Instantiate the model first
-    #model = TransformerModel(len(vocab)).to(device)
-
-    # Now, load the model state dict
-   # try:
-       # model_state_dict = torch.load('trained_models/best_model.pth')
-        #model.load_state_dict(model_state_dict)
-   # except FileNotFoundError:
-        #print("Best model file not found, ensure the model has been saved correctly.")
 
     # Create input tensor correctly
     input_tensor = torch.tensor([vocab["once"]], dtype=torch.int64).unsqueeze(0).to(device)
