@@ -9,15 +9,15 @@ device = (
     else "cpu"
 )
 learning_rate = 1e-3
-batch_size = 256
+batch_size = 512
 max_seq_len = 256  # needs to be max story length from batch or max sequence length
 num_heads = 8
 temperature = 1
 #d_model = 64  #
-embed_size = 256
-d_ff = embed_size  * 4    # 4 times model
+embed_size = 768
+d_ff = embed_size * 4    # 4 times model
 dropout = 0.1
-num_layers = 4
+num_layers = 1
 
 
 

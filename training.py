@@ -12,7 +12,7 @@ from model_1 import TransformerModel, device, learning_rate, max_seq_len, batch_
 from torch.utils.data import DataLoader
 from torch.cuda.amp import autocast, GradScaler
 
-def train_on_batches_val(dataset, model, loss_fn, optimizer, batch_size, device, epochs=1, validation_dataset=None, patience=20):
+def train_on_batches(dataset, model, loss_fn, optimizer, batch_size, device, epochs=1, validation_dataset=None, patience=20):
     model.train()
     pad_token_id = dataset.vocab['<pad>']
     best_loss = float('inf')
@@ -35,6 +35,8 @@ def train_on_batches_val(dataset, model, loss_fn, optimizer, batch_size, device,
                 loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
                 loss = (loss * mask.view(-1).float()).mean()
             scaler.scale(loss).backward()
+            # Apply gradient clipping
+            #torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             scaler.step(optimizer)
             scaler.update()
 
@@ -80,58 +82,6 @@ def evaluate(dataloader, model, loss_fn, device):
         num_batches += 1
     return total_loss / num_batches
 
-def train_on_batches(story_list, vocab, tokenizer, model, loss_fn, optimizer, batch_size, device, epochs: int = 1, validation_data=None, patience=2):
-    model.train()  # Set the model to training mode
-    pad_token_id = vocab['<pad>']  # Adjust as per vocab
-
-    num_samples = len(story_list)
-    total_batches = num_samples // batch_size
-    has_remaining_batch = num_samples % batch_size != 0  # Check if there's a remaining batch
-    batch_loss_list = []
-
-    for epoch in range(1, epochs + 1):
-        print(f"Starting epoch {epoch}/{epochs}")
-
-        # Shuffle indices at the beginning of each epoch
-        indices = torch.randperm(num_samples)
-
-        total_loss = 0.0  # Reset total loss for each epoch
-
-        for batch_index in range(total_batches):
-            start_index = batch_index * batch_size
-            end_index = start_index + batch_size if not (batch_index == total_batches and has_remaining_batch) else None
-
-            batch_stories = [story_list[i] for i in indices[start_index:end_index]]
-
-            x, y = get_batch(batch_stories, vocab, tokenizer)  # Get a batch
-
-            # Move tensors to the appropriate device
-            x, y = x.to(device), y.to(device)
-
-            optimizer.zero_grad()  # Clear gradients before each backward pass
-            pred = model(x)  # Compute predictions
-            mask = (y != pad_token_id)  # mask pad token for loss function
-            loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))  # Calculate loss without reduction
-            loss = (loss * mask.view(-1).float()).mean()  # Apply mask and calculate mean loss with mean
-            loss.backward()  # Backpropagate the gradients
-            #torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-            optimizer.step()  # Update model parameters
-
-            total_loss += loss.item()
-
-            if (batch_index + 1) % 10 == 0:
-                avg_loss = total_loss / (batch_index + 1)
-                print(f"Batch {batch_index + 1}: Avg. Loss = {avg_loss:.5f}")
-
-            # Record batch loss for further evaluation or logging
-            batch_loss_list.append(loss.item())
-
-            #if flags is not None and not flags[0]:
-                #break  #noch nicht gecheckt..
-
-    avg_total_loss = total_loss / (total_batches + (1 if has_remaining_batch else 0))
-    return avg_total_loss #max_idx
-
 
 def get_batch(batch_stories: list[str], vocab, tokenizer, use_eos=False) -> tuple[Tensor, Tensor]:
     """
@@ -169,7 +119,7 @@ def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Ten
     return data[:-1], data[1:]
 
 
-def do_training(end: int = 2000000, start: int = 0, load_model: bool = False, flags: list = None):
+def do_training(end: int = 64000, start: int = 0, load_model: bool = False, flags: list = None):
     stories = load_tiny_stories(end, start)
     stories = clean_stories(stories)
     print("Stories have been loaded")
@@ -183,7 +133,7 @@ def do_training(end: int = 2000000, start: int = 0, load_model: bool = False, fl
             print(f"Model/vocabulary does not exist!\n{err}", file=sys.stderr)
             sys.exit(1)
     else:
-        vocabulary = get_vocabulary_idx(stories, 3000)
+        vocabulary = get_vocabulary_idx(stories, 6000)
         save_vocabulary(vocabulary)
         model = TransformerModel(len(vocabulary)).to(device)
 
@@ -194,7 +144,7 @@ def do_training(end: int = 2000000, start: int = 0, load_model: bool = False, fl
     #print(f"Train_data: {train_data}")
     #print(f"Val_Data: {val_data}")
 
-    # Choose a tokenizer, e.g., GPT-2 tokenizer
+    # GPT-2 tokenizer
     #tokenizer = AutoTokenizer.from_pretrained('gpt2') # returns BatchEncoding obj -> needs to be converted
     tokenizer = get_tokenizer('basic_english')
     train_dataset = StoryDataset(train_stories, vocabulary, tokenizer, max_seq_len)
@@ -208,9 +158,10 @@ def do_training(end: int = 2000000, start: int = 0, load_model: bool = False, fl
 
     t0 = perf_counter()
 
-    avg_loss = train_on_batches_val(train_dataset, model, loss_fn, optimizer, batch_size, device, epochs=3, validation_dataset=val_dataset)
-    #avg_loss = train_on_batches(stories, vocabulary, tokenizer, model, loss_fn, optimizer, batch_size,
-                                 #epochs=3, device=device)
+    avg_loss = train_on_batches(train_dataset, model, loss_fn, optimizer, batch_size, device, epochs=1, validation_dataset=val_dataset)
+    #avg_loss = train_on_batches(train_dataset, model, loss_fn, optimizer, batch_size, device, epochs=1,
+                                    #validation_dataset=None)
+
     t = perf_counter() - t0
     print(f"\nTraining time: {t:.5}s")
     print(f"Average Loss: {avg_loss:.5}")
