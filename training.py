@@ -102,7 +102,7 @@ def do_training(max_num_batches: int | None = 1000, model_name: str = "model", l
             sys.exit(1)
     else:
         print("Creating vocabulary...")
-        stories = load_tiny_stories(2000)
+        stories = load_tiny_stories(30000) # Number of stories used for creating the vocabulary, not the vocabulary size
         stories = clean_stories(stories)
         vocabulary = get_vocabulary_idx(stories, 2048)
         save_vocabulary(vocabulary)
@@ -137,6 +137,6 @@ def eval_setup(model_name: str = "model", max_num_batches: int = 1000):
 
 
 if __name__ == '__main__':
-    do_training(4000, load_model=False)
+    do_training(9000, load_model=False)
     print("Starting evaluation...")
-    eval_setup(max_num_batches=1000)
+    # eval_setup(max_num_batches=1000)

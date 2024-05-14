@@ -8,7 +8,7 @@ from torch import Tensor
 import nltk
 from nltk.tokenize.treebank import TreebankWordDetokenizer
 import re
-from model_1 import TransformerModel, device
+from model_1 import TransformerModel, device, num_special_tokens
 from torch.utils.data import Dataset
 
 
@@ -64,7 +64,8 @@ def get_vocabulary_idx(story_list: list[str], max_words: int | None = None) -> d
     vocab_freq = get_vocabulary_frequencies(story_list)
     if max_words is not None:
         vocab = {}
-        for _, (k, v) in zip(range(max_words - 2), sorted(vocab_freq.items(), key=lambda item: item[1], reverse=True)):
+        for _, (k, v) in zip(range(max_words - num_special_tokens),
+                             sorted(vocab_freq.items(), key=lambda item: item[1], reverse=True)):
             vocab[k] = v
         vocab_freq = vocab
 
@@ -132,15 +133,15 @@ def prompt_model(model_name: str, start_token: str, length: int = 50) -> str:
     tl = model.generate_tokens(input_tensor.to(device), length)
 
     # List of all names in the vocabulary
-    names = {'ben', 'bob', 'emily', 'joe', 'john', 'lily', 'lucy', 'max', 'mia', 'sam', 'sara', 'sarah', 'timmy', 'tom'}
+    # names = {'ben', 'bob', 'emily', 'joe', 'john', 'lily', 'lucy', 'max', 'mia', 'sam', 'sara', 'sarah', 'timmy', 'tom'}
 
     token_list = []
-    for val in tl:
-        token = vocab_rev[val.item()]
-        if token in names:
-            token = token.title()
-        token_list.append(token)
-    return tokens_to_story(token_list)
+    for batch in tl:
+        for val in batch:
+            token = vocab_rev[val.item()]
+            token_list.append(token)
+        # ToDo: multiple stories
+        return tokens_to_story(token_list)
 
 
 class TinyStories(Dataset):

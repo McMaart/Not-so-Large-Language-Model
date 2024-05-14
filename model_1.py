@@ -36,16 +36,15 @@ class TransformerModel(nn.Module):
         return self.linear(embedding)
 
     @torch.no_grad()
-    def generate_tokens(self, start_token: Tensor, length: int) -> list[torch.Tensor]:
+    def generate_tokens(self, start_token: Tensor, length: int) -> Tensor:
         self.eval()
-        x = start_token
-        token_list = [x]
+        token_tensor = start_token
         for _ in range(length):
-            probs = F.softmax(self(x), dim=-1)
-            pred = torch.multinomial(probs[:, 0, :-num_special_tokens], 1)  # The last token is "<unk>"
-            token_list.append(pred)
-            x = pred
-        return token_list
+            pred1 = self(token_tensor)[:, -1, :-num_special_tokens]
+            probs = F.softmax(pred1, dim=-1)
+            pred = torch.multinomial(probs, 1)
+            token_tensor = torch.cat((token_tensor, pred), 1)
+        return token_tensor
 
 
 class PositionalEncoding(nn.Module):
