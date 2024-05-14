@@ -162,7 +162,7 @@ def objective(trial):
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
     # Train model
-    avg_loss, _ = train(data, model, loss_fn, optimizer, epochs=1, max_num_batches=10000, batch_size=batch_size)
+    avg_loss, _ = train(data, model, loss_fn, optimizer, epochs=1, max_num_batches=5000, batch_size=batch_size)
     return avg_loss
 
 
