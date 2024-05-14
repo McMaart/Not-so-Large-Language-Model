@@ -157,24 +157,16 @@ def objective(trial):
     stories = clean_stories(stories)
     vocabulary = get_vocabulary_idx(stories, 2048)
     save_vocabulary(vocabulary)
-    # Split the data into training and validation sets
-    n = int(0.9 * len(stories))
-    train_stories = stories[:n]
-    val_stories = stories[n:]
-
-    train_data = TinyStories(train_stories, vocabulary, max_seq_len=max_seq_len)
-    val_data = TinyStories(val_stories, vocabulary, max_seq_len=max_seq_len)
+    data = TinyStories(vocabulary, max_seq_len=max_seq_len)
 
     model = TransformerModel(len(vocabulary), embed_size, nhead, num_layers, dim_ff=dim_ff, dropout=dropout).to(device)
     loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
     # Train model
-    train(train_data, model, loss_fn, optimizer, epochs=1, max_num_batches=5000, batch_size=batch_size)
+    avg_loss, _ = train(data, model, loss_fn, optimizer, epochs=1, max_num_batches=5000, batch_size=batch_size)
+    return avg_loss
 
-    # Evaluate model on validation set
-    val_loss = evaluate(val_data, model, loss_fn, max_num_batches=5000)
-    return val_loss
 
 if __name__ == '__main__':
     do_training(8000, load_model=False, hyper_search=True)
