@@ -14,7 +14,7 @@ num_special_tokens = 2
 
 
 class TransformerModel(nn.Module):
-    def __init__(self, vocab_size: int, embed_size: int = 128, nhead: int = 4, num_layers: int = 4):
+    def __init__(self, vocab_size: int, embed_size: int = 256, nhead: int = 4, num_layers: int = 4):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
@@ -22,7 +22,8 @@ class TransformerModel(nn.Module):
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
         self.pos_encoding = PositionalEncoding(embed_size)
 
-        encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=nhead, batch_first=True)
+        encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=nhead, dim_feedforward=4*embed_size,
+                                                   batch_first=True, activation="gelu")
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
 

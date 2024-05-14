@@ -1,4 +1,3 @@
-import random
 import sys
 import torch
 from torch import nn, Tensor
@@ -22,7 +21,7 @@ def train(data, model, loss_fn, optimizer, epochs: int = 1, max_num_batches: int
     batch, epoch = 1, 1
 
     for epoch in range(1, epochs + 1):
-        shuffle = True # shuffle = False if epoch == 1 else True
+        shuffle = True  # shuffle = False if epoch == 1 else True
         dataloader = DataLoader(data, batch_size=32, collate_fn=data.get_batch, num_workers=2, shuffle=shuffle,
                                 pin_memory=True)
         if max_num_batches is None:
@@ -115,7 +114,12 @@ def do_training(max_num_batches: int | None = 1000, model_name: str = "model", l
     print("Model and stories have been loaded")
 
     t0 = perf_counter()
-    avg_loss, batch_loss = train(data, model, loss_fn, optimizer, max_num_batches=max_num_batches, flags=flags)
+    try:
+        avg_loss, batch_loss = train(data, model, loss_fn, optimizer, max_num_batches=max_num_batches, flags=flags)
+    except KeyboardInterrupt:
+        print("Cancelling training, loss statistics will not be available")
+        avg_loss = -1
+        batch_loss = []
     t = perf_counter() - t0
     print(f"Average Loss: {avg_loss:.5}")
     torch.save(model, f'trained_models/{model_name}.pth')
@@ -123,16 +127,16 @@ def do_training(max_num_batches: int | None = 1000, model_name: str = "model", l
     return t, avg_loss, max_num_batches, batch_loss
 
 
-def eval_setup(model_name: str = "model"):
+def eval_setup(model_name: str = "model", max_num_batches: int = 1000):
     model = torch.load(f'trained_models/{model_name}.pth').to(device)
     vocabulary = load_vocabulary()
-    data = TinyStories(vocabulary)
+    data = TinyStories(vocabulary, max_seq_len=max_seq_len)
 
     loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
-    print(evaluate(data, model, loss_fn))
+    print(evaluate(data, model, loss_fn, max_num_batches))
 
 
 if __name__ == '__main__':
-    do_training(4000, load_model=True)
+    do_training(4000, load_model=False)
     print("Starting evaluation...")
-    eval_setup()
+    eval_setup(max_num_batches=1000)
