@@ -9,14 +9,14 @@ device = (
     else "cpu"
 )
 learning_rate = 1e-3
-batch_size = 64
+batch_size = 128
 max_seq_len = 256  # needs to be max story length from batch or max sequence length
 num_heads = 8
 temperature = 1
 #d_model = 64  #
-embed_size = 128
+embed_size = 256
 d_ff = embed_size  * 4    # 4 times model
-dropout = 0.07
+dropout = 0.1
 num_layers = 8
 
 
@@ -66,7 +66,7 @@ class TransformerModel(nn.Module):
         return token_list
 
     class TransformerBlock(nn.Module):
-        def __init__(self, mod_dim, num_heads, d_ff, dropout=0.01):
+        def __init__(self, mod_dim, num_heads, d_ff, dropout=0.1):
             super().__init__()
             self.attention = self.MultiHeadAttention(mod_dim, mod_dim, num_heads)
             self.norm1 = nn.LayerNorm(mod_dim)
@@ -136,7 +136,7 @@ class TransformerModel(nn.Module):
                     return output
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, embed_size: int, dropout: float = 0.01):
+    def __init__(self, embed_size: int, dropout: float = 0.1):
         super().__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -162,7 +162,7 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 class PositionwiseFeedforward(nn.Module):
-    def __init__(self, d_model, d_ff, dropout=0.01):
+    def __init__(self, d_model, d_ff, dropout=0.1):
         super(PositionwiseFeedforward, self).__init__()
         # First fully connected layer
         self.fc1 = nn.Linear(d_model, d_ff)
@@ -189,9 +189,19 @@ if __name__ == '__main__':
     except FileNotFoundError:
         model = TransformerModel(len(vocab))
 
+    # Instantiate the model first
+    #model = TransformerModel(len(vocab)).to(device)
+
+    # Now, load the model state dict
+   # try:
+       # model_state_dict = torch.load('trained_models/best_model.pth')
+        #model.load_state_dict(model_state_dict)
+   # except FileNotFoundError:
+        #print("Best model file not found, ensure the model has been saved correctly.")
+
     # Create input tensor correctly
     input_tensor = torch.tensor([vocab["once"]], dtype=torch.int64).unsqueeze(0).to(device)
     # Pass the single integer value to generate_tokens
-    tl = model.generate_tokens(input_tensor[0][0].item(), 32)
+    tl = model.generate_tokens(input_tensor[0][0].item(), 80)
     for val in tl:
         print(vocab_rev[val], end=" ")

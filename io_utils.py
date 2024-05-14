@@ -145,7 +145,7 @@ def load_vocabulary(filename="trained_models/vocabulary.pkl") -> dict:
 
 
 if __name__ == "__main__":
-    stories = load_tiny_stories(2)
+    stories = load_tiny_stories(3)
     #stories = load_from_file("data/100stories.txt")
     stories = clean_stories(stories)
     # save_to_file("data/100stories.txt", stories)
@@ -154,7 +154,7 @@ if __name__ == "__main__":
     print("Number of stories:", len(stories))
     print(f"Story 1 size: {len(stories[0])}")
     print(f"Story 2 size: {len(stories[1])}\n")
-    #print(f"Story 3 size: {len(stories[2])}\n")
+    print(f"Story 3 size: {len(stories[2])}\n")
 
 
     tokenizer = get_tokenizer('basic_english')
