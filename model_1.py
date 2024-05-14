@@ -7,7 +7,7 @@ device = (
     else "mps" if torch.backends.mps.is_available()
     else "cpu"
 )
-learning_rate = 5e-4
+learning_rate = 0.00012381301478401363
 batch_size = 64
 max_seq_len = 256
 num_special_tokens = 2
@@ -74,5 +74,5 @@ class PositionalEncoding(nn.Module):
 if __name__ == '__main__':
     from io_utils import prompt_model
 
-    story = prompt_model("model", "once", 42)
+    story = prompt_model("model", "once", 250)
     print(f"\n{story}")
