@@ -102,7 +102,7 @@ def do_training(max_num_batches: int | None = 1000, model_name: str = "model", l
             sys.exit(1)
     else:
         print("Creating vocabulary...")
-        stories = load_tiny_stories(30000)
+        stories = load_tiny_stories(2000)
         stories = clean_stories(stories)
         vocabulary = get_vocabulary_idx(stories, 2048)
         save_vocabulary(vocabulary)

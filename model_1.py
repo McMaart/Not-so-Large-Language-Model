@@ -8,13 +8,13 @@ device = (
     else "cpu"
 )
 learning_rate = 5e-4
-batch_size = 16
+batch_size = 64
 max_seq_len = 256
 num_special_tokens = 2
 
 
 class TransformerModel(nn.Module):
-    def __init__(self, vocab_size: int, embed_size: int = 256, nhead: int = 4, num_layers: int = 4):
+    def __init__(self, vocab_size: int, embed_size: int = 512, nhead: int = 4, num_layers: int = 4):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
@@ -32,7 +32,7 @@ class TransformerModel(nn.Module):
         embedding = self.pos_encoding(embedding)
 
         mask = nn.Transformer.generate_square_subsequent_mask(x.size(1))
-        embedding = self.encoder(embedding, mask=mask, is_causal=True)
+        embedding = self.encoder(embedding, mask=mask.to(device), is_causal=True)
         return self.linear(embedding)
 
     @torch.no_grad()
