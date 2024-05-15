@@ -69,6 +69,8 @@ def train_on_batches(story_list, vocab, tokenizer, model, loss_fn, optimizer, ba
             h = torch.zeros(model.num_layers, batch_size, model.hidden_size).to(device)
 
         for batch_index in range(total_batches):
+            sys.stdout.write(f"\rBatch {batch_index + 1}/{total_batches}")
+            sys.stdout.flush()
             start_index = batch_index * batch_size
             end_index = start_index + batch_size
             batch_indices = indices[start_index:end_index]
@@ -231,7 +233,7 @@ def do_training_rnn(end: int = 1000, start: int = 0, load_model: bool = True, fl
     else:
         vocabulary = get_vocabulary_idx(stories, 1536)
         save_vocabulary(vocabulary)
-        model = RNNModel(len(vocabulary)).to(device)
+        model = RNNModel(len(vocabulary),num_layers=2).to(device)
 
     tokenizer = get_tokenizer('basic_english')
     loss_fn = nn.CrossEntropyLoss(reduction='none')  # Initialize loss function with 'none' reduction
@@ -249,6 +251,6 @@ def do_training_rnn(end: int = 1000, start: int = 0, load_model: bool = True, fl
 if __name__ == '__main__':
     from sys import argv
     if len(argv) > 1 and argv[1] == 'rnn':
-        do_training_rnn(end = 30000, load_model=False)
+        do_training_rnn(end = 100000, load_model=False)
     else:
         do_training(load_model=False)
