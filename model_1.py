@@ -9,7 +9,7 @@ device = (
 )
 learning_rate = 0.00012381301478401363
 batch_size = 64
-max_seq_len = 256
+max_seq_len = 512
 num_special_tokens = 2
 
 
