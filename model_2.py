@@ -11,12 +11,12 @@ device = (
     else "cpu"
 )
 learning_rate_rnn = 1e-3
-batch_size_rnn = 64
+batch_size_rnn = 32
 max_seq_len_rnn = 60
 
 
 class RNNModel(nn.Module):
-    def __init__(self, vocab_size: int, embed_size: int = 128, hidden_size: int = 256, num_layers: int = 1):
+    def __init__(self, vocab_size: int, embed_size: int = 128, hidden_size: int = 256, num_layers: int = 1, dropout_p: float = 0.35):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
@@ -25,6 +25,7 @@ class RNNModel(nn.Module):
 
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
         self.rnn = nn.RNN(self.embed_size, self.hidden_size, self.num_layers, batch_first=True)
+        self.dropout = nn.Dropout(dropout_p)
         self.linear = nn.Linear(self.hidden_size, self.vocab_size)
         self.to(device)
 
@@ -36,6 +37,7 @@ class RNNModel(nn.Module):
                 h = torch.zeros(self.num_layers, self.hidden_size).to(x.device)
         x = self.embedding(x)
         out, h = self.rnn(x, h)
+        out = self.dropout(out)
         out = self.linear(out)
         return out, h
 
@@ -64,5 +66,5 @@ class RNNModel(nn.Module):
 
 
 if __name__ == "__main__":
-    print(prompt_model("rnn_model", "my", 100, end_on_eos=False))
+    print(prompt_model("rnn_model", "the", 100, end_on_eos=False))
 

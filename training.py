@@ -251,6 +251,6 @@ def do_training_rnn(end: int = 1000, start: int = 0, load_model: bool = True, fl
 if __name__ == '__main__':
     from sys import argv
     if len(argv) > 1 and argv[1] == 'rnn':
-        do_training_rnn(end = 100000, load_model=False)
+        do_training_rnn(end = 175000, load_model=False)
     else:
         do_training(load_model=False)
