@@ -3,14 +3,14 @@ import torch
 from torch import nn, Tensor
 from io_utils import (get_vocabulary_idx, map_story_to_tensor, load_tiny_stories, clean_stories, save_vocabulary,
                       load_vocabulary, TinyStories)
-from torchtext.data.utils import get_tokenizer
 from time import perf_counter
 from model_1 import TransformerModel, device, learning_rate, max_seq_len
 from torch.utils.data import DataLoader
 import optuna
 
 
-def train(data, model, loss_fn, optimizer, epochs: int = 1, max_num_batches: int = None, flags: list = None, batch_size=32):
+def train(data, model, loss_fn, optimizer, epochs: int = 1, max_num_batches: int = None, flags: list = None,
+          batch_size: int = 32):
     model.train()
     total_loss = 0.
     curr_loss = 0.
@@ -45,8 +45,8 @@ def train(data, model, loss_fn, optimizer, epochs: int = 1, max_num_batches: int
             if batch % log_interval == 0:
                 print(f"Batch: {batch:5}, avg. loss: {total_loss / (batch * epoch):.5f},"
                       f" curr. loss: {curr_loss / log_interval:.5f}")
-                # ToDO: append only the batch loss (i.e., adjust gui implementation)
-                batch_loss.append(f"Batch: {batch} loss: {total_loss / batch:.6}")
+                # ToDO: Adjust the GUI implmentation to receive only the loss (instead of a string)
+                batch_loss.append(curr_loss / log_interval)
                 curr_loss = 0.
 
     return total_loss / (max_num_batches * (epoch - 1) + batch), batch_loss
@@ -93,7 +93,7 @@ def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Ten
 
 def do_training(max_num_batches: int | None = 1000, model_name: str = "model", load_model: bool = True,
                 flags: list[bool] = None, hyper_search: bool = False):
-    if hyper_search:
+    if hyper_search is True:
         study = optuna.create_study(direction='minimize')
         study.optimize(objective, n_trials=50)
         print(f"Best trial: {study.best_trial.value}")
@@ -111,9 +111,10 @@ def do_training(max_num_batches: int | None = 1000, model_name: str = "model", l
             stories = load_tiny_stories(
                 524288)  # Number of stories used for creating the vocabulary, not the vocabulary size
             stories = clean_stories(stories)
-            vocabulary = get_vocabulary_idx(stories, 4096)
+            vocabulary = get_vocabulary_idx(stories, 2048)
             save_vocabulary(vocabulary)
-            model = TransformerModel(len(vocabulary),1024,8,2,4096,0.15990730780487847).to(device)
+            model = TransformerModel(len(vocabulary), 256, 4, 4, 1024,
+                                     0.12, padding_idx=vocabulary["<pad>"]).to(device)
 
         data = TinyStories(vocabulary, max_seq_len=max_seq_len)
         loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
@@ -122,14 +123,16 @@ def do_training(max_num_batches: int | None = 1000, model_name: str = "model", l
 
         t0 = perf_counter()
         try:
-            avg_loss, batch_loss = train(data, model, loss_fn, optimizer, epochs=2, max_num_batches=max_num_batches, flags=flags)
+            avg_loss, batch_loss = train(data, model, loss_fn, optimizer, epochs=2, max_num_batches=max_num_batches,
+                                         flags=flags)
         except KeyboardInterrupt:
             print("Cancelling training, loss statistics will not be available")
-            avg_loss = -1
+            avg_loss = None
             batch_loss = []
         t = perf_counter() - t0
-        print(f"Average Loss: {avg_loss:.5}")
         torch.save(model, f'trained_models/{model_name}.pth')
+        if avg_loss is not None:
+            print(f"Average Loss: {avg_loss:.5}")
         print(f"Time:{t}")
 
         return t, avg_loss, max_num_batches, batch_loss
@@ -142,6 +145,7 @@ def eval_setup(model_name: str = "model", max_num_batches: int = 1000):
 
     loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
     print(evaluate(data, model, loss_fn, max_num_batches))
+
 
 def objective(trial):
     # Defines hyperparameter search space
@@ -170,6 +174,6 @@ def objective(trial):
 
 
 if __name__ == '__main__':
-    do_training(40000, load_model=False, hyper_search=False)
-    print("Starting evaluation...")
+    do_training(1000, load_model=True, hyper_search=False)
+    # print("Starting evaluation...")
     # eval_setup(max_num_batches=1000)

@@ -7,19 +7,20 @@ device = (
     else "mps" if torch.backends.mps.is_available()
     else "cpu"
 )
-learning_rate = 0.00012381301478401363
-batch_size = 64
-max_seq_len = 512
+learning_rate = 5e-4
+batch_size = 32
+max_seq_len = 256
 num_special_tokens = 2
 
 
 class TransformerModel(nn.Module):
-    def __init__(self, vocab_size: int, embed_size: int = 512, nhead: int = 4, num_layers: int = 4, dim_ff: int = 2048, dropout: float = 0.1):
+    def __init__(self, vocab_size: int, embed_size: int = 512, nhead: int = 4, num_layers: int = 4, dim_ff: int = 2048,
+                 dropout: float = 0.1, padding_idx: int | None = None):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
 
-        self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
+        self.embedding = nn.Embedding(self.vocab_size, self.embed_size, padding_idx=padding_idx)
         self.pos_encoding = PositionalEncoding(embed_size)
 
         encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=nhead, dim_feedforward=dim_ff, dropout=dropout,
@@ -31,8 +32,8 @@ class TransformerModel(nn.Module):
         embedding: Tensor = self.embedding(x)
         embedding = self.pos_encoding(embedding)
 
-        mask = nn.Transformer.generate_square_subsequent_mask(x.size(1))
-        embedding = self.encoder(embedding, mask=mask.to(device), is_causal=True)
+        mask = nn.Transformer.generate_square_subsequent_mask(x.size(1), device=torch.device(device))
+        embedding = self.encoder(embedding, mask=mask, is_causal=True)
         return self.linear(embedding)
 
     @torch.no_grad()
@@ -75,4 +76,4 @@ if __name__ == '__main__':
     from io_utils import prompt_model
 
     story = prompt_model("model", "once", 250)
-    print(f"\n{story}")
+    print(story)

@@ -79,7 +79,7 @@ def map_story_to_tensor(story: str, vocab: dict, tokenizer) -> Tensor:
     Maps a story to a Tensor of Integers, according to the index in the vocabulary
     """
     default = vocab["<unk>"]
-    return torch.tensor([vocab.get(word, default) for word in tokenizer(story)], dtype=torch.int64)
+    return torch.tensor([vocab.get(word, default) for word in tokenizer(story)], dtype=torch.int32)
 
 
 def clean_stories(story_list: list[str]) -> list[str]:
@@ -116,7 +116,15 @@ def tokens_to_story(token_list: list[str]) -> str:
     story = " ".join([s.capitalize() for s in sentences])
     story = re.sub(r'\si\s', r' I ', story)  # Fix capitalization of 'i'
     story = re.sub(r"n' t", "n't", story)  # Fix contraction
-    story = re.sub(r"' s", "'s", story)  # Fix possessive
+    story = re.sub(r"' s\s", "'s ", story)  # Fix possessive
+    story = re.sub(r"' d\s", "'d ", story)
+
+    # List of all names in the vocabulary
+    names = {'ben', 'bob', 'emily', 'joe', 'john', 'lily', 'lucy', 'max', 'mia', 'sam', 'sara', 'sarah', 'timmy', 'tom'}
+    # ToDo: can be more efficient
+    for name in names:
+        story = story.replace(name, name.title())
+
     return story
 
 
@@ -128,20 +136,18 @@ def prompt_model(model_name: str, start_token: str, length: int = 50) -> str:
     except FileNotFoundError:
         model = TransformerModel(len(vocab)).to(device)
 
-    input_tensor = torch.tensor(vocab[start_token], dtype=torch.int64)
+    input_tensor = torch.tensor(vocab[start_token], dtype=torch.int32)
     input_tensor = input_tensor.view(1, -1)
     tl = model.generate_tokens(input_tensor.to(device), length)
 
-    # List of all names in the vocabulary
-    # names = {'ben', 'bob', 'emily', 'joe', 'john', 'lily', 'lucy', 'max', 'mia', 'sam', 'sara', 'sarah', 'timmy', 'tom'}
-
-    token_list = []
+    story_list = []
     for batch in tl:
+        token_list = []
         for val in batch:
             token = vocab_rev[val.item()]
             token_list.append(token)
-        # ToDo: multiple stories
-        return tokens_to_story(token_list)
+        story_list.append(tokens_to_story(token_list))
+    return story_list[0]    # ToDo: maybe adjust function for generating multiple stories at once
 
 
 class TinyStories(Dataset):
@@ -197,7 +203,7 @@ if __name__ == "__main__":
     dataloader = DataLoader(data, batch_size=32, collate_fn=data.get_batch, num_workers=2)
     print(len(dataloader))
 
-    # stories = load_tiny_stories(1000)
+    # stories = load_tiny_stories(100)
     # stories = clean_stories(stories)
     # print("Number of stories:", len(stories))
     #
