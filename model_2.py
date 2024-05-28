@@ -66,5 +66,37 @@ class RNNModel(nn.Module):
 
 
 if __name__ == "__main__":
-    print(prompt_model("rnn_model", "the", 100, end_on_eos=False))
+    from eval import calculate_rouge_scores, get_stories, max_rouge_score
+    prompt = "once"
+    length = 100
+    num_stories = 1
+    
+    # stories = [prompt_model("rnn_model", prompt, length) for _ in range(num_stories)]
+    # for story in stories:
+    #     print(story)
+    #     print()
+    
+    # actual_stories = get_stories(prompt, 10000)
+
+    # print(len(stories))
+    # print(len(actual_stories))
+
+    # scores = calculate_rouge_scores(stories, actual_stories[:num_stories])
+    # print(scores)
+    # print(f"ROUGE-1: {scores['rouge-1']}")
+    # print(f"ROUGE-2: {scores['rouge-2']}")
+    # print(f"ROUGE-L: {scores['rouge-l']}")
+    # print(f"ROUGE-L: {scores['rouge-l']}")
+
+    story = prompt_model("rnn_model", prompt, length)
+    print(story)
+    print(max_rouge_score(story, prompt))
+
+
+
+
+
+
+
+
 
