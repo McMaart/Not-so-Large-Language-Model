@@ -4,13 +4,14 @@ RNN reference model
 import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
+from model_1 import num_special_non_eos_tokens
 
 device = (
     "cuda" if torch.cuda.is_available()
     else "mps" if torch.backends.mps.is_available()
     else "cpu"
 )
-learning_rate_rnn = .8e-3
+learning_rate_rnn = 8e-4
 batch_size_rnn = 32
 max_seq_len_rnn = 100
 embed_size_rnn = 256
@@ -18,23 +19,21 @@ hidden_size_rnn = 128
 num_layers_rnn = 2
 dropout_rnn = 0.2
 dropout_rnn_2 = 0.2
-num_spec_non_eos_tokens = 2
-num_spec_tokens = 3
 
 
 class RNNModel(nn.Module):
-    def __init__(self, vocab_size: int, embed_size: int = 128, hidden_size: int = 256, num_layers: int = 2, dropout_rnn: float = 0.1, dropout_2: float = 0.35):
+    def __init__(self, vocab_size: int, embed_size: int = 128, hidden_size: int = 256, num_layers: int = 2,
+                 dropout_rnn: float = 0.1, dropout_2: float = 0.35, padding_idx: int | None = None):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
 
-        self.embedding = nn.Embedding(self.vocab_size, self.embed_size)
+        self.embedding = nn.Embedding(self.vocab_size, self.embed_size, padding_idx=padding_idx)
         self.rnn = nn.RNN(self.embed_size, self.hidden_size, self.num_layers, batch_first=True, dropout=dropout_rnn)
         self.dropout = nn.Dropout(dropout_2)
         self.linear = nn.Linear(self.hidden_size, self.vocab_size)
-        self.to(device)
 
     def forward(self, x: Tensor, h: Tensor) -> tuple[Tensor, Tensor]:
         if h is None:
@@ -57,17 +56,17 @@ class RNNModel(nn.Module):
     #     return torch.zeros(self.num_layers, batch_size, self.hidden_size).to(device)
 
     @torch.no_grad()
-    def generate_tokens(self, start_token: Tensor | int, length: int, eos_idx: int = None) -> Tensor:
+    def generate_tokens(self, token_tensor: Tensor, length: int = 250, eos_token: int = None) -> Tensor:
         self.eval()
-        token_tensor = start_token
         h = self.init_hidden(token_tensor.size(0))
-        for _ in range(length):
-            out, h = self(token_tensor, h)
-            out = out[:, -1, :-num_spec_non_eos_tokens]
-            probs = F.softmax(out, dim=-1)
+
+        for _ in range(len(token_tensor[0]), length+1):
+            output, h = self(token_tensor, h)
+            output = output[:, -1, :-num_special_non_eos_tokens]
+            probs = F.softmax(output, dim=-1)
             pred = torch.multinomial(probs, 1)
             token_tensor = torch.cat((token_tensor, pred), 1)
-            if pred.item() == eos_idx or token_tensor.size(1) == max_seq_len_rnn:
+            if pred.item() == eos_token:
                 return token_tensor
         return token_tensor
             

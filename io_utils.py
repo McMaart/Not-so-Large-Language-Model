@@ -3,13 +3,17 @@ import sys
 import torch
 from datasets import load_dataset
 from torch.nn.utils.rnn import pad_sequence
+import torchtext
+torchtext.disable_torchtext_deprecation_warning()
 from torchtext.data import get_tokenizer
 from torch import Tensor
 import nltk
 from nltk.tokenize.treebank import TreebankWordDetokenizer
 import re
-from model_1 import TransformerModel, device, num_special_tokens
+from model_1 import device, num_special_tokens
 from torch.utils.data import Dataset
+
+num_val_stories = 75000
 
 
 def load_tiny_stories(end: int, start: int = 0, split: str = "train") -> list[str]:
@@ -43,7 +47,7 @@ def save_to_file(filename: str, story_list: list):
             f.write(f"{item}\n<end>\n\n")
 
 
-def get_vocabulary_frequencies(story_list: list[str]) -> dict[str, int]:
+def get_vocabulary_frequencies(story_list: list[str], split_on_hyphen: bool = True) -> dict[str, int]:
     """
     Returns a dict of all tokens and their absolute frequencies
     """
@@ -52,8 +56,17 @@ def get_vocabulary_frequencies(story_list: list[str]) -> dict[str, int]:
     for story in story_list:
         tokens = tokenizer(story)
         for token in tokens:
-            vocabulary.setdefault(token, 0)
-            vocabulary[token] += 1
+            token = token.strip("*").strip("_")
+            if split_on_hyphen is True and "-" in token:
+                token_split = token.split("-")
+                vocabulary.setdefault("-", 0)
+                vocabulary["-"] += len(token_split) - 1
+                for split_token in token_split:
+                    vocabulary.setdefault(split_token, 0)
+                    vocabulary[split_token] += 1
+            else:
+                vocabulary.setdefault(token, 0)
+                vocabulary[token] += 1
     return vocabulary
 
 
@@ -69,6 +82,7 @@ def get_vocabulary_idx(story_list: list[str], max_words: int | None = None) -> d
             vocab[k] = v
         vocab_freq = vocab
 
+    vocab_freq["<eos>"] = 0
     vocab_freq['<unk>'] = 0  # Placeholder for tokens that do not appear in the story
     vocab_freq['<pad>'] = 0  # Pad token for batching
     return {k: idx for idx, k in enumerate(vocab_freq.keys())}
@@ -121,24 +135,31 @@ def tokens_to_story(token_list: list[str]) -> str:
 
     # List of all names in the vocabulary
     names = {'ben', 'bob', 'emily', 'joe', 'john', 'lily', 'lucy', 'max', 'mia', 'sam', 'sara', 'sarah', 'timmy', 'tom'}
-    # ToDo: can be more efficient
+    # ToDo: can be more efficient ToDo: use regex instead (or, even better, directly capitalize the tokens),
+    #  for fixing spelling mistakes such as botTom
     for name in names:
         story = story.replace(name, name.title())
 
     return story
 
 
-def prompt_model(model_name: str, start_token: str, length: int = 50) -> str:
+def prompt_model(model_name: str, start_str: str, length: int = 250) -> str:
     vocab = load_vocabulary()
     vocab_rev = {k: v for v, k in vocab.items()}
-    try:
-        model: TransformerModel = torch.load(f'trained_models/{model_name}.pth').to(device)
-    except FileNotFoundError:
-        model = TransformerModel(len(vocab)).to(device)
 
-    input_tensor = torch.tensor(vocab[start_token], dtype=torch.int32)
+    try:
+        model = torch.load(f'trained_models/{model_name}.pth').to(device)
+    except FileNotFoundError:
+        print(f"Model 'trained_models/{model_name}.pth could not be found", file=sys.stderr)
+        sys.exit(1)
+
+    print("Number of parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
+    tokenizer = get_tokenizer("basic_english")
+    default = vocab["<unk>"]
+
+    input_tensor = torch.tensor([vocab.get(token, default) for token in tokenizer(start_str)], dtype=torch.int32)
     input_tensor = input_tensor.view(1, -1)
-    tl = model.generate_tokens(input_tensor.to(device), length)
+    tl = model.generate_tokens(input_tensor.to(device), length, eos_token=vocab.get("<eos>"))
 
     story_list = []
     for batch in tl:
@@ -147,18 +168,20 @@ def prompt_model(model_name: str, start_token: str, length: int = 50) -> str:
             token = vocab_rev[val.item()]
             token_list.append(token)
         story_list.append(tokens_to_story(token_list))
-    return story_list[0]    # ToDo: maybe adjust function for generating multiple stories at once
+    return story_list[0]  # ToDo: maybe adjust function for generating multiple stories at once
 
 
 class TinyStories(Dataset):
-    def __init__(self, vocabulary, tokenizer=get_tokenizer('basic_english'), split: str = "train", max_seq_len=None):
+    def __init__(self, vocabulary, tokenizer=get_tokenizer('basic_english'), split: str = "train",
+                 max_seq_len: int | None = None, split_on_hyphen: bool = True):
         self.stories = load_dataset("roneneldan/TinyStories", num_proc=4, split=split)
         self.vocab = vocabulary
         self.tokenizer = tokenizer
+        self.split_on_hyphen = split_on_hyphen
 
         self.unk_token = self.vocab["<unk>"]
         self.pad_token = self.vocab["<pad>"]
-        self.max_seq_len = max_seq_len
+        self.max_seq_len = max_seq_len if max_seq_len is not None else 10000
 
     def get_batch(self, sequences) -> tuple[Tensor, Tensor]:
         padded_seq = pad_sequence(sequences, batch_first=True, padding_value=self.pad_token)
@@ -169,12 +192,21 @@ class TinyStories(Dataset):
         if 'â' in story:
             story = remove_enc_errors(story)
 
-        if self.max_seq_len is None:
-            token_list = [self.vocab.get(word, self.unk_token) for word in self.tokenizer(story)]
-        else:
-            token_list = []
-            for _, word in zip(range(self.max_seq_len + 1), self.tokenizer(story)):
+        token_list = []
+        tokens = self.tokenizer(story)
+        for _, word in zip(range(self.max_seq_len + 1), tokens):
+            word = word.strip("*").strip("_")
+            if self.split_on_hyphen is True and "-" in word:
+                token_split = word.split("-")
+                for split_token in token_split:
+                    token_list.append(self.vocab.get(split_token, self.unk_token))
+                    token_list.append("-")
+                token_list = token_list[:-1]
+            else:
                 token_list.append(self.vocab.get(word, self.unk_token))
+        if len(token_list) <= self.max_seq_len:
+            token_list.append(self.vocab.get("<eos>"))
+        token_list = token_list[:self.max_seq_len + 1]
 
         data = torch.tensor(token_list, dtype=torch.int64)
         if len(data) < 2:
@@ -182,7 +214,7 @@ class TinyStories(Dataset):
         return data
 
     def __len__(self):
-        return len(self.stories)
+        return len(self.stories) - num_val_stories
 
 
 def save_vocabulary(vocab: dict[str, int], filename: str = "trained_models/vocabulary.pkl"):
@@ -196,14 +228,12 @@ def load_vocabulary(filename: str = "trained_models/vocabulary.pkl") -> dict:
 
 
 if __name__ == "__main__":
-    from torch.utils.data import DataLoader
+    # vocab = load_vocabulary()
 
-    vocab = load_vocabulary()
-    data = TinyStories(vocab)
-    dataloader = DataLoader(data, batch_size=32, collate_fn=data.get_batch, num_workers=2)
-    print(len(dataloader))
-
-    # stories = load_tiny_stories(100)
+    stories = load_tiny_stories(100)
+    for story in stories:
+        if "-" in story:
+            print(story)
     # stories = clean_stories(stories)
     # print("Number of stories:", len(stories))
     #

@@ -7,10 +7,11 @@ device = (
     else "mps" if torch.backends.mps.is_available()
     else "cpu"
 )
-learning_rate = 5e-4
+learning_rate = 1e-3
 batch_size = 32
 max_seq_len = 256
-num_special_tokens = 2
+num_special_non_eos_tokens = 2
+num_special_tokens = 3
 
 
 class TransformerModel(nn.Module):
@@ -21,11 +22,11 @@ class TransformerModel(nn.Module):
         self.embed_size = embed_size
 
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size, padding_idx=padding_idx)
-        self.pos_encoding = PositionalEncoding(embed_size)
+        self.pos_encoding = PositionalEncoding(embed_size, base=10000)
 
         encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=nhead, dim_feedforward=dim_ff, dropout=dropout,
-                                                   batch_first=True, activation="gelu")
-        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+                                                   batch_first=True, activation="gelu", norm_first=False)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers, enable_nested_tensor=False)
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
 
     def forward(self, x: Tensor) -> Tensor:
@@ -37,25 +38,26 @@ class TransformerModel(nn.Module):
         return self.linear(embedding)
 
     @torch.no_grad()
-    def generate_tokens(self, start_token: Tensor, length: int) -> Tensor:
+    def generate_tokens(self, token_tensor: Tensor, length: int = 250, eos_token: int = None) -> Tensor:
         self.eval()
-        token_tensor = start_token
-        for _ in range(length):
-            pred1 = self(token_tensor)[:, -1, :-num_special_tokens]
-            probs = F.softmax(pred1, dim=-1)
+        for _ in range(len(token_tensor[0]), length+1):
+            output = self(token_tensor)[:, -1, :-num_special_non_eos_tokens]
+            probs = F.softmax(output, dim=-1)
             pred = torch.multinomial(probs, 1)
             token_tensor = torch.cat((token_tensor, pred), 1)
+            if pred.item() == eos_token:
+                return token_tensor
         return token_tensor
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, embed_size: int, dropout: float = 0.07):
+    def __init__(self, embed_size: int, dropout: float = 0.07, base=10000):
         super().__init__()
         pos_enc = torch.empty(max_seq_len, embed_size, dtype=torch.float)
         self.dropout = nn.Dropout(p=dropout)
 
         pos = torch.arange(max_seq_len, dtype=torch.float).unsqueeze(dim=1)
-        inv_denominator = 10000 ** (-1 / embed_size * torch.arange(0, embed_size, 2, dtype=torch.float))
+        inv_denominator = base ** (-1 / embed_size * torch.arange(0, embed_size, 2, dtype=torch.float))
         pe_term = pos * inv_denominator
         pos_enc[:, 0::2] = torch.sin(pe_term)
         pos_enc[:, 1::2] = torch.cos(pe_term)
@@ -75,5 +77,5 @@ class PositionalEncoding(nn.Module):
 if __name__ == '__main__':
     from io_utils import prompt_model
 
-    story = prompt_model("model", "once", 250)
+    story = prompt_model("model", "once", 255)
     print(story)
