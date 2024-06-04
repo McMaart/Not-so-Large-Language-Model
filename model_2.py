@@ -38,9 +38,9 @@ class RNNModel(nn.Module):
     def forward(self, x: Tensor, h: Tensor) -> tuple[Tensor, Tensor]:
         if h is None:
             if x.dim() == 2:  # Batched input
-                h = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+                h = self.init_hidden(x.size(0))
             else:  # Unbatched input
-                h = torch.zeros(self.num_layers, self.hidden_size).to(x.device)
+                h = torch.zeros(self.num_layers, self.hidden_size, device=next(self.parameters()).device)
         x = self.embedding(x)
         out, h = self.rnn(x, h)
         out = self.dropout(out)
@@ -48,12 +48,8 @@ class RNNModel(nn.Module):
         return out, h
 
     def init_hidden(self, batch_size: int) -> Tensor:
-        return torch.zeros(self.num_layers, batch_size, self.hidden_size).to(device)
-    # def init_hidden(self, batch_size: int) -> Tensor:
-    #   if batch_size == 1:  # Unbatched input
-    #     return torch.zeros(self.num_layers, self.hidden_size).to(device)
-    #   else:  # Batched input
-    #     return torch.zeros(self.num_layers, batch_size, self.hidden_size).to(device)
+        return torch.zeros(self.num_layers, batch_size, self.hidden_size, device=next(self.parameters()).device,
+                           requires_grad=False)
 
     @torch.no_grad()
     def generate_tokens(self, token_tensor: Tensor, length: int = 250, eos_token: int = None) -> Tensor:
@@ -69,27 +65,6 @@ class RNNModel(nn.Module):
             if pred.item() == eos_token:
                 return token_tensor
         return token_tensor
-            
-    # @torch.no_grad()
-    # def generate_tokens(self, start_token: Tensor | int, length: int, eos_idx: int = None) -> list:
-    #     self.eval()
-    #     x = start_token.to(device)
-    #     h = self.init_hidden(1)
-    #     token_list = [x]
-    #     for _ in range(length):
-    #         x = x.view(1, -1)  # reshape x to be a 3D tensor
-    #         out, h = self(x, h)
-    #         # out, h = self(x.unsqueeze(0), h)
-    #         out = out.squeeze(0)
-    #         # x = torch.argmax(out, dim=-1)
-    #         probabilities = torch.softmax(out, dim=-1)
-    #         x = torch.multinomial(probabilities, 1)
-    #         while x.item() == self.vocab['<unk>']:
-    #             x = torch.multinomial(probabilities, 1)
-    #         token_list.append(x)
-    #         if eos_idx is not None and x == eos_idx:
-    #             break
-    #     return token_list
 
 
 if __name__ == "__main__":

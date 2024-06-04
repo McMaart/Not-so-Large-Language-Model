@@ -36,7 +36,7 @@ class TestIOUtils(unittest.TestCase):
     # Test for get_vocabulary_frequencies
     def test_get_vocabulary_frequencies(self):
         stories = ['story1 with token', 'story2 with another token']
-        result = io_utils.get_vocabulary_frequencies(stories)
+        result = io_utils.get_token_frequencies(stories)
         expected_result = {'story1': 1, 'with': 2, 'token': 2, 'story2': 1, 'another': 1}
         self.assertEqual(result, expected_result)
 
@@ -53,7 +53,7 @@ class TestIOUtils(unittest.TestCase):
     # Test for get_vocabulary_idx
     def test_get_vocabulary_idx(self):
         stories = ['story1 with token', 'story2 with another token']
-        result = io_utils.get_vocabulary_idx(stories)
+        result = io_utils.create_vocabulary(stories)
         expected_result = {word: idx for idx, word in enumerate(result)}
         self.assertEqual(result, expected_result)
 

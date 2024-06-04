@@ -4,18 +4,18 @@ from torch import nn, Tensor
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from io_utils import (get_vocabulary_idx, map_story_to_tensor, load_tiny_stories, clean_stories, save_vocabulary,
+from io_utils import (create_vocabulary, map_story_to_tensor, load_tiny_stories, clean_stories, save_vocabulary,
                       load_vocabulary, TinyStories)
 from model_1 import TransformerModel, device, learning_rate, max_seq_len
 from time import perf_counter
 import optuna
-# from model_2 import RNNModel
+from model_2 import RNNModel
 
 writer = SummaryWriter()
 
 
-def train(data, model, loss_fn, optimizer, epochs: int = 1, max_num_batches: int = None, flags: list = None,
-          batch_size: int = 32, is_rnn: bool = False):
+def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int = 1, max_num_batches: int = None,
+          flags: list[bool] = None, batch_size: int = 32, is_rnn: bool = False):
     model.train()
     total_loss = 0.
     curr_loss = 0.
@@ -25,7 +25,7 @@ def train(data, model, loss_fn, optimizer, epochs: int = 1, max_num_batches: int
 
     h = None
     if is_rnn:
-        h = torch.zeros(model.num_layers, batch_size, model.hidden_size).to(device)
+        h = model.init_hidden(batch_size)
 
     # just for IDE
     x: Tensor
@@ -69,7 +69,7 @@ def train(data, model, loss_fn, optimizer, epochs: int = 1, max_num_batches: int
 
 
 @torch.no_grad()
-def evaluate(data, model, loss_fn, max_num_batches: int = 1000, is_rnn: bool = False):
+def evaluate(data: TinyStories, model: nn.Module, loss_fn, max_num_batches: int = 1000, is_rnn: bool = False) -> float:
     model.eval()
     total_loss = 0.0
     dataloader = DataLoader(data, batch_size=32, collate_fn=data.get_batch, num_workers=2, shuffle=True,
@@ -134,7 +134,7 @@ def do_training(max_num_batches: int | None = 1000, model_name: str = "model", l
             stories = load_tiny_stories(
                 900000)  # Number of stories used for creating the vocabulary, not the vocabulary size
             stories = clean_stories(stories)
-            vocabulary = get_vocabulary_idx(stories, 2048)
+            vocabulary = create_vocabulary(stories, 2048)
             save_vocabulary(vocabulary)
         if load_model is True:
             try:
@@ -191,7 +191,7 @@ def objective(trial):
     # Load data
     stories = load_tiny_stories(524288)
     stories = clean_stories(stories)
-    vocabulary = get_vocabulary_idx(stories, 2048)
+    vocabulary = create_vocabulary(stories, 2048)
     save_vocabulary(vocabulary)
     data = TinyStories(vocabulary, max_seq_len=max_seq_len)
 

@@ -47,7 +47,7 @@ def save_to_file(filename: str, story_list: list):
             f.write(f"{item}\n<end>\n\n")
 
 
-def get_vocabulary_frequencies(story_list: list[str], split_on_hyphen: bool = True) -> dict[str, int]:
+def get_token_frequencies(story_list: list[str], split_on_hyphen: bool = True) -> dict[str, int]:
     """
     Returns a dict of all tokens and their absolute frequencies
     """
@@ -70,11 +70,11 @@ def get_vocabulary_frequencies(story_list: list[str], split_on_hyphen: bool = Tr
     return vocabulary
 
 
-def get_vocabulary_idx(story_list: list[str], max_words: int | None = None) -> dict[str, int]:
+def create_vocabulary(story_list: list[str], max_words: int | None = None) -> dict[str, int]:
     """
     Assigns an index to each word that appears in the list of stories
     """
-    vocab_freq = get_vocabulary_frequencies(story_list)
+    vocab_freq = get_token_frequencies(story_list)
     if max_words is not None:
         vocab = {}
         for _, (k, v) in zip(range(max_words - num_special_tokens),
@@ -101,11 +101,16 @@ def clean_stories(story_list: list[str]) -> list[str]:
     Fixes certain encoding errors in the stories and removes all stories that either are empty or still contain
     non-ascii characters. Removes approximately 0.8% of all stories (802 of first 100K stories).
     """
-    for idx, story in enumerate(story_list):
+    story_set = set(story_list)
+    story_set.discard("")
+    new_story_list = []
+
+    for idx, story in enumerate(story_set):
         if 'â' in story:
             story = remove_enc_errors(story)
-            story_list[idx] = story
-    return [story for story in story_list if story.isascii() and len(story) > 1]
+        if story.isascii() is True:
+            new_story_list.append(story)
+    return new_story_list
 
 
 def remove_enc_errors(story: str) -> str:
@@ -172,7 +177,7 @@ def prompt_model(model_name: str, start_str: str, length: int = 250) -> str:
 
 
 class TinyStories(Dataset):
-    def __init__(self, vocabulary, tokenizer=get_tokenizer('basic_english'), split: str = "train",
+    def __init__(self, vocabulary: dict, tokenizer=get_tokenizer('basic_english'), split: str = "train",
                  max_seq_len: int | None = None, split_on_hyphen: bool = True):
         self.stories = load_dataset("roneneldan/TinyStories", num_proc=4, split=split)
         self.vocab = vocabulary
@@ -183,11 +188,11 @@ class TinyStories(Dataset):
         self.pad_token = self.vocab["<pad>"]
         self.max_seq_len = max_seq_len if max_seq_len is not None else 10000
 
-    def get_batch(self, sequences) -> tuple[Tensor, Tensor]:
+    def get_batch(self, sequences: list[Tensor]) -> tuple[Tensor, Tensor]:
         padded_seq = pad_sequence(sequences, batch_first=True, padding_value=self.pad_token)
         return padded_seq[:, :-1].contiguous(), padded_seq[:, 1:].contiguous()
 
-    def __getitem__(self, index) -> Tensor:
+    def __getitem__(self, index: int) -> Tensor:
         story = self.stories[index]['text']
         if 'â' in story:
             story = remove_enc_errors(story)
@@ -198,9 +203,10 @@ class TinyStories(Dataset):
             word = word.strip("*").strip("_")
             if self.split_on_hyphen is True and "-" in word:
                 token_split = word.split("-")
+                hyphen_token = self.vocab.get("-", self.unk_token)
                 for split_token in token_split:
                     token_list.append(self.vocab.get(split_token, self.unk_token))
-                    token_list.append("-")
+                    token_list.append(hyphen_token)
                 token_list = token_list[:-1]
             else:
                 token_list.append(self.vocab.get(word, self.unk_token))
@@ -228,12 +234,13 @@ def load_vocabulary(filename: str = "trained_models/vocabulary.pkl") -> dict:
 
 
 if __name__ == "__main__":
-    # vocab = load_vocabulary()
+    from torch.utils.data import DataLoader
 
-    stories = load_tiny_stories(100)
-    for story in stories:
-        if "-" in story:
-            print(story)
+    vocab = load_vocabulary()
+
+    # data = TinyStories(load_vocabulary())
+    # dataloader = DataLoader(data, batch_size=32, collate_fn=data.get_batch, num_workers=4,
+    #                             pin_memory=True)
     # stories = clean_stories(stories)
     # print("Number of stories:", len(stories))
     #

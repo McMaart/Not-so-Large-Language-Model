@@ -51,7 +51,7 @@ class TransformerModel(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, embed_size: int, dropout: float = 0.07, base=10000):
+    def __init__(self, embed_size: int, dropout: float = 0.07, base: int = 10000):
         super().__init__()
         pos_enc = torch.empty(max_seq_len, embed_size, dtype=torch.float)
         self.dropout = nn.Dropout(p=dropout)

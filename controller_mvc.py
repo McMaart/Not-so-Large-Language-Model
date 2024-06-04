@@ -3,7 +3,7 @@ import gui_mvc
 import training
 import model_1
 import datetime
-from io_utils import get_vocabulary_idx, map_story_to_tensor, load_tiny_stories, clean_stories
+from io_utils import create_vocabulary, map_story_to_tensor, load_tiny_stories, clean_stories
 from torchtext.data.utils import get_tokenizer
 from time import perf_counter
 import torch
@@ -48,7 +48,7 @@ class Controller:
                 self.view.training.training_info.insert("end", "MODEL 1!\n\n")
                 stories = load_tiny_stories(20000)
                 stories = clean_stories(stories)
-                vocabulary = get_vocabulary_idx(stories)
+                vocabulary = create_vocabulary(stories)
                 vocabulary_rev = {k: v for v, k in vocabulary.items()}
                 tokenizer = get_tokenizer('basic_english')
 
