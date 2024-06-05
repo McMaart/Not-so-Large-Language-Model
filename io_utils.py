@@ -210,8 +210,12 @@ class TinyStories(Dataset):
                 token_list = token_list[:-1]
             else:
                 token_list.append(self.vocab.get(word, self.unk_token))
+
         if len(token_list) <= self.max_seq_len:
-            token_list.append(self.vocab.get("<eos>"))
+            eos_token = self.vocab.get("<eos>")
+            if eos_token is None:
+                raise ValueError("<eos> token is not found in the vocabulary.")
+            token_list.append(eos_token)
         token_list = token_list[:self.max_seq_len + 1]
 
         data = torch.tensor(token_list, dtype=torch.int64)
@@ -236,8 +240,19 @@ def load_vocabulary(filename: str = "trained_models/vocabulary.pkl") -> dict:
 if __name__ == "__main__":
     from torch.utils.data import DataLoader
 
+    # Load and clean stories
+    stories = load_tiny_stories(end=1000)  # Example to load 1000 stories
+    stories = clean_stories(stories)
+
+    # Create and save vocabulary
+    vocab = create_vocabulary(stories)
+    save_vocabulary(vocab)
+
+    # Check the vocabulary includes <eos>
+    assert "<eos>" in vocab, "Error: <eos> token is not in the vocabulary"
     vocab = load_vocabulary()
 
+    assert "<eos>" in vocab, "Error: <eos> token is not in the vocabulary"
     # data = TinyStories(load_vocabulary())
     # dataloader = DataLoader(data, batch_size=32, collate_fn=data.get_batch, num_workers=4,
     #                             pin_memory=True)

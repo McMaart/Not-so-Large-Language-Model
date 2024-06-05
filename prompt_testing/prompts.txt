@@ -1,0 +1,51 @@
+prompt0 funktioniert mit gpt4o
+
+This story is written for a 5 year old child:
+"#STORY#PLACEHOLDER#"
+Give a rating for each of the following categories:
+
+- GRAMMAR: only rate the grammar of the story. Do not rate any other aspects such as spelling, punctuation, or capitalization
+- SPELLING: only rate the spelling of the story. Do not rate any other aspects such as grammar, punctuation, or capitalization
+- CONSISTENCY: only rate the consistency of the story. Do not rate any other aspects such as grammar, spelling, punctuation, or capitalization
+- STORY: only rate the story of the story. Do not rate any other aspects such as grammar, spelling, punctuation, or capitalization
+- CREATIVITY: only rate the creativity of the story. Do not rate any other aspects such as grammar, spelling, punctuation, or capitalization
+- STYLE: only rate the style of the story. Do not rate any other aspects such as grammar, spelling, punctuation, or capitalization
+
+For each of those categories give a rating from 1 to 10, with 1 being the worst and 10 being the best.
+Make sure that your ratings are as objective as possible.
+
+Write one sentence for each category first.
+Then, give your rating in THIS EXACT FORMAT where <RATING> is the number you chose for the respective category (the last lines of your response should look exactly like this but with your ratings):
+GRAMMAR: <RATING>
+SPELLING: <RATING> 
+CONSISTENCY: <RATING>
+STORY: <RATING>
+CREATIVITY: <RATING>
+STYLE: <RATING>
+
+#PROMPT#SEPERATOR#
+
+prompt1 unprecise instructions test
+
+This story is written for a 5 year old child:
+"#STORY#PLACEHOLDER#"
+Give a rating for each of the following categories:
+
+- GRAMMAR
+- SPELLING
+- CONSISTENCY
+- STORY
+- CREATIVITY
+- STYLE
+
+For each of those categories give a rating from 1 to 10, with 1 being the worst and 10 being the best.
+
+Give your rating in THIS EXACT FORMAT where <RATING> is the number you chose for the respective category (the last lines of your response should look exactly like this but with your ratings):
+GRAMMAR: <RATING>
+SPELLING: <RATING> 
+CONSISTENCY: <RATING>
+STORY: <RATING>
+CREATIVITY: <RATING>
+STYLE: <RATING>
+
+#PROMPT#SEPERATOR#
