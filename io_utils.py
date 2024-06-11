@@ -13,8 +13,6 @@ import re
 from model_1 import device, num_special_tokens, generate_tokens
 from torch.utils.data import Dataset
 
-num_val_stories = 75000
-
 
 def load_tiny_stories(end: int, start: int = 0, split: str = "train") -> list[str]:
     """
@@ -47,7 +45,7 @@ def save_to_file(filename: str, story_list: list):
             f.write(f"{item}\n<end>\n\n")
 
 
-def get_token_frequencies(story_list: list[str], tokenizer=get_tokenizer('basic_english'),
+def get_token_frequencies(story_list: list[str], tokenizer=get_tokenizer('spacy', language='en_core_web_sm'),
                           split_on_hyphen: bool = True) -> dict[str, int]:
     """
     Returns a dict of all tokens and their absolute frequencies
@@ -70,7 +68,7 @@ def get_token_frequencies(story_list: list[str], tokenizer=get_tokenizer('basic_
     return vocabulary
 
 
-def create_vocabulary(story_list: list[str], tokenizer=get_tokenizer('basic_english'),
+def create_vocabulary(story_list: list[str], tokenizer=get_tokenizer('spacy', language='en_core_web_sm'),
                       max_words: int | None = None) -> dict[str, int]:
     """
     Assigns an index to each word that appears in the list of stories
@@ -160,10 +158,11 @@ def prompt_model(model_name: str, start_str: str, length: int = 250) -> str:
         sys.exit(1)
 
     print("Number of parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
-    tokenizer = get_tokenizer("basic_english")
+    tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
     default = vocab["<unk>"]
 
-    input_tensor = torch.tensor([vocab.get(token, default) for token in tokenizer(start_str)], dtype=torch.int32)
+    input_tensor = torch.tensor([vocab.get(token, default) for token in tokenizer(start_str.lower())],
+                                dtype=torch.int32)
     input_tensor = input_tensor.view(1, -1)
     tl = generate_tokens(model, input_tensor.to(device), length, eos_token=vocab.get("<eos>"))
 
@@ -178,8 +177,8 @@ def prompt_model(model_name: str, start_str: str, length: int = 250) -> str:
 
 
 class TinyStories(Dataset):
-    def __init__(self, vocabulary: dict, tokenizer=get_tokenizer('basic_english'), split: str = "train",
-                 max_seq_len: int | None = None, split_on_hyphen: bool = True):
+    def __init__(self, vocabulary: dict, tokenizer=get_tokenizer('spacy', language='en_core_web_sm'),
+                 split: str = "train", max_seq_len: int | None = None, split_on_hyphen: bool = False):
         self.stories = load_from_disk("data/TinyStories")[split]
         self.vocab = vocabulary
         self.tokenizer = tokenizer
@@ -197,25 +196,16 @@ class TinyStories(Dataset):
         story = self.stories[index]['text']
 
         token_list = []
-        tokens = self.tokenizer(story)
+        tokens = self.tokenizer(story.lower())
         for _, word in zip(range(self.max_seq_len + 1), tokens):
-            # ToDo: use SpaCy tokenizer, so that this segment is not necessary
-            if self.split_on_hyphen is True and "-" in word:
-                token_split = word.split("-")
-                hyphen_token = self.vocab.get("-", self.unk_token)
-                for split_token in token_split:
-                    token_list.append(self.vocab.get(split_token, self.unk_token))
-                    token_list.append(hyphen_token)
-                token_list = token_list[:-1]
-            else:
-                token_list.append(self.vocab.get(word, self.unk_token))
+            token_list.append(self.vocab.get(word, self.unk_token))
 
         if len(token_list) <= self.max_seq_len:
             eos_token = self.vocab.get("<eos>")
             if eos_token is None:
                 raise ValueError("<eos> token is not found in the vocabulary.")
             token_list.append(eos_token)
-        token_list = token_list[:self.max_seq_len + 1]
+        # token_list = token_list[:self.max_seq_len + 1]
 
         data = torch.tensor(token_list, dtype=torch.int64)
         return data

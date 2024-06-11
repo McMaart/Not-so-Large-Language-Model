@@ -4,6 +4,9 @@ from torch import nn, Tensor
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+import torchtext
+torchtext.disable_torchtext_deprecation_warning()
+from torchtext.data import get_tokenizer
 from io_utils import (create_vocabulary, map_story_to_tensor, load_tiny_stories, save_vocabulary,
                       load_vocabulary, TinyStories)
 from model_1 import TransformerModel, device, learning_rate, max_seq_len
@@ -33,7 +36,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
 
     for epoch in range(1, epochs + 1):
         shuffle = True  # shuffle = False if epoch == 1 else True
-        dataloader = DataLoader(data, batch_size=batch_size, collate_fn=data.get_batch, num_workers=4, shuffle=shuffle,
+        dataloader = DataLoader(data, batch_size=batch_size, collate_fn=data.get_batch, num_workers=2, shuffle=shuffle,
                                 pin_memory=True)
         if max_num_batches is None:
             max_num_batches = len(dataloader)
@@ -145,7 +148,7 @@ def do_training(max_num_batches: int | None = 1000, model_name: str = "model", l
             model = TransformerModel(len(vocabulary), 192, 6, 6, 768,
                                      0.1, padding_idx=vocabulary["<pad>"]).to(device)
             # model = RNNModel(2048).to(device)
-        data = TinyStories(vocabulary, max_seq_len=max_seq_len)
+        data = TinyStories(vocabulary, get_tokenizer('spacy', language='en_core_web_sm'), max_seq_len=max_seq_len)
         loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
         optimizer = torch.optim.AdamW(model.parameters(), learning_rate)
         params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -204,4 +207,4 @@ if __name__ == '__main__':
     tup = do_training(54000, load_model=False, hyper_search=False, load_vocab=True)
     print(tup)
     print("Starting evaluation...")
-    eval_setup("model", max_num_batches=2300)
+    eval_setup("model", max_num_batches=2400)
