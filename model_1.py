@@ -1,6 +1,7 @@
 import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
+from torchtune.modules import RotaryPositionalEmbeddings
 
 device = (
     "cuda" if torch.cuda.is_available()
@@ -24,6 +25,8 @@ class TransformerModel(nn.Module):
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size, padding_idx=padding_idx)
         self.pos_encoding = PositionalEncoding(embed_size, base=10000)
 
+        #self.rope = RotaryPositionalEmbeddings(dim=embed_size // nhead, max_seq_len=max_seq_len, base=10000)
+
         encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=nhead, dim_feedforward=dim_ff, dropout=dropout,
                                                    batch_first=True, activation="gelu", norm_first=False)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers, enable_nested_tensor=False)
@@ -32,6 +35,11 @@ class TransformerModel(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         embedding: Tensor = self.embedding(x)
         embedding = self.pos_encoding(embedding)
+
+        # Reshape for multi-head attention
+        #embedding = embedding.view(embedding.size(0), embedding.size(1), self.nhead,-1)  # (batch_size, seq_len, nhead, head_dim)
+        #embedding = self.rope(embedding)  # Apply ROPE
+        #embedding = embedding.view(embedding.size(0), embedding.size(1), -1)  # (batch_size, seq_len, embed_size)
 
         mask = nn.Transformer.generate_square_subsequent_mask(x.size(1), device=torch.device(device))
         embedding = self.encoder(embedding, mask=mask, is_causal=True)

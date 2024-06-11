@@ -21,6 +21,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
     curr_loss = 0.
     log_interval = 125
     batch_loss = []
+    epoch_losses = []
     scheduler = StepLR(optimizer, step_size=5000, gamma=0.8)
 
     h = None
@@ -32,6 +33,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
     batch, epoch = 1, 1
 
     for epoch in range(1, epochs + 1):
+        epoch_loss = 0.
         shuffle = True  # shuffle = False if epoch == 1 else True
         dataloader = DataLoader(data, batch_size=batch_size, collate_fn=data.get_batch, num_workers=4, shuffle=shuffle,
                                 pin_memory=True)
@@ -51,6 +53,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
             loss_item = loss.item()
             total_loss += loss_item
             curr_loss += loss_item
+            epoch_loss += loss_item
             writer.add_scalar("Loss/batch", loss_item, batch)
             loss.backward()
             optimizer.step()
@@ -63,9 +66,13 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
                 batch_loss.append(curr_loss / log_interval)
                 curr_loss = 0.
 
+        epoch_loss = epoch_loss / (min(max_num_batches, len(dataloader)))
+        epoch_losses.append(epoch_loss)
+        print(f"Epoch {epoch}/{epochs}, Loss: {epoch_loss:.4f}")
+
     writer.flush()
     writer.close()
-    return total_loss / (max_num_batches * (epoch - 1) + batch), batch_loss
+    return epoch_losses, total_loss / (max_num_batches * (epoch - 1) + batch), batch_loss
 
 
 @torch.no_grad()
@@ -154,8 +161,8 @@ def do_training(max_num_batches: int | None = 1000, model_name: str = "model", l
 
         t0 = perf_counter()
         try:
-            avg_loss, batch_loss = train(data, model, loss_fn, optimizer, epochs=1, max_num_batches=max_num_batches,
-                                         flags=flags)
+            epoch_losses, avg_loss, batch_loss = train(data, model, loss_fn, optimizer, epochs=1,
+                                                       max_num_batches=max_num_batches, flags=flags)
         except KeyboardInterrupt:
             print("Cancelling training, loss statistics will not be available")
             avg_loss = None
