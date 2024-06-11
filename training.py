@@ -4,7 +4,7 @@ from torch import nn, Tensor
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from io_utils import (create_vocabulary, map_story_to_tensor, load_tiny_stories, clean_stories, save_vocabulary,
+from io_utils import (create_vocabulary, map_story_to_tensor, load_tiny_stories, save_vocabulary,
                       load_vocabulary, TinyStories)
 from model_1 import TransformerModel, device, learning_rate, max_seq_len
 from time import perf_counter
@@ -133,7 +133,6 @@ def do_training(max_num_batches: int | None = 1000, model_name: str = "model", l
             print("Creating vocabulary...")
             stories = load_tiny_stories(
                 900000)  # Number of stories used for creating the vocabulary, not the vocabulary size
-            stories = clean_stories(stories)
             vocabulary = create_vocabulary(stories, 2048)
             save_vocabulary(vocabulary)
         if load_model is True:
@@ -172,7 +171,7 @@ def do_training(max_num_batches: int | None = 1000, model_name: str = "model", l
 def eval_setup(model_name: str = "model", max_num_batches: int = 1000):
     model = torch.load(f'trained_models/{model_name}.pth').to(device)
     vocabulary = load_vocabulary()
-    data = TinyStories(vocabulary, max_seq_len=max_seq_len)
+    data = TinyStories(vocabulary, max_seq_len=max_seq_len, split="validation")
 
     loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
     print(evaluate(data, model, loss_fn, max_num_batches))
@@ -189,10 +188,7 @@ def objective(trial):
     dropout = trial.suggest_float('dropout', 0.1, 0.5)
 
     # Load data
-    stories = load_tiny_stories(524288)
-    stories = clean_stories(stories)
-    vocabulary = create_vocabulary(stories, 2048)
-    save_vocabulary(vocabulary)
+    vocabulary = load_vocabulary()
     data = TinyStories(vocabulary, max_seq_len=max_seq_len)
 
     model = TransformerModel(len(vocabulary), embed_size, nhead, num_layers, dim_ff=dim_ff, dropout=dropout).to(device)

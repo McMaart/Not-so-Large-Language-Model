@@ -37,18 +37,6 @@ class TransformerModel(nn.Module):
         embedding = self.encoder(embedding, mask=mask, is_causal=True)
         return self.linear(embedding)
 
-    @torch.no_grad()
-    def generate_tokens(self, token_tensor: Tensor, length: int = 250, eos_token: int = None) -> Tensor:
-        self.eval()
-        for _ in range(len(token_tensor[0]), length+1):
-            output = self(token_tensor)[:, -1, :-num_special_non_eos_tokens]
-            probs = F.softmax(output, dim=-1)
-            pred = torch.multinomial(probs, 1)
-            token_tensor = torch.cat((token_tensor, pred), 1)
-            if pred.item() == eos_token:
-                return token_tensor
-        return token_tensor
-
 
 class PositionalEncoding(nn.Module):
     def __init__(self, embed_size: int, dropout: float = 0.07, base: int = 10000):
@@ -74,8 +62,26 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x + self.pos_enc[:x.size(1)])
 
 
+@torch.no_grad()
+def generate_tokens(model: nn.Module, token_tensor: Tensor, length: int = 250, temperature: float = 1.0,
+                    eos_token: int = None) -> Tensor:
+    model.eval()
+    for _ in range(len(token_tensor[0]), length + 1):
+        output = model(token_tensor)[:, -1, :-num_special_non_eos_tokens]
+        if abs(temperature) < 1e-10:
+            pred = torch.argmax(output, dim=1).unsqueeze(0)
+        else:
+            probs = F.softmax(output * (1 / temperature), dim=-1)
+            pred = torch.multinomial(probs, 1)
+        token_tensor = torch.cat((token_tensor, pred), 1)
+        if pred.item() == eos_token:
+            return token_tensor
+    return token_tensor
+
+
 if __name__ == '__main__':
     from io_utils import prompt_model
 
-    story = prompt_model("model", "once", 255)
+    string = "once"
+    story = prompt_model("model", string, 255)
     print(story)

@@ -1,6 +1,8 @@
 playground/
+runs/
 # disable temporarily
 trained_models/
+data/TinyStories*.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
