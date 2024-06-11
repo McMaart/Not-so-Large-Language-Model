@@ -59,12 +59,12 @@ Once upon a time, there was a girl named Lily. She had a flute that she loved to
 #STORY#RATINGS#SEPERATOR#
 
 IK
-GRAMMAR: 
-SPELLING: 
-CONSISTENCY: 
-STORY: 
-CREATIVITY: 
-STYLE: 
+GRAMMAR: 10
+SPELLING: 10
+CONSISTENCY: 10 
+STORY: 8
+CREATIVITY: 9
+STYLE: 7
 MM
 GRAMMAR: 
 SPELLING: 
@@ -87,12 +87,12 @@ Once upon a time, there was a boy named Tom. He loved gum. One day, he found a t
 #STORY#RATINGS#SEPERATOR#
 
 IK
-GRAMMAR: 
-SPELLING: 
-CONSISTENCY: 
-STORY: 
-CREATIVITY: 
-STYLE: 
+GRAMMAR: 9
+SPELLING: 10
+CONSISTENCY: 9 
+STORY: 6
+CREATIVITY: 10
+STYLE: 8
 MM
 GRAMMAR: 
 SPELLING: 
@@ -115,12 +115,12 @@ Once upon a time, there was a little boy named Tim. Tim had a favorite vest that
 #STORY#RATINGS#SEPERATOR#
 
 IK
-GRAMMAR: 
-SPELLING: 
-CONSISTENCY: 
-STORY: 
-CREATIVITY: 
-STYLE: 
+GRAMMAR: 10
+SPELLING: 10
+CONSISTENCY: 9
+STORY: 4
+CREATIVITY: 5
+STYLE: 5
 MM
 GRAMMAR: 
 SPELLING: 
@@ -143,12 +143,12 @@ Once upon a time, there was a little boat. The boat was blue and it liked to flo
 #STORY#RATINGS#SEPERATOR#
 
 IK
-GRAMMAR: 
-SPELLING: 
-CONSISTENCY: 
-STORY: 
-CREATIVITY: 
-STYLE: 
+GRAMMAR: 10
+SPELLING: 10
+CONSISTENCY: 10
+STORY: 7
+CREATIVITY: 8
+STYLE: 8
 MM
 GRAMMAR: 
 SPELLING: 
@@ -171,12 +171,12 @@ Once upon a time, there was an old lady who lived in a small house. She loved to
 #STORY#RATINGS#SEPERATOR#
 
 IK
-GRAMMAR: 
-SPELLING: 
-CONSISTENCY: 
-STORY: 
-CREATIVITY: 
-STYLE: 
+GRAMMAR: 10
+SPELLING: 10
+CONSISTENCY: 10
+STORY: 4
+CREATIVITY: 4
+STYLE: 6
 MM
 GRAMMAR: 
 SPELLING: 
@@ -199,12 +199,12 @@ Once upon a time, there was a little boy named Tim. Tim was very nervous. He had
 #STORY#RATINGS#SEPERATOR#
 
 IK
-GRAMMAR: 
-SPELLING: 
-CONSISTENCY: 
-STORY: 
-CREATIVITY: 
-STYLE: 
+GRAMMAR: 10
+SPELLING: 10
+CONSISTENCY: 8
+STORY: 5
+CREATIVITY: 6
+STYLE: 5
 MM
 GRAMMAR: 
 SPELLING: 
@@ -227,12 +227,12 @@ Once upon a time, there was a big gray elephant named Elly. Elly was sad because
 #STORY#RATINGS#SEPERATOR#
 
 IK
-GRAMMAR: 
-SPELLING: 
-CONSISTENCY: 
-STORY: 
-CREATIVITY: 
-STYLE: 
+GRAMMAR: 9
+SPELLING: 10
+CONSISTENCY: 10
+STORY: 9
+CREATIVITY: 9
+STYLE: 8
 MM
 GRAMMAR: 
 SPELLING: 
