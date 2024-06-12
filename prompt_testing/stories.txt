@@ -17,12 +17,12 @@ STORY:
 CREATIVITY: 
 STYLE: 
 RW
-GRAMMAR: 
-SPELLING: 
-CONSISTENCY: 
-STORY: 
-CREATIVITY: 
-STYLE: 
+GRAMMAR: 10 
+SPELLING: 10
+CONSISTENCY: 10 
+STORY: 2
+CREATIVITY: 2 
+STYLE: 5
 
 #STORY#SEPERATOR#
 
@@ -45,11 +45,207 @@ STORY:
 CREATIVITY: 
 STYLE: 
 RW
+GRAMMAR: 9
+SPELLING: 1
+CONSISTENCY: 10
+STORY: 2
+CREATIVITY: 2
+STYLE: 5
+
+#STORY#SEPERATOR#
+
+Once upon a time, there was a girl named Lily. She had a flute that she loved to play. One day, she met a deaf cat who could not hear her play the flute. Lily wanted to help the cat hear her music. Lily had an idea. She would stretch a big string from her flute to the cat's ear. The cat could feel the music through the string. The cat was happy and started to dance. Lily and the deaf cat became best friends. They played and danced together every day. The cat loved to feel the music from Lily's flute. They were happy and had lots of fun.
+
+#STORY#RATINGS#SEPERATOR#
+
+IK
+GRAMMAR: 10
+SPELLING: 10
+CONSISTENCY: 10 
+STORY: 8
+CREATIVITY: 9
+STYLE: 7
+MM
 GRAMMAR: 
 SPELLING: 
 CONSISTENCY: 
 STORY: 
 CREATIVITY: 
 STYLE: 
+RW
+GRAMMAR: 10
+SPELLING: 10
+CONSISTENCY: 10 
+STORY: 9
+CREATIVITY: 9 
+STYLE: 7
+
+#STORY#SEPERATOR#
+
+Once upon a time, there was a boy named Tom. He loved gum. One day, he found a thin piece of gum on the ground. He thought it was very special. He put the gum in his pocket to save it for later. Tom went to play with his friend, Sam. They played a game where they had to escape from a pretend monster. They ran and hid, but the monster always found them. Tom felt scared, but he remembered his special gum. He thought it could help them win the game. Tom took out the thin gum and shared it with Sam. They both chewed the gum and started to run from the monster again. But this time, they did not escape. The gum made them feel sick and slow. The monster caught them, and they lost the game. Tom and Sam were very sad. They learned never to pick up gum from the ground again.
+
+#STORY#RATINGS#SEPERATOR#
+
+IK
+GRAMMAR: 9
+SPELLING: 10
+CONSISTENCY: 9 
+STORY: 6
+CREATIVITY: 10
+STYLE: 8
+MM
+GRAMMAR: 
+SPELLING: 
+CONSISTENCY: 
+STORY: 
+CREATIVITY: 
+STYLE: 
+RW
+GRAMMAR: 9
+SPELLING: 10
+CONSISTENCY: 8  
+STORY: 5
+CREATIVITY: 6
+STYLE: 5
+
+#STORY#SEPERATOR#
+
+Once upon a time, there was a little boy named Tim. Tim had a favorite vest that he loved to wear. It was a pretty vest with many colors. He wore it all the time. One day, it started to rain when Tim was playing outside. The rain made Tim and his vest very wet. Tim did not like being wet, so he went back inside his house. His mom saw his wet vest and told him to take it off. Tim took off his wet vest and started to weep. He was sad because his favorite vest was wet. His mom saw him weep and hugged him. She told him not to worry, she would dry the vest. Tim felt better and played with his toys while he waited for his vest to dry.
+
+#STORY#RATINGS#SEPERATOR#
+
+IK
+GRAMMAR: 10
+SPELLING: 10
+CONSISTENCY: 9
+STORY: 4
+CREATIVITY: 5
+STYLE: 5
+MM
+GRAMMAR: 
+SPELLING: 
+CONSISTENCY: 
+STORY: 
+CREATIVITY: 
+STYLE: 
+RW
+GRAMMAR: 10
+SPELLING: 10
+CONSISTENCY: 10
+STORY: 4
+CREATIVITY:  4
+STYLE: 5
+
+#STORY#SEPERATOR#
+
+Once upon a time, there was a little boat. The boat was blue and it liked to float on the water. One day, the sun was very hot and the water began to dry up. The boat was sad because it could not float anymore. A bird saw the boat and asked, "Why are you sad, little boat?" The boat said, "The water is dry and I cannot float. I miss the water." The bird wanted to help the boat, so it thought of an easy plan. The bird told the boat, "I will find more water for you. Then you can float again!" The boat was happy and thanked the bird. The bird flew away and soon found a big pond. It came back and told the boat about the pond. Together, the bird and the boat went to the big pond. The boat was able to float again and it was very happy. The bird and the boat played together in the water all day long. And they became the best of friends.
+
+#STORY#RATINGS#SEPERATOR#
+
+IK
+GRAMMAR: 10
+SPELLING: 10
+CONSISTENCY: 10
+STORY: 7
+CREATIVITY: 8
+STYLE: 8
+MM
+GRAMMAR: 
+SPELLING: 
+CONSISTENCY: 
+STORY: 
+CREATIVITY: 
+STYLE: 
+RW
+GRAMMAR: 9 
+SPELLING: 10
+CONSISTENCY:10 
+STORY: 5
+CREATIVITY: 6
+STYLE: 5
+
+#STORY#SEPERATOR#
+
+Once upon a time, there was an old lady who lived in a small house. She loved to mix things in her big pot. One day, she decided to mix some yummy soup for her lunch. As she mixed the soup, she saw some smoke come out of her pot. She knew that meant the soup was very hot. The old lady was very careful not to touch the smoke or the pot. She let the soup cool down and then she ate it. The old lady thought it was the best soup she ever had. She was very happy and full. From that day on, she always mixed yummy soup for her lunch.
+
+#STORY#RATINGS#SEPERATOR#
+
+IK
+GRAMMAR: 10
+SPELLING: 10
+CONSISTENCY: 10
+STORY: 4
+CREATIVITY: 4
+STYLE: 6
+MM
+GRAMMAR: 
+SPELLING: 
+CONSISTENCY: 
+STORY: 
+CREATIVITY: 
+STYLE: 
+RW
+GRAMMAR: 10
+SPELLING: 10
+CONSISTENCY: 10  
+STORY: 4
+CREATIVITY: 4  
+STYLE: 4
+
+#STORY#SEPERATOR#
+
+Once upon a time, there was a little boy named Tim. Tim was very nervous. He had lost his toy razor. He loved to pretend to shave like his dad. Every day, he would play with his toy razor. But now, it was gone. One day, Tim went to the park with his mom. He thought maybe he left his toy razor there. He looked and looked, but he could not find it. Tim was very sad. He missed his toy razor so much. He wanted to find it and play with it again. Then, Tim saw a girl playing with a toy. He looked closer and recognized it. It was his toy razor! Tim was so happy. He went to the girl and told her that it was his toy. The girl was nice and gave it back to him. After that, Tim was not nervous anymore. He had his toy razor back and could play with it again. And they all lived happily ever after.
+
+#STORY#RATINGS#SEPERATOR#
+
+IK
+GRAMMAR: 10
+SPELLING: 10
+CONSISTENCY: 8
+STORY: 5
+CREATIVITY: 6
+STYLE: 5
+MM
+GRAMMAR: 
+SPELLING: 
+CONSISTENCY: 
+STORY: 
+CREATIVITY: 
+STYLE: 
+RW
+GRAMMAR: 9
+SPELLING: 10
+CONSISTENCY: 8
+STORY: 3
+CREATIVITY: 4
+STYLE: 3
+
+#STORY#SEPERATOR#
+
+Once upon a time, there was a big gray elephant named Elly. Elly was sad because she thought she was ugly. She had big ears and a long nose, and she felt different from the other animals. One day, a little bird named Benny flew to Elly. Benny saw that Elly was sad and asked, "Why are you sad, Elly?" Elly told Benny that she felt ugly and did not like her big ears and long nose. Benny looked at Elly and said, "I think you are not ugly. You are special." Benny promised to show Elly how her big ears and long nose made her special. They went to the river, and Benny asked Elly to use her long nose to spray water on the dry plants. Elly did and the plants grew happy and green. Then, Benny asked Elly to use her big ears to fan the hot animals. Elly did, and all the animals felt cool and happy. Elly learned that being different was not ugly. She was special and had her own way to help others. Elly and Benny became best friends, and they lived happily ever after.
+
+#STORY#RATINGS#SEPERATOR#
+
+IK
+GRAMMAR: 9
+SPELLING: 10
+CONSISTENCY: 10
+STORY: 9
+CREATIVITY: 9
+STYLE: 8
+MM
+GRAMMAR: 
+SPELLING: 
+CONSISTENCY: 
+STORY: 
+CREATIVITY: 
+STYLE: 
+RW
+GRAMMAR: 10 
+SPELLING: 10
+CONSISTENCY: 9  
+STORY: 8
+CREATIVITY: 8 
+STYLE: 6
 
 #STORY#SEPERATOR#

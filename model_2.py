@@ -22,8 +22,8 @@ dropout_rnn_2 = 0.2
 
 
 class RNNModel(nn.Module):
-    def __init__(self, vocab_size: int, embed_size: int = 128, hidden_size: int = 256, num_layers: int = 2,
-                 dropout_rnn: float = 0.1, dropout_2: float = 0.35, padding_idx: int | None = None):
+    def __init__(self, vocab_size: int, embed_size: int = 256, hidden_size: int = 256, num_layers: int = 2,
+                 dropout_rnn: float = 0.1, dropout_2: float = 0.1, padding_idx: int | None = None):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
@@ -50,21 +50,6 @@ class RNNModel(nn.Module):
     def init_hidden(self, batch_size: int) -> Tensor:
         return torch.zeros(self.num_layers, batch_size, self.hidden_size, device=next(self.parameters()).device,
                            requires_grad=False)
-
-    @torch.no_grad()
-    def generate_tokens(self, token_tensor: Tensor, length: int = 250, eos_token: int = None) -> Tensor:
-        self.eval()
-        h = self.init_hidden(token_tensor.size(0))
-
-        for _ in range(len(token_tensor[0]), length+1):
-            output, h = self(token_tensor, h)
-            output = output[:, -1, :-num_special_non_eos_tokens]
-            probs = F.softmax(output, dim=-1)
-            pred = torch.multinomial(probs, 1)
-            token_tensor = torch.cat((token_tensor, pred), 1)
-            if pred.item() == eos_token:
-                return token_tensor
-        return token_tensor
 
 
 if __name__ == "__main__":

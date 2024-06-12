@@ -4,7 +4,10 @@ from torch import nn, Tensor
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from io_utils import (create_vocabulary, map_story_to_tensor, load_tiny_stories, clean_stories, save_vocabulary,
+import torchtext
+torchtext.disable_torchtext_deprecation_warning()
+from torchtext.data import get_tokenizer
+from io_utils import (create_vocabulary, map_story_to_tensor, load_tiny_stories, save_vocabulary,
                       load_vocabulary, TinyStories)
 from model_1 import TransformerModel, device, learning_rate, max_seq_len
 from time import perf_counter
@@ -35,7 +38,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
     for epoch in range(1, epochs + 1):
         epoch_loss = 0.
         shuffle = True  # shuffle = False if epoch == 1 else True
-        dataloader = DataLoader(data, batch_size=batch_size, collate_fn=data.get_batch, num_workers=4, shuffle=shuffle,
+        dataloader = DataLoader(data, batch_size=batch_size, collate_fn=data.get_batch, num_workers=2, shuffle=shuffle,
                                 pin_memory=True)
         if max_num_batches is None:
             max_num_batches = len(dataloader)
@@ -140,7 +143,6 @@ def do_training(max_num_batches: int | None = 1000, model_name: str = "model", l
             print("Creating vocabulary...")
             stories = load_tiny_stories(
                 900000)  # Number of stories used for creating the vocabulary, not the vocabulary size
-            stories = clean_stories(stories)
             vocabulary = create_vocabulary(stories, 2048)
             save_vocabulary(vocabulary)
         if load_model is True:
@@ -153,7 +155,7 @@ def do_training(max_num_batches: int | None = 1000, model_name: str = "model", l
             model = TransformerModel(len(vocabulary), 192, 6, 6, 768,
                                      0.1, padding_idx=vocabulary["<pad>"]).to(device)
             # model = RNNModel(2048).to(device)
-        data = TinyStories(vocabulary, max_seq_len=max_seq_len)
+        data = TinyStories(vocabulary, get_tokenizer('spacy', language='en_core_web_sm'), max_seq_len=max_seq_len)
         loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
         optimizer = torch.optim.AdamW(model.parameters(), learning_rate)
         params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -179,7 +181,7 @@ def do_training(max_num_batches: int | None = 1000, model_name: str = "model", l
 def eval_setup(model_name: str = "model", max_num_batches: int = 1000):
     model = torch.load(f'trained_models/{model_name}.pth').to(device)
     vocabulary = load_vocabulary()
-    data = TinyStories(vocabulary, max_seq_len=max_seq_len)
+    data = TinyStories(vocabulary, max_seq_len=max_seq_len, split="validation")
 
     loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
     print(evaluate(data, model, loss_fn, max_num_batches))
@@ -196,10 +198,7 @@ def objective(trial):
     dropout = trial.suggest_float('dropout', 0.1, 0.5)
 
     # Load data
-    stories = load_tiny_stories(524288)
-    stories = clean_stories(stories)
-    vocabulary = create_vocabulary(stories, 2048)
-    save_vocabulary(vocabulary)
+    vocabulary = load_vocabulary()
     data = TinyStories(vocabulary, max_seq_len=max_seq_len)
 
     model = TransformerModel(len(vocabulary), embed_size, nhead, num_layers, dim_ff=dim_ff, dropout=dropout).to(device)
@@ -215,4 +214,4 @@ if __name__ == '__main__':
     tup = do_training(54000, load_model=False, hyper_search=False, load_vocab=True)
     print(tup)
     print("Starting evaluation...")
-    eval_setup("model", max_num_batches=2300)
+    eval_setup("model", max_num_batches=2400)
