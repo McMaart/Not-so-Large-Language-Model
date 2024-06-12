@@ -16,13 +16,13 @@ sweep_configuration = {
     'method': 'bayes',
     'metric': {'name': 'eval_loss', 'goal': 'minimize'},
     'parameters': {
-        'embed_size': {'values': [256, 512, 768]},
+        'embed_size': {'values': [512, 768, 1024]},
         'nhead': {'values': [4, 8]},
-        'num_layers': {'values': [2, 4, 6]},
+        'num_layers': {'values': [4, 6]},
         'dim_ff': {'values': [512, 1024, 2048]},
         'dropout': {'values': [0.1, 0.2, 0.3]},
         'learning_rate': {'max': 1e-3, 'min': 1e-5},
-        'batch_size': {'values': [32, 64, 128]}
+        'batch_size': {'values': [32, 64, 128, 256]}
     }
 }
 
@@ -99,7 +99,7 @@ def train_transformer_sweep(data, vocabulary, config=None):
     with run:
         config = wandb.config
 
-        run_name = f"E_{config.embed_size}_L_{config.num_layers}_Dff_{config.dim_ff}_Lr_{config.learning_rate}"
+        run_name = f"E_{config.embed_size}_L_{config.num_layers}_Dff_{config.dim_ff}_Lr_{config.learning_rate:.7f}_D_{config.dropout}_B_{config.batch_size}"
         wandb.run.name = run_name
 
         # Initialize the model with hyperparameters from the sweep config
@@ -126,8 +126,8 @@ def train_transformer_sweep(data, vocabulary, config=None):
         start_time = perf_counter()
 
         # Train the model
-        max_num_batches = 500  # Define max number of batches
-        epoch_losses, avg_loss, batch_losses = train(data, model, loss_fn, optimizer, epochs=2,
+        max_num_batches = 100000  # Define max number of batches
+        epoch_losses, avg_loss, batch_losses = train(data, model, loss_fn, optimizer, epochs=1,
                                                      max_num_batches=max_num_batches,
                                                      batch_size=config.batch_size)
 
@@ -137,8 +137,8 @@ def train_transformer_sweep(data, vocabulary, config=None):
         wandb.log({"training_time": training_time})
 
         # Log the results for each epoch
-        for epoch, epoch_loss in enumerate(epoch_losses):
-            wandb.log({"epoch": epoch + 1, "train_loss": epoch_loss})
+        #for epoch, epoch_loss in enumerate(epoch_losses):
+           # wandb.log({"epoch": epoch + 1, "train_loss": epoch_loss})
 
         # Log the average training loss
         wandb.log({"avg_train_loss": avg_loss})
@@ -148,7 +148,7 @@ def train_transformer_sweep(data, vocabulary, config=None):
             wandb.log({"batch_idx": batch_idx, "batch_loss": batch_loss})
 
         # Evaluate the model and log evaluation loss
-        eval_loss = evaluate(data, model, loss_fn, max_num_batches=10000)
+        eval_loss = evaluate(data, model, loss_fn, max_num_batches=100000)
         wandb.log({"eval_loss": eval_loss})
 
         # Evaluate additional metrics on a sample
