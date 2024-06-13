@@ -4,7 +4,7 @@ import torch
 from datasets import load_from_disk
 from torch.nn.utils.rnn import pad_sequence
 import torchtext
-torchtext.disable_torchtext_deprecation_warning()
+#torchtext.disable_torchtext_deprecation_warning()
 from torchtext.data import get_tokenizer
 from torch import Tensor
 import nltk

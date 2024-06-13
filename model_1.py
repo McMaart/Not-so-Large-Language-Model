@@ -91,5 +91,5 @@ if __name__ == '__main__':
     from io_utils import prompt_model
 
     string = "once"
-    story = prompt_model("model", string, 255)
+    story = prompt_model("best_model_saved", string, 255)
     print(story)
