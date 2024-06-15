@@ -12,13 +12,13 @@ from io_utils import (create_vocabulary, map_story_to_tensor, load_tiny_stories,
 from model_1 import TransformerModel, device, learning_rate, max_seq_len
 from time import perf_counter
 import optuna
-from model_2 import RNNModel
+from model_2 import RNNModel, LSTMModel, GRUModel
 
 writer = SummaryWriter()
 
 
 def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int = 1, max_num_batches: int = None,
-          flags: list[bool] = None, batch_size: int = 32, is_rnn: bool = False):
+          flags: list[bool] = None, batch_size: int = 32):
     model.train()
     total_loss = 0.
     curr_loss = 0.
@@ -26,10 +26,6 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
     batch_loss = []
     #epoch_losses = []
     scheduler = StepLR(optimizer, step_size=5000, gamma=0.8)
-
-    h = None
-    if is_rnn:
-        h = model.init_hidden(batch_size)
 
     # just for IDE
     x: Tensor
@@ -45,11 +41,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
 
         for batch, (x, y) in zip(range(1, min(max_num_batches, len(dataloader)) + 1), dataloader):
             x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
-
-            if is_rnn:
-                pred, h = model(x, h.detach())
-            else:
-                pred = model(x)
+            pred = model(x)
 
             optimizer.zero_grad(set_to_none=True)
             loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
@@ -79,7 +71,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
 
 
 @torch.no_grad()
-def evaluate(data: TinyStories, model: nn.Module, loss_fn, max_num_batches: int = 1000, is_rnn: bool = False) -> float:
+def evaluate(data: TinyStories, model: nn.Module, loss_fn, max_num_batches: int = 1000) -> float:
     model.eval()
     total_loss = 0.0
     dataloader = DataLoader(data, batch_size=32, collate_fn=data.get_batch, num_workers=2, shuffle=True,
@@ -87,16 +79,9 @@ def evaluate(data: TinyStories, model: nn.Module, loss_fn, max_num_batches: int 
     if max_num_batches is None:
         max_num_batches = len(dataloader)
 
-    h = None
-    if is_rnn:
-        h = torch.zeros(model.num_layers, 32, model.hidden_size).to(device)
-
     for batch, (x, y) in zip(range(1, min(max_num_batches, len(dataloader)) + 1), dataloader):
         x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
-        if is_rnn:
-            pred, h = model(x, h.detach())
-        else:
-            pred = model(x)
+        pred = model(x)
 
         loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
         total_loss += loss.item()
