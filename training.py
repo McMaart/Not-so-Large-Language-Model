@@ -37,9 +37,10 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
         if max_num_batches is None:
             max_num_batches = len(dataloader)
 
-        for batch, (x, y) in zip(range(1, min(max_num_batches, len(dataloader)) + 1), dataloader):
+        for batch, (x, y, lengths) in zip(range(1, min(max_num_batches, len(dataloader)) + 1), dataloader):
             x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
-            pred = model(x)
+            lengths = lengths.to(device, non_blocking=True)
+            pred = model(x, lengths)
 
             optimizer.zero_grad(set_to_none=True)
             loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
@@ -72,9 +73,10 @@ def evaluate(data: TinyStories, model: nn.Module, loss_fn, max_num_batches: int 
     if max_num_batches is None:
         max_num_batches = len(dataloader)
 
-    for batch, (x, y) in zip(range(1, min(max_num_batches, len(dataloader)) + 1), dataloader):
+    for batch, (x, y, lengths) in zip(range(1, min(max_num_batches, len(dataloader)) + 1), dataloader):
         x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
-        pred = model(x)
+        lengths = lengths.to(device, non_blocking=True)
+        pred = model(x, lengths)
 
         loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
         total_loss += loss.item()
@@ -189,7 +191,8 @@ def objective(trial):
 
 
 if __name__ == '__main__':
-    tup = do_training(54000, load_model=False, hyper_search=False, load_vocab=True)
+    tup = do_training(max_num_batches=54000, model_name="model", load_model=False, load_vocab=True,
+                      hyper_search=False)
     print(tup)
     print("Starting evaluation...")
     eval_setup("model", max_num_batches=2400)

@@ -29,12 +29,18 @@ class TransformerModel(nn.Module):
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers, enable_nested_tensor=False)
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor, lengths: Tensor | None = None) -> Tensor:
         embedding: Tensor = self.embedding(x)
         embedding = self.pos_encoding(embedding)
 
-        mask = nn.Transformer.generate_square_subsequent_mask(x.size(1), device=torch.device(device))
-        embedding = self.encoder(embedding, mask=mask, is_causal=True)
+        mask = nn.Transformer.generate_square_subsequent_mask(x.size(1), dtype=torch.bool, device=torch.device(device))
+        if lengths is None:
+            pad_mask = None
+        else:
+            seq_indices = torch.arange(x.size(1), device=device)
+            pad_mask = seq_indices >= lengths[:, None]
+
+        embedding = self.encoder(embedding, mask=mask, src_key_padding_mask=pad_mask, is_causal=True)
         return self.linear(embedding)
 
 
@@ -83,5 +89,5 @@ if __name__ == '__main__':
     from io_utils import prompt_model
 
     string = "once"
-    story = prompt_model("model", string, 255)
+    story = prompt_model("model", string, 255, 0.0)
     print(story)

@@ -28,7 +28,7 @@ class RNNModel(RNNBaseModel):
         self.rnn = nn.RNN(self.embed_size, self.hidden_size, self.num_layers, batch_first=True, dropout=dropout)
         self.dropout = nn.Dropout(dropout2)
 
-    def forward(self, x: Tensor):
+    def forward(self, x: Tensor, lengths: Tensor | None = None):
         h = self.init_hidden(x.size(0))
         embedding = self.embedding(x)
         out, _ = self.rnn(embedding, h)
@@ -42,7 +42,7 @@ class GRUModel(RNNBaseModel):
         super().__init__(vocab_size, embed_size, hidden_size, num_layers, padding_idx)
         self.gru = nn.GRU(self.embed_size, self.hidden_size, self.num_layers, batch_first=True, dropout=dropout)
 
-    def forward(self, x: Tensor):
+    def forward(self, x: Tensor, lengths: Tensor | None = None):
         h = self.init_hidden(x.size(0))
         embedding = self.embedding(x)
         out, _ = self.gru(embedding, h)
@@ -55,7 +55,7 @@ class LSTMModel(RNNBaseModel):
         super().__init__(vocab_size, embed_size, hidden_size, num_layers, padding_idx)
         self.lstm = nn.LSTM(self.embed_size, self.hidden_size, self.num_layers, batch_first=True, dropout=dropout_lstm)
 
-    def forward(self, x: Tensor):
+    def forward(self, x: Tensor, lengths: Tensor | None = None):
         h, c = self.init_hidden(x.size(0)), self.init_hidden(x.size(0))
         embedding = self.embedding(x)
         out, _ = self.lstm(embedding, (h, c))

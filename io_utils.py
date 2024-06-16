@@ -147,7 +147,7 @@ def tokens_to_story(token_list: list[str]) -> str:
     return story
 
 
-def prompt_model(model_name: str, start_str: str, length: int = 250) -> str:
+def prompt_model(model_name: str, start_str: str, length: int = 250, temperature: float = 1.0) -> str:
     vocab = load_vocabulary()
     vocab_rev = {k: v for v, k in vocab.items()}
 
@@ -164,7 +164,7 @@ def prompt_model(model_name: str, start_str: str, length: int = 250) -> str:
     input_tensor = torch.tensor([vocab.get(token, default) for token in tokenizer(start_str.lower())],
                                 dtype=torch.int32)
     input_tensor = input_tensor.view(1, -1)
-    tl = generate_tokens(model, input_tensor.to(device), length, eos_token=vocab.get("<eos>"))
+    tl = generate_tokens(model, input_tensor.to(device), length, eos_token=vocab.get("<eos>"), temperature=temperature)
 
     story_list = []
     for batch in tl:
@@ -188,9 +188,10 @@ class TinyStories(Dataset):
         self.pad_token = self.vocab["<pad>"]
         self.max_seq_len = max_seq_len if max_seq_len is not None else 10000
 
-    def get_batch(self, sequences: list[Tensor]) -> tuple[Tensor, Tensor]:
+    def get_batch(self, sequences: list[Tensor]) -> tuple[Tensor, Tensor, Tensor]:
+        lengths = torch.cat([torch.tensor(s.shape)-1 for s in sequences])
         padded_seq = pad_sequence(sequences, batch_first=True, padding_value=self.pad_token)
-        return padded_seq[:, :-1].contiguous(), padded_seq[:, 1:].contiguous()
+        return padded_seq[:, :-1].contiguous(), padded_seq[:, 1:].contiguous(), lengths
 
     def __getitem__(self, index: int) -> Tensor:
         story = self.stories[index]['text']
