@@ -126,6 +126,9 @@ def tokens_to_story(token_list: list[str]) -> str:
     if not nltk.download('punkt', quiet=True):
         nltk.download('punkt')
 
+    # List of all names in the vocabulary
+    names = {'ben', 'bob', 'emily', 'joe', 'john', 'lily', 'lucy', 'max', 'mia', 'sam', 'sara', 'sarah', 'timmy', 'tom'}
+
     # Handle quotes based on order of appearance (cannot handle nested quotes)
     in_quote = False
     for i, token in enumerate(token_list):
@@ -137,6 +140,8 @@ def tokens_to_story(token_list: list[str]) -> str:
                 if i != 0:
                     token_list[i] = ' "'
             in_quote = not in_quote
+        elif token in names:  # Capitalize names
+            token_list[i] = token.title()
 
     sentence = TreebankWordDetokenizer().detokenize(token_list)
     sentence = re.sub(r'\s([?.!,"](?:\s|$))', r'\1', sentence)
@@ -150,12 +155,7 @@ def tokens_to_story(token_list: list[str]) -> str:
     story = re.sub(r"' s\s", "'s ", story)  # Fix possessive
     story = re.sub(r"' d\s", "'d ", story)
 
-    # List of all names in the vocabulary
-    names = {'ben', 'bob', 'emily', 'joe', 'john', 'lily', 'lucy', 'max', 'mia', 'sam', 'sara', 'sarah', 'timmy', 'tom'}
-    # ToDo: can be more efficient ToDo: use regex instead (or, even better, directly capitalize the tokens),
-    #  for fixing spelling mistakes such as botTom
-    for name in names:
-        story = story.replace(name, name.title())
+    return story
 
     return story
 
