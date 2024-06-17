@@ -125,6 +125,19 @@ def map_story_to_tensor(story: str, vocab: dict, tokenizer) -> Tensor:
 def tokens_to_story(token_list: list[str]) -> str:
     if not nltk.download('punkt', quiet=True):
         nltk.download('punkt')
+
+    # Handle quotes based on order of appearance (cannot handle nested quotes)
+    in_quote = False
+    for i, token in enumerate(token_list):
+        if token == '"':
+            if in_quote:  # Closing quote
+                if i != len(token_list) - 1 and token_list[i + 1] not in ['.', ',', '!', '?']:
+                    token_list[i] = '" '
+            else:  # Opening quote
+                if i != 0:
+                    token_list[i] = ' "'
+            in_quote = not in_quote
+
     sentence = TreebankWordDetokenizer().detokenize(token_list)
     sentence = re.sub(r'\s([?.!,"](?:\s|$))', r'\1', sentence)
 
