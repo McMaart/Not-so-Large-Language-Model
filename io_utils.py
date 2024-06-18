@@ -156,6 +156,9 @@ def tokens_to_story(token_list: list[str]) -> str:
     story = story[0].upper() + story[1:]
     story = re.sub(r'([.!?"]\s*)([a-z])', lambda x: x.group(1) + x.group(2).upper(), story)
 
+    # unify quotation marks
+    story = re.sub(r'“|”', '"', story)
+
     # handle space before and after " based on appearance (cannot handle nested quotes)
     in_quote = False
     # loop through all characters in the story and delete unnecessary spaces
