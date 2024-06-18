@@ -123,39 +123,54 @@ def map_story_to_tensor(story: str, vocab: dict, tokenizer) -> Tensor:
 
 
 def tokens_to_story(token_list: list[str]) -> str:
-    if not nltk.download('punkt', quiet=True):
-        nltk.download('punkt')
 
-    # List of all names in the vocabulary
-    names = {'ben', 'bob', 'emily', 'joe', 'john', 'lily', 'lucy', 'max', 'mia', 'sam', 'sara', 'sarah', 'timmy', 'tom'}
-
-    # Handle quotes based on order of appearance (cannot handle nested quotes)
-    in_quote = False
-    for i, token in enumerate(token_list):
-        if token == '"':
-            if in_quote:  # Closing quote
-                if i != len(token_list) - 1 and token_list[i + 1] not in ['.', ',', '!', '?']:
-                    token_list[i] = '" '
-            else:  # Opening quote
-                if i != 0:
-                    token_list[i] = ' "'
-            in_quote = not in_quote
-        elif token in names:  # Capitalize names
-            token_list[i] = token.title()
-
-    sentence = TreebankWordDetokenizer().detokenize(token_list)
-    sentence = re.sub(r'\s([?.!,"](?:\s|$))', r'\1', sentence)
-
-    tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
-    sentences = tokenizer.tokenize(sentence)
-
-    story = " ".join([s.capitalize() for s in sentences])
+    story = " ".join(token_list)
+    
     story = re.sub(r'\si\s', r' I ', story)  # Fix capitalization of 'i'
-    story = re.sub(r"n' t", "n't", story)  # Fix contraction
-    story = re.sub(r"' s\s", "'s ", story)  # Fix possessive
-    story = re.sub(r"' d\s", "'d ", story)
+    
+    # Fix contraction, possessive, 'd, 're
+    patterns = {
+        r"n' t": "n't",
+        r"(\w) n't": r"\1n't",
+        r"' s\s": "'s ",
+        r"(\w) 's": r"\1's",
+        r"' d\s": "'d ",
+        r"(\w) 'd": r"\1'd",
+        r"' re\s": "'re ",
+        r"(\w) 're": r"\1're",
+    }
 
-    return story
+    for pattern, replacement in patterns.items():
+        story = re.sub(pattern, replacement, story)
+    
+    # Fix spaces around punctuation
+    story = re.sub(r'\s([?.!,](?:\s|$))', r'\1', story)
+
+    # capitalize first letter of each sentence
+    story = story[0].upper() + story[1:]
+    story = re.sub(r'([.!?"]\s*)([a-z])', lambda x: x.group(1) + x.group(2).upper(), story)
+
+    # handle space before and after " based on appearance (cannot handle nested quotes)
+    in_quote = False
+    # loop through all characters in the story and delete unnecessary spaces
+    # if closing quote: delete space before quote
+    # if opening quote: delete space after quote
+    story_list = list(story)
+    for i, char in enumerate(story_list):
+        if char == '"':
+            if in_quote:  # Closing quote
+                if story_list[i-1] == ' ':
+                    story_list[i-1] = ''
+            elif i != len(story_list) - 1:  # Opening quote
+                if story_list[i+1] == ' ':
+                    story_list[i+1] = ''
+            in_quote = not in_quote
+
+    story = ''.join(story_list)
+
+    names = {'ben', 'billy', 'bob', 'emily', 'jack', 'joe', 'john', 'lily', 'lucy', 'max', 'mia', 'sam', 'sara', 'sarah', 'timmy', 'tom'}
+    # replace names with capitalized names
+    story = re.sub(r'\b(' + '|'.join(names) + r')\b', lambda x: x.group().capitalize(), story)
 
     return story
 
