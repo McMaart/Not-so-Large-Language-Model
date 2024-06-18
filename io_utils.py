@@ -138,13 +138,19 @@ def tokens_to_story(token_list: list[str]) -> str:
         r"(\w) 'd": r"\1'd",
         r"' re\s": "'re ",
         r"(\w) 're": r"\1're",
+        r"' m\s": "'m ",
+        r"(\w) 'm": r"\1'm",
+        r"' ve\s": "'ve ",
+        r"(\w) 've": r"\1've",
+        r"' ll\s": "'ll ",
+        r"(\w) 'll": r"\1'll"
     }
 
     for pattern, replacement in patterns.items():
         story = re.sub(pattern, replacement, story)
     
     # Fix spaces around punctuation
-    story = re.sub(r'\s([?.!,](?:\s|$))', r'\1', story)
+    story = re.sub(r'\s([?.!,;:](?:\s|$))', r'\1', story)
 
     # capitalize first letter of each sentence
     story = story[0].upper() + story[1:]
