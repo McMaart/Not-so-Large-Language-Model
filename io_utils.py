@@ -168,7 +168,11 @@ def tokens_to_story(token_list: list[str]) -> str:
 
     story = ''.join(story_list)
 
-    names = {'ben', 'billy', 'bob', 'emily', 'jack', 'joe', 'john', 'lily', 'lucy', 'max', 'mia', 'sam', 'sara', 'sarah', 'timmy', 'tom'}
+    names = {'ben', 'billy', 'bob', 'emily', 'jack', 'joe', 'john', 'lily', 'lucy', 'max', 'mia', 'polly', 'sam', 'sara', 'sarah', 'timmy', 'tom'}
+    # names obtained from GPT-4o by providing list of vocabulary and asking for names:
+    names_gpt = ['alice', 'amy', 'anna', 'ben', 'bella', 'benny', 'billy', 'bob', 'bobo', 'daisy', 'dave', 'emma', 'ellie', 'ella', 'george', 'jack', 'jake', 'jane', 'jen', 'jenny', 'jim', 'jimmy', 'joe', 'john', 'johnny', 'leo', 'lila', 'lily', 'lisa', 'lola', 'lucy', 'mandy', 'mark', 'mary', 'max', 'mia', 'mike', 'molly', 'pete', 'peter', 'rex', 'sally', 'sam', 'sammy', 'sara', 'sarah', 'sophie', 'susie', 'tim', 'timmy', 'tom', 'tommy', 'toby']
+    names = names.union(names_gpt)
+
     # replace names with capitalized names
     story = re.sub(r'\b(' + '|'.join(names) + r')\b', lambda x: x.group().capitalize(), story)
 
