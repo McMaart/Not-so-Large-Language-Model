@@ -332,6 +332,42 @@ if __name__ == "__main__":
     STYLE: 7
 
     """
+    reply12 = """
+    Here are my ratings:
+
+    **Grammar:** The story's grammar is generally good, with only a few minor errors that do not affect the overall understanding of the text. Sentence structure is simple and easy to follow.
+
+    Rating: 8
+
+    **Spelling:** The spelling in the story appears to be accurate, with no notable errors or misspellings.
+
+    Rating: 10
+
+    **Consistency:** The story has a clear and consistent tone, with all events and actions making sense within the narrative. The characters' motivations and behaviors are also consistent throughout.
+    
+    Rating: 9
+    
+    **Story:** The story is sweet and heartwarming, with a clear moral about friendship and helping others. The plot is simple yet engaging for young readers.
+    
+    Rating: 7
+    
+    **Creativity:** While the idea of using a string to transmit music to a deaf cat is creative, the overall concept is not particularly original or surprising.
+    
+    Rating: 6
+    
+    **Style:** The language used in the story is clear and concise, making it easy for young readers to understand. The tone is also generally upbeat and cheerful.
+    
+    Rating: 8
+    
+    Here are my ratings in the required format:
+    
+    GRAMMAR: 8
+    SPELLING: 10
+    CONSISTENCY: 9
+    STORY: 7
+    CREATIVITY: 6
+    STYLE: 8
+    """
 
     categories = {
         0: "GRAMMAR",
@@ -353,6 +389,7 @@ if __name__ == "__main__":
     ratings9 = parse_prompt_3(reply9)
     ratings10 = parse_prompt_3(reply10)
     ratings11 = parse_prompt_3(reply11)
+    ratings12 = parse_prompt_3((reply12))
 
     print("parse_prompt_3:\n")
     print(ratings1)
@@ -366,3 +403,4 @@ if __name__ == "__main__":
     print(ratings9)
     print(ratings10)
     print(ratings11)
+    print(ratings12)
