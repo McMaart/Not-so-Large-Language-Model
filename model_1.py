@@ -37,6 +37,7 @@ class TransformerModel(nn.Module):
         if lengths is None:
             pad_mask = None
         else:
+            lengths = lengths.to(device, non_blocking=True)
             seq_indices = torch.arange(x.size(1), device=device)
             pad_mask = seq_indices >= lengths[:, None]
 
@@ -88,6 +89,6 @@ def generate_tokens(model: nn.Module, token_tensor: Tensor, length: int = 250, t
 if __name__ == '__main__':
     from io_utils import prompt_model
 
-    string = "once"
+    string = '"What do birds like to eat?", Tom asked his mother.'
     story = prompt_model("model", string, 255, 0.0)
     print(story)
