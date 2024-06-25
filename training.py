@@ -17,18 +17,17 @@ from model_2 import RNNModel, LSTMModel, GRUModel
 writer = SummaryWriter()
 
 
-def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int = 1, max_num_batches: int = None,
-          flags: list[bool] = None, batch_size: int = 32):
+def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int = 1, max_num_batches: int | None = None,
+          flags: list[bool] = None, batch_size: int = 32) -> list[float]:
     model.train()
     total_loss = 0.
     curr_loss = 0.
-    log_interval = 125
+    log_interval = 250
     batch_loss = []
-    scheduler = StepLR(optimizer, step_size=5000, gamma=0.8)
+    scheduler = StepLR(optimizer, step_size=2500, gamma=0.87)
 
     # just for IDE
     x: Tensor
-    batch, epoch = 1, 1
 
     for epoch in range(1, epochs + 1):
         shuffle = True  # shuffle = False if epoch == 1 else True
@@ -37,9 +36,9 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
         if max_num_batches is None:
             max_num_batches = len(dataloader)
 
-        for batch, (x, y) in zip(range(1, min(max_num_batches, len(dataloader)) + 1), dataloader):
+        for batch, (x, y, lengths) in zip(range(1, min(max_num_batches, len(dataloader)) + 1), dataloader):
             x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
-            pred = model(x)
+            pred = model(x, lengths)
 
             optimizer.zero_grad(set_to_none=True)
             loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
@@ -52,19 +51,18 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
             scheduler.step()
 
             if batch % log_interval == 0:
-                print(f"Batch: {batch:5}, avg. loss: {total_loss / (batch * epoch):.5f},"
-                      f" curr. loss: {curr_loss / log_interval:.5f}")
-                # ToDO: Adjust the GUI implmentation to receive only the loss (instead of a string)
+                print(f"Batch: {batch:5}, curr. loss: {curr_loss / log_interval:.5f}")
+                # ToDO: Adjust the GUI implementation to receive only the loss (instead of a string containing the loss)
                 batch_loss.append(curr_loss / log_interval)
                 curr_loss = 0.
 
     writer.flush()
     writer.close()
-    return total_loss / (max_num_batches * (epoch - 1) + batch), batch_loss
+    return batch_loss
 
 
 @torch.no_grad()
-def evaluate(data: TinyStories, model: nn.Module, loss_fn, max_num_batches: int = 1000) -> float:
+def evaluate(data: TinyStories, model: nn.Module, loss_fn, max_num_batches: int | None = None) -> float:
     model.eval()
     total_loss = 0.0
     dataloader = DataLoader(data, batch_size=32, collate_fn=data.get_batch, num_workers=2, shuffle=True,
@@ -72,9 +70,10 @@ def evaluate(data: TinyStories, model: nn.Module, loss_fn, max_num_batches: int 
     if max_num_batches is None:
         max_num_batches = len(dataloader)
 
-    for batch, (x, y) in zip(range(1, min(max_num_batches, len(dataloader)) + 1), dataloader):
+    for batch, (x, y, lengths) in zip(range(1, min(max_num_batches, len(dataloader)) + 1), dataloader):
         x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
-        pred = model(x)
+        lengths = lengths.to(device, non_blocking=True)
+        pred = model(x, lengths)
 
         loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
         total_loss += loss.item()
@@ -103,7 +102,7 @@ def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Ten
     return data[:-1], data[1:]
 
 
-def do_training(max_num_batches: int | None = 1000, model_name: str = "model", load_model: bool = True,
+def do_training(model_name: str = "model", max_num_batches: int | None = None, load_model: bool = True,
                 load_vocab: bool = True, flags: list[bool] = None, hyper_search: bool = False):
     if hyper_search is True:
         study = optuna.create_study(direction='minimize')
@@ -125,7 +124,7 @@ def do_training(max_num_batches: int | None = 1000, model_name: str = "model", l
             save_vocabulary(vocabulary)
         if load_model is True:
             try:
-                model = torch.load(f'trained_models/{model_name}.pth').to(device)
+                model = torch.load(f'trained_models/{model_name}.pth', map_location=device).to(device)
             except FileNotFoundError as err:
                 print(f"Model/vocabulary does not exist!\n{err}", file=sys.stderr)
                 sys.exit(1)
@@ -189,7 +188,9 @@ def objective(trial):
 
 
 if __name__ == '__main__':
-    tup = do_training(54000, load_model=False, hyper_search=False, load_vocab=True)
-    print(tup)
+    model_name = "transformer"
+    loss_list = do_training(model_name=model_name, max_num_batches=54000, load_model=False, load_vocab=True,
+                            hyper_search=False)
+    print(f"Loss list: {loss_list}")
     print("Starting evaluation...")
-    eval_setup("model", max_num_batches=2400)
+    eval_setup(model_name, max_num_batches=2400)
