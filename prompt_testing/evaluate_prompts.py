@@ -123,22 +123,22 @@ def evaluate_prompts():
     for category_idx in range(n_categories):
         best_prompts[category_idx] = valid_prompts[np.argmin(avg_rmse[:, category_idx])]
 
-    print("Average RMSE for each category:")
+    print("\n AVERAGE RMSE FOR EACH CATEGORY:")
     for i, category in categories.items():
         print(f"{category}: {avg_rmse[:, i]}")
     print()
     print("Best prompt for each category:")
     for i, category in categories.items():
-        print(f"Best prompt for {category}: {prompts[best_prompts[i]]}")
+        print(f"\n BEST PROMPT FOR {category}: {prompts[best_prompts[i]]}")
 
-    print("\n PROMPTS EXCLUDED FOR FAILURES:")
+    print("\n PROMPTS EXCLUDED FOR FAILURES:\n")
     for i, count in enumerate(failed_prompts):
         if count > 0:
             print(f"Prompt {i}: {prompts[i]} (Failed {count} times)")
             for story in failed_prompt_details[i]:
                 print(f"  FAILED STORY: {story}")
     print()
-    print("\n Overall best prompt:")
+    print("\n OVERALL BEST PROMPT:")
     print(prompts[valid_prompts[np.argmin(avg_rmse.sum(axis=1))]])
 
 if __name__ == "__main__":

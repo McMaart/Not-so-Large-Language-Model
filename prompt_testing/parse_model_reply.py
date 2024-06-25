@@ -103,7 +103,9 @@ parse_functions = {
     1: parse_prompt_3,
     2: parse_prompt_3,
     3: parse_prompt_3,
-    4: parse_prompt_3
+    4: parse_prompt_3,
+    5: parse_prompt_3,
+    6: parse_prompt_3
 }
 
 
