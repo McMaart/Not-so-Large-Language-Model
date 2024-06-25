@@ -10,7 +10,7 @@ from torch import Tensor
 import nltk
 from nltk.tokenize.treebank import TreebankWordDetokenizer
 import re
-from model_1 import device, num_special_tokens, generate_tokens
+from model_1 import device, num_special_tokens, generate_tokens, generate_tokens_beam
 from torch.utils.data import Dataset
 
 
@@ -188,7 +188,7 @@ def tokens_to_story(token_list: list[str]) -> str:
     return story
 
 
-def prompt_model(model_name: str, start_str: str, length: int = 250, temperature: float = 1.0) -> str:
+def prompt_model(model_name: str, start_str: str, length: int = 250, temperature: float = 1.0, beam_search: bool = True, beam_width: int = 3) -> str:
     vocab = load_vocabulary()
     vocab_rev = {k: v for v, k in vocab.items()}
 
@@ -205,7 +205,13 @@ def prompt_model(model_name: str, start_str: str, length: int = 250, temperature
     input_tensor = torch.tensor([vocab.get(token, default) for token in tokenizer(start_str.lower())],
                                 dtype=torch.int32)
     input_tensor = input_tensor.view(1, -1)
-    tl = generate_tokens(model, input_tensor.to(device), length, eos_token=vocab.get("<eos>"), temperature=temperature)
+
+    if beam_search:
+        tl = generate_tokens_beam(model, input_tensor, beam_width, length, eos_token=vocab.get("<eos>"),
+                                  temperature=temperature)
+    else:
+        tl = generate_tokens(model, input_tensor.to(device), length, eos_token=vocab.get("<eos>"),
+                             temperature=temperature)
 
     story_list = []
     for batch in tl:

@@ -2,6 +2,7 @@ import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
 
+
 device = (
     "cuda" if torch.cuda.is_available()
     else "mps" if torch.backends.mps.is_available()
@@ -86,9 +87,37 @@ def generate_tokens(model: nn.Module, token_tensor: Tensor, length: int = 250, t
     return token_tensor
 
 
+@torch.no_grad()
+def generate_tokens_beam(model: nn.Module, input_tensor: Tensor, beam_width: int, length: int = 250, temperature: float = 1.0, eos_token: int = None) -> Tensor:
+    model.eval()
+    sequences = [input_tensor.squeeze(0).tolist()]
+    scores = torch.zeros(beam_width, device=device)
+    for _ in range(length):
+        all_candidates = []
+        for i in range(len(sequences)):
+            seq = sequences[i]
+            if seq[-1] == eos_token:
+                all_candidates.append((seq, scores[i]))
+                continue
+            input_tensor = torch.tensor(seq, dtype=torch.long).unsqueeze(0).to(device)
+            output = model(input_tensor)[:, -1, :]
+            logits = output / temperature if temperature > 0 else output
+            log_probs = F.log_softmax(logits, dim=-1).squeeze(0)
+            top_k_log_probs, top_k_tokens = torch.topk(log_probs, beam_width)
+            for j in range(beam_width):
+                candidate = seq + [top_k_tokens[j].item()]
+                candidate_score = scores[i] + top_k_log_probs[j]
+                all_candidates.append((candidate, candidate_score))
+        ordered = sorted(all_candidates, key=lambda tup: tup[1], reverse=True)
+        sequences = [x[0] for x in ordered[:beam_width]]
+        scores = torch.stack([x[1] for x in ordered[:beam_width]])
+        if all(seq[-1] == eos_token for seq in sequences):
+            break
+    return torch.tensor(sequences[0]).unsqueeze(0)
+
 if __name__ == '__main__':
     from io_utils import prompt_model
 
     string = '"What do birds like to eat?", Tom asked his mother.'
-    story = prompt_model("model", string, 255, 0.0)
+    story = prompt_model("26M", string, 255, 1.0, True)
     print(story)
