@@ -7,16 +7,15 @@ headers = {'Content-Type': 'application/json'}
 
 
 def get_llama_response(prompt: str) -> str | None:
-    data = {
+    request_data = {
         "model": "llama3",
         "stream": False,
         "prompt": prompt,
     }
-    response = requests.post(url, headers=headers, data=json.dumps(data))
 
+    response = requests.post(url, headers=headers, data=json.dumps(request_data))
     if response.status_code == 200:
-        response_text = response.text
-        data = json.loads(response_text)
+        data = json.loads(response.text)
         return data["response"]
     else:
         print(f"Error: {response.status_code}, {response.text}", file=sys.stderr)
