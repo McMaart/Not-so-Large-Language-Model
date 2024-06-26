@@ -115,9 +115,48 @@ def generate_tokens_beam(model: nn.Module, input_tensor: Tensor, beam_width: int
             break
     return torch.tensor(sequences[0]).unsqueeze(0)
 
+@torch.no_grad()
+def generate_tokens_beam_multinomial(model: nn.Module, input_tensor: Tensor, beam_width: int, length: int = 250,
+                                     temperature: float = 1.0, eos_token: int = None, top_k: int = 50) -> Tensor:
+    model.eval()
+    sequences = [[(input_tensor.squeeze(0).tolist(), 0.0)]]  # list of lists to handle beams separately
+    completed_sequences = []
+
+    for step in range(length):
+        all_candidates = []
+
+        for beam in sequences:
+            for seq, score in beam:
+                if seq[-1] == eos_token:
+                    completed_sequences.append((seq, score))
+                    continue
+
+                input_tensor = torch.tensor(seq, dtype=torch.long).unsqueeze(0).to(device)
+                output = model(input_tensor)[:, -1, :]
+                logits = output / temperature if temperature > 0 else output
+                log_probs = F.log_softmax(logits, dim=-1).squeeze(0)
+                top_k_log_probs, top_k_tokens = torch.topk(log_probs, top_k)
+
+                top_k_probs = F.softmax(top_k_log_probs, dim=-1)
+                pred_idx = torch.multinomial(top_k_probs, 1).item()
+                pred = top_k_tokens[pred_idx].item()
+                candidate = (seq + [pred], score + top_k_log_probs[pred_idx].item())
+
+                all_candidates.append(candidate)
+
+        ordered = sorted(all_candidates, key=lambda tup: tup[1], reverse=True)
+        sequences = [ordered[i:i + beam_width] for i in range(0, len(ordered), beam_width)]
+
+        if all(seq[-1] == eos_token for beam in sequences for seq, _ in beam):
+            break
+
+    best_sequence = max(completed_sequences, key=lambda tup: tup[1])[0] if completed_sequences else sequences[0][0][0]
+    return torch.tensor(best_sequence).unsqueeze(0)
+
+
 if __name__ == '__main__':
     from io_utils import prompt_model
 
     string = '"What do birds like to eat?", Tom asked his mother.'
-    story = prompt_model("26M", string, 255, 1.0, True)
+    story = prompt_model("26M", string, 255, 1, 'beam', beam_width=16)
     print(story)

@@ -4,13 +4,13 @@ import torch
 from datasets import load_from_disk
 from torch.nn.utils.rnn import pad_sequence
 import torchtext
-torchtext.disable_torchtext_deprecation_warning()
+#torchtext.disable_torchtext_deprecation_warning()
 from torchtext.data import get_tokenizer
 from torch import Tensor
 import nltk
 from nltk.tokenize.treebank import TreebankWordDetokenizer
 import re
-from model_1 import device, num_special_tokens, generate_tokens, generate_tokens_beam
+from model_1 import device, num_special_tokens, generate_tokens, generate_tokens_beam, generate_tokens_beam_multinomial
 from torch.utils.data import Dataset
 
 
@@ -188,7 +188,7 @@ def tokens_to_story(token_list: list[str]) -> str:
     return story
 
 
-def prompt_model(model_name: str, start_str: str, length: int = 250, temperature: float = 1.0, beam_search: bool = True, beam_width: int = 3) -> str:
+def prompt_model(model_name: str, start_str: str, length: int = 250, temperature: float = 1.0, method: str = "default", beam_width: int = 5, top_k: int = 50, sampling_after: int = 5) -> str:
     vocab = load_vocabulary()
     vocab_rev = {k: v for v, k in vocab.items()}
 
@@ -206,12 +206,16 @@ def prompt_model(model_name: str, start_str: str, length: int = 250, temperature
                                 dtype=torch.int32)
     input_tensor = input_tensor.view(1, -1)
 
-    if beam_search:
-        tl = generate_tokens_beam(model, input_tensor, beam_width, length, eos_token=vocab.get("<eos>"),
-                                  temperature=temperature)
-    else:
-        tl = generate_tokens(model, input_tensor.to(device), length, eos_token=vocab.get("<eos>"),
-                             temperature=temperature)
+    match method:
+        case "beam":
+            tl = generate_tokens_beam(model, input_tensor, beam_width, length, eos_token=vocab.get("<eos>"),
+                                      temperature=temperature)
+        case "beam_multinomial":
+            tl = generate_tokens_beam_multinomial(model, input_tensor, beam_width, length, eos_token=vocab.get("<eos>"),
+                                                  temperature=temperature, top_k=top_k)
+        case _:
+            tl = generate_tokens(model, input_tensor.to(device), length, eos_token=vocab.get("<eos>"),
+                                 temperature=temperature)
 
     story_list = []
     for batch in tl:
@@ -221,6 +225,7 @@ def prompt_model(model_name: str, start_str: str, length: int = 250, temperature
             token_list.append(token)
         story_list.append(tokens_to_story(token_list))
     return story_list[0]  # ToDo: maybe adjust function for generating multiple stories at once
+
 
 
 class TinyStories(Dataset):
