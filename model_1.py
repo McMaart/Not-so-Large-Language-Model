@@ -158,5 +158,6 @@ if __name__ == '__main__':
     from io_utils import prompt_model
 
     string = '"What do birds like to eat?", Tom asked his mother.'
-    story = prompt_model("26M", string, 255, 1, 'beam', beam_width=16)
+    #string = 'Once'
+    story = prompt_model("26M", string, 255, 0, method='beam', beam_width=8)
     print(story)
