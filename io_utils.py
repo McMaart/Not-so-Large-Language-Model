@@ -152,12 +152,13 @@ def tokens_to_story(token_list: list[str]) -> str:
     # Fix spaces around punctuation
     story = re.sub(r'\s([?.!,;:](?:\s|$))', r'\1', story)
 
-    # capitalize first letter of each sentence
-    story = story[0].upper() + story[1:]
-    story = re.sub(r'([.!?"]\s*)([a-z])', lambda x: x.group(1) + x.group(2).upper(), story)
-
     # unify quotation marks
     story = re.sub(r'“|”', '"', story)
+
+    # capitalize first letter of each sentence
+    story = story[0].upper() + story[1:]
+
+    story = re.sub(r'([.!?"]\s*)([a-z])', lambda x: x.group(1) + x.group(2).upper(), story)
 
     # handle space before and after " based on appearance (cannot handle nested quotes)
     in_quote = False
