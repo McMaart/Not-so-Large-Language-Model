@@ -175,8 +175,10 @@ def tokens_to_story(token_list: list[str]) -> str:
                 if story_list[i+1] == ' ':
                     story_list[i+1] = ''
             in_quote = not in_quote
-
+    
     story = ''.join(story_list)
+
+    story = re.sub(r'(,"\s*)([A-Z])', lambda x: x.group(1) + x.group(2).lower(), story)
 
     names = {'ben', 'billy', 'bob', 'emily', 'jack', 'joe', 'john', 'lily', 'lucy', 'max', 'mia', 'polly', 'sam', 'sara', 'sarah', 'timmy', 'tom'}
     # names obtained from GPT-4o by providing list of vocabulary and asking for names:
