@@ -33,7 +33,7 @@ class TransformerModel(nn.Module):
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers, enable_nested_tensor=False)
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor, lengths: Tensor | None = None) -> Tensor:
         embedding: Tensor = self.embedding(x)
         #embedding = self.pos_encoding(embedding)
 
@@ -42,21 +42,16 @@ class TransformerModel(nn.Module):
         embedding = self.rope(embedding)  # Apply ROPE
         embedding = embedding.view(embedding.size(0), embedding.size(1), -1)  # (batch_size, seq_len, embed_size)
 
-        mask = nn.Transformer.generate_square_subsequent_mask(x.size(1), device=torch.device(device))
-        embedding = self.encoder(embedding, mask=mask, is_causal=True)
-        return self.linear(embedding)
+        mask = nn.Transformer.generate_square_subsequent_mask(x.size(1), dtype=torch.bool, device=torch.device(device))
+        if lengths is None:
+            pad_mask = None
+        else:
+            lengths = lengths.to(device, non_blocking=True)
+            seq_indices = torch.arange(x.size(1), device=device)
+            pad_mask = seq_indices >= lengths[:, None]
 
-    @torch.no_grad()
-    def generate_tokens(self, token_tensor: Tensor, length: int = 250, eos_token: int = None) -> Tensor:
-        self.eval()
-        for _ in range(len(token_tensor[0]), length+1):
-            output = self(token_tensor)[:, -1, :-num_special_non_eos_tokens]
-            probs = F.softmax(output, dim=-1)
-            pred = torch.multinomial(probs, 1)
-            token_tensor = torch.cat((token_tensor, pred), 1)
-            if pred.item() == eos_token:
-                return token_tensor
-        return token_tensor
+        embedding = self.encoder(embedding, mask=mask, src_key_padding_mask=pad_mask, is_causal=True)
+        return self.linear(embedding)
 
 
 class PositionalEncoding(nn.Module):
@@ -83,8 +78,26 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x + self.pos_enc[:x.size(1)])
 
 
+@torch.no_grad()
+def generate_tokens(model: nn.Module, token_tensor: Tensor, length: int = 250, temperature: float = 1.0,
+                    eos_token: int = None) -> Tensor:
+    model.eval()
+    for _ in range(len(token_tensor[0]), length + 1):
+        output = model(token_tensor)[:, -1, :-num_special_non_eos_tokens]
+        if abs(temperature) < 1e-10:
+            pred = torch.argmax(output, dim=1).unsqueeze(0)
+        else:
+            probs = F.softmax(output * (1 / temperature), dim=-1)
+            pred = torch.multinomial(probs, 1)
+        token_tensor = torch.cat((token_tensor, pred), 1)
+        if pred.item() == eos_token:
+            return token_tensor
+    return token_tensor
+
+
 if __name__ == '__main__':
     from io_utils import prompt_model
 
-    story = prompt_model("model", "once", 255)
+    string = '"What do birds like to eat?", Tom asked his mother.'
+    story = prompt_model("model", string, 255, 0.0)
     print(story)

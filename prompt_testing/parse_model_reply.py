@@ -45,5 +45,7 @@ def parse_prompt_0(reply: str) -> list[int] | None:
 
 parse_functions = {
     0: parse_prompt_0,
-    1: parse_prompt_0
+    1: parse_prompt_0,
+    2: parse_prompt_0,
+    3: parse_prompt_0
 }

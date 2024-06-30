@@ -49,3 +49,64 @@ CREATIVITY: <RATING>
 STYLE: <RATING>
 
 #PROMPT#SEPERATOR#
+
+prompt2
+
+The following story is a story written for children at the age of around 5 years old.
+Your task is to rate the story objectively.
+
+Story:
+"#STORY#PLACEHOLDER#"
+
+Please rate the story in the following categories:
+- GRAMMAR (exclusively rate the grammar of the story)
+- SPELLING (exclusively rate the spelling of the story)
+- CONSISTENCY (exclusively rate the consistency of the story)
+- STORY (exclusively rate the story/plot of the story)
+- CREATIVITY (exclusively rate the creativity of the story)
+- STYLE (exclusively rate the linguistic style of the story)
+
+Rate objectively and rate each category independently from the others.
+Rate each category with a score from 1 to 10, with 1 being the worst and 10 being the best.
+
+It is crucial that your response ends with the following format (substitute <YOUR_CATEGORY_SCORE> with the score you gave for the respective category) and does not include any other text afterwords:
+
+GRAMMAR: <YOUR_GRAMMAR_SCORE>
+SPELLING: <YOUR_SPELLING_SCORE> 
+CONSISTENCY: <YOUR_CONSISTENCY_SCORE>
+STORY: <YOUR_STORY_SCORE>
+CREATIVITY: <YOUR_CREATIVITY_SCORE>
+STYLE: <YOUR_STYLE_SCORE>
+
+#PROMPT#SEPERATOR#
+
+prompt3 like p2 but with instruction to write text
+
+The following story is a story written for children at the age of around 5 years old.
+Your task is to rate the story objectively.
+
+Story:
+"#STORY#PLACEHOLDER#"
+
+Please rate the story in the following categories:
+- GRAMMAR (exclusively rate the grammar of the story)
+- SPELLING (exclusively rate the spelling of the story)
+- CONSISTENCY (exclusively rate the consistency of the story)
+- STORY (exclusively rate the story/plot of the story)
+- CREATIVITY (exclusively rate the creativity of the story)
+- STYLE (exclusively rate the linguistic style of the story)
+
+Rate objectively and rate each category independently from the others.
+You can write a sentence for each category first.
+Then, rate each category with a score from 1 to 10, with 1 being the worst and 10 being the best.
+
+It is crucial that your response ends with the following format (substitute <YOUR_CATEGORY_SCORE> with the score you gave for the respective category) and does not include any other text afterwards:
+
+GRAMMAR: <YOUR_GRAMMAR_SCORE>
+SPELLING: <YOUR_SPELLING_SCORE> 
+CONSISTENCY: <YOUR_CONSISTENCY_SCORE>
+STORY: <YOUR_STORY_SCORE>
+CREATIVITY: <YOUR_CREATIVITY_SCORE>
+STYLE: <YOUR_STYLE_SCORE>
+
+#PROMPT#SEPERATOR#
