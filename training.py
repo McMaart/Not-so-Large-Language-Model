@@ -5,7 +5,7 @@ from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import torchtext
-torchtext.disable_torchtext_deprecation_warning()
+#torchtext.disable_torchtext_deprecation_warning()
 from torchtext.data import get_tokenizer
 from io_utils import (create_vocabulary, map_story_to_tensor, load_tiny_stories, save_vocabulary,
                       load_vocabulary, TinyStories)
@@ -189,7 +189,7 @@ def objective(trial):
 
 if __name__ == '__main__':
     model_name = "transformer"
-    loss_list = do_training(model_name=model_name, max_num_batches=54000, load_model=False, load_vocab=True,
+    loss_list = do_training(model_name=model_name, max_num_batches=5000, load_model=False, load_vocab=True,
                             hyper_search=False)
     print(f"Loss list: {loss_list}")
     print("Starting evaluation...")
