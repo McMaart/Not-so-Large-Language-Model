@@ -58,7 +58,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
 
     writer.flush()
     writer.close()
-    return batch_loss
+    return total_loss / (max_num_batches * (epoch - 1) + batch), batch_loss
 
 
 @torch.no_grad()
