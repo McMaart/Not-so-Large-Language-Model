@@ -1,17 +1,13 @@
 from datasets import load_from_disk
 import torchtext
-torchtext.disable_torchtext_deprecation_warning()
+#torchtext.disable_torchtext_deprecation_warning()
 from torchtext.data import get_tokenizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 
 if __name__ == '__main__':
-    generated_story = """Once upon a time, there was a little girl named Lily. She loved to play outside and explore the 
-    world around her. One day, she found a shiny rock on the ground. She picked it up and carried it to her mommy. 
-    "Mommy, look what I found!" She said. "I found it!" Her mommy smiled and said, "That's a nice rock, Lily. But 
-    remember, it's important to be honest and not be selfish." Lily nodded and continued to rock the rock until she was 
-    happy again."""
+    generated_story = """"Once upon a time, there was a little girl named Lily. She loved to play outside in the park. One day, she saw a big tree with lots of leaves. She wanted to climb it, but it was too high. Lily asked her friend, Timmy, to help her. "Timmy, can you help me climb the tree?" She asked. Timmy said, "Sure, I can help you." He climbed up the tree and got a <unk> for Lily. Lily was so happy and said, "Thank you, Timmy! You are the best friend ever!" <eos>"""
 
     # nlp = spacy.load("en_core_web_sm")
     # s1 = nlp(generated_story)
