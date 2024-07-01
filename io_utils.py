@@ -12,6 +12,10 @@ from nltk.tokenize.treebank import TreebankWordDetokenizer
 import re
 from model_1 import device, num_special_tokens, generate_tokens, generate_tokens_beam, generate_tokens_beam_multinomial
 from torch.utils.data import Dataset
+import numpy as np
+from collections import Counter
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 def load_tiny_stories(end: int, start: int = 0, split: str = "train") -> list[str]:
@@ -283,20 +287,71 @@ def load_vocabulary(filename: str = "trained_models/vocabulary.pkl") -> dict:
     with open(filename, 'rb') as file:
         return pickle.load(file)
 
+def calculate_statistics(stories, tokenizer):
+    token_counts = [len(tokenizer(story)) for story in stories]
+    total_tokens = sum(token_counts)
+    all_tokens = [token for story in stories for token in tokenizer(story)]
+    unique_tokens = len(set(all_tokens))
+    avg_seq_length = total_tokens / len(stories)
+    std_dev_seq_length = np.std(token_counts)
+    return total_tokens, unique_tokens, avg_seq_length, std_dev_seq_length, token_counts
+
 
 if __name__ == "__main__":
-    # Create and save vocabulary
-    stories = load_from_disk("data/TinyStories")["train"][:]["text"]
-    vocab = create_vocabulary(stories, get_tokenizer('spacy', language='en_core_web_sm'), 2048)
-    save_vocabulary(vocab)
-    print(load_vocabulary("trained_models/vocabulary.pkl"))
+    # Load datasets
+    dataset = load_from_disk("data/TinyStories")
+    train_stories = dataset["train"][:]["text"]
+    test_stories = dataset["test"][:]["text"]
 
-    # dataloader = DataLoader(data, batch_size=32, collate_fn=data.get_batch, num_workers=4,
-    #                             pin_memory=True)
-    # stories = clean_stories(stories)
-    # print("Number of stories:", len(stories))
-    #
-    # token_dict = get_vocabulary_frequencies(stories)
-    # token_dict_sorted = {k: v for k, v in sorted(token_dict.items(), key=lambda item: item[1], reverse=True)}
-    # print(f"Number of tokens: {len(token_dict)}")
-    # print("Token frequency:", token_dict_sorted)
+    # Create and save vocabulary
+    vocab = create_vocabulary(train_stories, get_tokenizer('spacy', language='en_core_web_sm'), 2048)
+    save_vocabulary(vocab)
+    loaded_vocab = load_vocabulary("trained_models/vocabulary.pkl")
+    print(f"Vocab with 2048 tokens: {loaded_vocab}")
+
+    """
+    Statistics:
+    """
+    # Tokenizer
+    tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
+
+    # Calculate statistics for training set
+    train_total_tokens, train_unique_tokens, train_avg_seq_length, train_std_dev_seq_length, train_token_counts = calculate_statistics(
+        train_stories, tokenizer
+    )
+    print("Training Set Statistics:")
+    print(f"Number of tokens: {train_total_tokens}")
+    print(f"Number of unique tokens: {train_unique_tokens}")
+    print(f"Average sequence length: {train_avg_seq_length:.1f} (±{train_std_dev_seq_length:.1f})")
+
+    # Calculate statistics for test set
+    test_total_tokens, test_unique_tokens, test_avg_seq_length, test_std_dev_seq_length, test_token_counts = calculate_statistics(
+        test_stories, tokenizer
+    )
+    print("Test Set Statistics:")
+    print(f"Number of tokens: {test_total_tokens}")
+    print(f"Number of unique tokens: {test_unique_tokens}")
+    print(f"Average sequence length: {test_avg_seq_length:.1f} (±{test_std_dev_seq_length:.1f})")
+
+    # Verify dataset sizes
+    print(f"Number of training stories: {len(train_stories)}")
+    print(f"Number of test stories: {len(test_stories)}")
+
+    # Plot histogram with more bins for smoothness
+    plt.figure(figsize=(10, 6))
+    bins = range(0, 700, 5)
+    train_hist = plt.hist(train_token_counts, bins=bins, alpha=0.7, label='Training set', density=False)
+    test_hist = plt.hist(test_token_counts, bins=bins, alpha=0.7, label='Test set', density=False)
+    plt.xlabel('Number of tokens')
+    plt.ylabel('Frequency')
+    plt.title('Distribution of story lengths')
+    plt.legend(loc='upper right')
+    plt.show()
+
+    # Print the sum of frequencies to verify
+    print("Sum of training set frequencies:", sum(train_hist[0]))
+    print("Sum of test set frequencies:", sum(test_hist[0]))
+
+    # Print the peak frequency value
+    print("Peak frequency in training set:", max(train_hist[0]))
+    print("Peak frequency in test set:", max(test_hist[0]))
