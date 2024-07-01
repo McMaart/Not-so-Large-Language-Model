@@ -10,7 +10,7 @@ from torch import Tensor
 import nltk
 from nltk.tokenize.treebank import TreebankWordDetokenizer
 import re
-from model_1 import device, num_special_tokens, generate_tokens
+from model_1 import device, num_special_tokens, generate_tokens, generate_tokens_beam, generate_tokens_beam_multinomial
 from torch.utils.data import Dataset
 
 
@@ -123,31 +123,75 @@ def map_story_to_tensor(story: str, vocab: dict, tokenizer) -> Tensor:
 
 
 def tokens_to_story(token_list: list[str]) -> str:
-    if not nltk.download('punkt', quiet=True):
-        nltk.download('punkt')
-    sentence = TreebankWordDetokenizer().detokenize(token_list)
-    sentence = re.sub(r'\s([?.!,"](?:\s|$))', r'\1', sentence)
 
-    tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
-    sentences = tokenizer.tokenize(sentence)
-
-    story = " ".join([s.capitalize() for s in sentences])
+    story = " ".join(token_list)
+    
     story = re.sub(r'\si\s', r' I ', story)  # Fix capitalization of 'i'
-    story = re.sub(r"n' t", "n't", story)  # Fix contraction
-    story = re.sub(r"' s\s", "'s ", story)  # Fix possessive
-    story = re.sub(r"' d\s", "'d ", story)
+    
+    # Fix contraction, possessive, 'd, 're
+    patterns = {
+        r"n' t": "n't",
+        r"(\w) n't": r"\1n't",
+        r"' s\s": "'s ",
+        r"(\w) 's": r"\1's",
+        r"' d\s": "'d ",
+        r"(\w) 'd": r"\1'd",
+        r"' re\s": "'re ",
+        r"(\w) 're": r"\1're",
+        r"' m\s": "'m ",
+        r"(\w) 'm": r"\1'm",
+        r"' ve\s": "'ve ",
+        r"(\w) 've": r"\1've",
+        r"' ll\s": "'ll ",
+        r"(\w) 'll": r"\1'll"
+    }
 
-    # List of all names in the vocabulary
-    names = {'ben', 'bob', 'emily', 'joe', 'john', 'lily', 'lucy', 'max', 'mia', 'sam', 'sara', 'sarah', 'timmy', 'tom'}
-    # ToDo: can be more efficient ToDo: use regex instead (or, even better, directly capitalize the tokens),
-    #  for fixing spelling mistakes such as botTom
-    for name in names:
-        story = story.replace(name, name.title())
+    for pattern, replacement in patterns.items():
+        story = re.sub(pattern, replacement, story)
+    
+    # Fix spaces around punctuation
+    story = re.sub(r'\s([?.!,;:](?:\s|$))', r'\1', story)
+
+    # unify quotation marks
+    story = re.sub(r'“|”', '"', story)
+
+    # capitalize first letter of each sentence
+    story = story[0].upper() + story[1:]
+
+    story = re.sub(r'([.!?"]\s*)([a-z])', lambda x: x.group(1) + x.group(2).upper(), story)
+
+    # handle space before and after " based on appearance (cannot handle nested quotes)
+    in_quote = False
+    # loop through all characters in the story and delete unnecessary spaces
+    # if closing quote: delete space before quote
+    # if opening quote: delete space after quote
+    story_list = list(story)
+    for i, char in enumerate(story_list):
+        if char == '"':
+            if in_quote:  # Closing quote
+                if story_list[i-1] == ' ':
+                    story_list[i-1] = ''
+            elif i != len(story_list) - 1:  # Opening quote
+                if story_list[i+1] == ' ':
+                    story_list[i+1] = ''
+            in_quote = not in_quote
+    
+    story = ''.join(story_list)
+
+    story = re.sub(r'(,"\s*)([A-Z])', lambda x: x.group(1) + x.group(2).lower(), story)
+
+    names = {'ben', 'billy', 'bob', 'emily', 'jack', 'joe', 'john', 'lily', 'lucy', 'max', 'mia', 'polly', 'sam', 'sara', 'sarah', 'timmy', 'tom'}
+    # names obtained from GPT-4o by providing list of vocabulary and asking for names:
+    names_gpt = ['alice', 'amy', 'anna', 'ben', 'bella', 'benny', 'billy', 'bob', 'bobo', 'daisy', 'dave', 'emma', 'ellie', 'ella', 'george', 'jack', 'jake', 'jane', 'jen', 'jenny', 'jim', 'jimmy', 'joe', 'john', 'johnny', 'leo', 'lila', 'lily', 'lisa', 'lola', 'lucy', 'mandy', 'mark', 'mary', 'max', 'mia', 'mike', 'molly', 'pete', 'peter', 'rex', 'sally', 'sam', 'sammy', 'sara', 'sarah', 'sophie', 'susie', 'tim', 'timmy', 'tom', 'tommy', 'toby']
+    names = names.union(names_gpt)
+
+    # replace names with capitalized names
+    story = re.sub(r'\b(' + '|'.join(names) + r')\b', lambda x: x.group().capitalize(), story)
 
     return story
 
 
-def prompt_model(model_name: str, start_str: str, length: int = 250) -> str:
+def prompt_model(model_name: str, start_str: str, length: int = 250, temperature: float = 1.0, method: str = "default", beam_width: int = 5, top_k: int = 50, sampling_after: int = 5) -> str:
     vocab = load_vocabulary()
     vocab_rev = {k: v for v, k in vocab.items()}
 
@@ -164,7 +208,17 @@ def prompt_model(model_name: str, start_str: str, length: int = 250) -> str:
     input_tensor = torch.tensor([vocab.get(token, default) for token in tokenizer(start_str.lower())],
                                 dtype=torch.int32)
     input_tensor = input_tensor.view(1, -1)
-    tl = generate_tokens(model, input_tensor.to(device), length, eos_token=vocab.get("<eos>"))
+
+    match method:
+        case "beam":
+            tl = generate_tokens_beam(model, input_tensor, beam_width, length, eos_token=vocab.get("<eos>"),
+                                      temperature=temperature)
+        case "beam_multinomial":
+            tl = generate_tokens_beam_multinomial(model, input_tensor, beam_width, length, eos_token=vocab.get("<eos>"),
+                                                  temperature=temperature, top_k=top_k)
+        case _:
+            tl = generate_tokens(model, input_tensor.to(device), length, eos_token=vocab.get("<eos>"),
+                                 temperature=temperature)
 
     story_list = []
     for batch in tl:
@@ -174,6 +228,7 @@ def prompt_model(model_name: str, start_str: str, length: int = 250) -> str:
             token_list.append(token)
         story_list.append(tokens_to_story(token_list))
     return story_list[0]  # ToDo: maybe adjust function for generating multiple stories at once
+
 
 
 class TinyStories(Dataset):
@@ -188,9 +243,10 @@ class TinyStories(Dataset):
         self.pad_token = self.vocab["<pad>"]
         self.max_seq_len = max_seq_len if max_seq_len is not None else 10000
 
-    def get_batch(self, sequences: list[Tensor]) -> tuple[Tensor, Tensor]:
+    def get_batch(self, sequences: list[Tensor]) -> tuple[Tensor, Tensor, Tensor]:
+        lengths = torch.cat([torch.tensor(s.shape)-1 for s in sequences])
         padded_seq = pad_sequence(sequences, batch_first=True, padding_value=self.pad_token)
-        return padded_seq[:, :-1].contiguous(), padded_seq[:, 1:].contiguous()
+        return padded_seq[:, :-1].contiguous(), padded_seq[:, 1:].contiguous(), lengths
 
     def __getitem__(self, index: int) -> Tensor:
         story = self.stories[index]['text']

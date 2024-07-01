@@ -58,9 +58,31 @@ class TestIO(unittest.TestCase):
 
     # Test for tokens_to_story
     def test_tokens_to_story(self):
-        tokens = ['story', 'with', 'token']
-        result = io_utils.tokens_to_story(tokens)
-        self.assertEqual(result, 'story with token')
+        # tokens = ['story', 'with', 'token']
+        # result = io_utils.tokens_to_story(tokens)
+        # self.assertEqual(result, 'story with token')
+        
+        token_list = [
+            'i', 'am', 'going', 'to', 'the', 'market', ',', 'have' "n'", 't', 'i', 'said', '.', 
+            '"', 'hello', ',', 'ben', '!', '"', 'he', "didn'", 't', 'reply', '.', 
+            'it', "'", 's', 'a', 'beautiful', 'day', ',', "isn'", 't', 'it', '?', 
+            'i', "'", 'm', 'feeling', 'great', 'and', 'i', "'", 'll', 'see', 'you', 'later', '.', 
+            'the', 'adventures', 'of', 'tom', 'and', 'jenny', 'are', 'fun', '.', 
+            '“', 'look', 'out', ',', '”', 'screamed', 'sarah', '.'
+        ]
+
+        # Expected output
+        expected_story = (
+            "I am going to the market, haven't I said. "
+            '"Hello, Ben!" He didn\'t reply. '
+            "It's a beautiful day, isn't it? "
+            "I'm feeling great and I'll see you later. "
+            "The adventures of Tom and Jenny are fun. "
+            '"Look out," screamed Sarah.'
+        )
+
+        result_story = io_utils.tokens_to_story(token_list)
+        self.assertEqual(result_story, expected_story)    
 
 
 if __name__ == '__main__':
