@@ -110,7 +110,7 @@ def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Ten
 
 
 def do_training(model_name: str = "model", max_num_batches: int | None = None, load_model: bool = True,
-                load_vocab: bool = True, flags: list[bool] = None, hyper_search: bool = False):
+                load_vocab: bool = True, flags: list[bool] = None, hyper_search: bool = False, use_rope:bool = False):
     if hyper_search is True:
         study = optuna.create_study(direction='minimize')
         study.optimize(objective, n_trials=50)
@@ -137,7 +137,7 @@ def do_training(model_name: str = "model", max_num_batches: int | None = None, l
                 sys.exit(1)
         else:
             model = TransformerModel(len(vocabulary), 192, 6, 6, 768,
-                                     0.1, padding_idx=vocabulary["<pad>"]).to(device)
+                                     0.1, padding_idx=vocabulary["<pad>"], use_rope=use_rope).to(device)
             # model = RNNModel(2048).to(device)
         data = TinyStories(vocabulary, get_tokenizer('spacy', language='en_core_web_sm'), max_seq_len=max_seq_len)
         loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
@@ -196,8 +196,8 @@ def objective(trial):
 
 if __name__ == '__main__':
     model_name = "transformer"
-    loss_list = do_training(model_name=model_name, max_num_batches=3000, load_model=False, load_vocab=True,
-                            hyper_search=False)
+    loss_list = do_training(model_name=model_name, max_num_batches=1000, load_model=False, load_vocab=True,
+                            hyper_search=False, use_rope=True)
     print(f"Loss list: {loss_list}")
     print("Starting evaluation...")
     eval_setup(model_name, max_num_batches=2400)

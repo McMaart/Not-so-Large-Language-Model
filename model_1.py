@@ -1,6 +1,7 @@
 import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
+import packaging
 from torchtune.modules import RotaryPositionalEmbeddings
 
 
@@ -18,15 +19,18 @@ num_special_tokens = 3
 
 class TransformerModel(nn.Module):
     def __init__(self, vocab_size: int, embed_size: int = 512, nhead: int = 4, num_layers: int = 4, dim_ff: int = 2048,
-                 dropout: float = 0.1, padding_idx: int | None = None):
+                 dropout: float = 0.1, padding_idx: int | None = None, use_rope: bool = False):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
+        self.nhead = nhead
+        self.use_rope = use_rope
 
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size, padding_idx=padding_idx)
-        self.pos_encoding = PositionalEncoding(embed_size, base=10000)
-
-        #self.rope = RotaryPositionalEmbeddings(dim=embed_size // nhead, max_seq_len=max_seq_len, base=10000)
+        if self.use_rope:
+            self.pos_encoding = RotaryPositionalEmbeddings(dim=embed_size // nhead, max_seq_len=max_seq_len, base=10000)
+        else:
+            self.pos_encoding = PositionalEncoding(embed_size, base=10000)
 
         encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=nhead, dim_feedforward=dim_ff, dropout=dropout,
                                                    batch_first=True, activation="gelu", norm_first=False)
@@ -35,12 +39,14 @@ class TransformerModel(nn.Module):
 
     def forward(self, x: Tensor, lengths: Tensor | None = None) -> Tensor:
         embedding: Tensor = self.embedding(x)
-        embedding = self.pos_encoding(embedding)
-
-        # Reshape for multi-head attention
-        #embedding = embedding.view(embedding.size(0), embedding.size(1), self.nhead,-1)  # (batch_size, seq_len, nhead, head_dim)
-        #embedding = self.rope(embedding)  # Apply ROPE
-        #embedding = embedding.view(embedding.size(0), embedding.size(1), -1)  # (batch_size, seq_len, embed_size)
+        if self.use_rope:
+            # Reshape for multi-head attention
+            embedding = embedding.view(embedding.size(0), embedding.size(1), self.nhead,
+                                       -1)  # (batch_size, seq_len, nhead, head_dim)
+            embedding = self.pos_encoding(embedding)  # Apply ROPE
+            embedding = embedding.view(embedding.size(0), embedding.size(1), -1)  # (batch_size, seq_len, embed_size)
+        else:
+            embedding = self.pos_encoding(embedding)
 
         mask = nn.Transformer.generate_square_subsequent_mask(x.size(1), dtype=torch.bool, device=torch.device(device))
         if lengths is None:
@@ -193,5 +199,5 @@ if __name__ == '__main__':
 
     string = '"What do birds like to eat?", Tom asked his mother.'
     #string = 'Once'
-    story = prompt_model("26M", string, 255, 0.5, 'beam', beam_width=8)
+    story = prompt_model("transformer", string, 255, 0.5, 'beam', beam_width=8)
     print(story)
