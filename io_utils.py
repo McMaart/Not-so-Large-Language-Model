@@ -202,8 +202,8 @@ def prompt_model(model_name: str, start_str: str, length: int = 250, temperature
         sys.exit(1)
 
         # Ensure nhead attribute is present
-    if not hasattr(model, 'nhead'):
-        raise AttributeError(f"Loaded model does not have 'nhead' attribute (cannot use ROPE).")
+    #if not hasattr(model, 'nhead'):
+        #raise AttributeError(f"Loaded model does not have 'nhead' attribute (cannot use ROPE).")
 
     print("Number of parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
     tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
