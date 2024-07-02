@@ -1,8 +1,9 @@
+from datasets import load_from_disk
 import wandb
 from time import perf_counter, sleep
-from model_1 import TransformerModel, device
+from model_3 import TransformerModel, device
 from training import train, evaluate
-from io_utils import create_vocabulary, load_tiny_stories, save_vocabulary, TinyStories
+from io_utils import TinyStories, load_vocabulary
 import torch
 import torch.nn as nn
 from torch.optim import AdamW
@@ -24,13 +25,18 @@ def init_wandb_with_retries(config, project_name, max_retries=3, delay=5):
                 raise e
 
 # Load dataset and prepare vocabulary once
-def prepare_data():
-    stories = load_tiny_stories(900000)
+
+def prepare_data(vocab_path):
+
+    # Use the tokenizer and vocabulary directly
     tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
-    vocabulary = create_vocabulary(stories, tokenizer, 2048)
-    save_vocabulary(vocabulary)
-    data = TinyStories(vocabulary, tokenizer, max_seq_len=256)
-    return data, vocabulary
+    vocabulary = load_vocabulary(vocab_path)
+
+    # Create the TinyStories dataset objects with the loaded datasets
+    train_data = TinyStories(vocabulary, tokenizer, max_seq_len=256, split="train")
+    val_data = TinyStories(vocabulary, max_seq_len=256, split="validation")
+
+    return train_data, val_data, vocabulary
 
 # Define the function to train the model
 def train_function(config, data, vocabulary, validation_data, project_name, num_epochs=1):
@@ -38,7 +44,8 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
     with run:
         config = wandb.config
 
-        run_name = f"Ep_{num_epochs}_Spa_Em_{config.embed_size}_L_{config.num_layers}_Dff_{config.dim_ff}_Lr_{config.learning_rate:.7f}_D_{config.dropout}_B_{config.batch_size}"
+        run_name = (f"Ep_{num_epochs}_Spa_Em_{config.embed_size}_L_{config.num_layers}_Dff_{config.dim_ff}"
+                    f"_Lr_{config.learning_rate:.5f}_D_{config.dropout}_B_{config.batch_size}_{config.pos_enc_type}")
         wandb.run.name = run_name
 
         # Initialize the model with hyperparameters from the config
@@ -49,7 +56,8 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
             num_layers=config.num_layers,
             dim_ff=config.dim_ff,
             dropout=config.dropout,
-            padding_idx=vocabulary["<pad>"]
+            padding_idx=vocabulary["<pad>"],
+            pos_enc_type = config.pos_enc_type
         ).to(device)
 
         # Define loss function and optimizer
@@ -63,7 +71,7 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
 
         global best_eval_loss
 
-        total_steps = 0  # Initialize total steps counter
+        total_batches = 0  # Initialize total steps counter
 
         # Train the model for multiple epochs
         for epoch in range(num_epochs):
@@ -73,12 +81,12 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
             start_time = perf_counter()
 
             # Train the model
-            max_num_batches = 100000  # Define max number of batches
+            max_num_batches = 200000  # Define max number of batches
             avg_loss, batch_losses = train(data, model, loss_fn, optimizer, epochs=1,
                                            max_num_batches=max_num_batches,
                                            batch_size=config.batch_size)
 
-            total_steps += len(batch_losses)  # Update total steps
+            total_batches += len(batch_losses)  # Update total steps
 
             # Measure the end time
             end_time = perf_counter()
@@ -90,7 +98,8 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
 
             # Optionally log batch losses for finer granularity
             for batch_idx, batch_loss in enumerate(batch_losses):
-                wandb.log({"step": total_steps, "batch_loss": batch_loss, "epoch": epoch + 1})
+                total_batches += 250  # Increment the batch counter for each batch logged
+                wandb.log({"# batches": total_batches, "batch_loss": batch_loss, "epoch": epoch + 1})
 
         # Evaluate the model on the validation set after all epochs
         print("Starting evaluation...")
@@ -109,14 +118,16 @@ def train_transformer_sweep(data, vocabulary, validation_data, project_name, num
     sweep_configuration = {
         'method': 'bayes',
         'metric': {'name': 'eval_loss', 'goal': 'minimize'},
+        'early_terminate': {'type': 'hyperband', 'max_iter': 8},
         'parameters': {
-            'embed_size': {'values': [512, 768, 1024]},
-            'nhead': {'values': [4, 8]},
-            'num_layers': {'values': [4, 6]},
-            'dim_ff': {'values': [512, 1024, 2048]},
-            'dropout': {'values': [0.1, 0.2, 0.3]},
-            'learning_rate': {'distribution': 'log_uniform', 'min': 1e-5, 'max': 1e-2},
-            'batch_size': {'values': [32, 64, 128, 256]}
+            'embed_size': {'values': [128, 192]},
+            'nhead': {'values': [8]},
+            'num_layers': {'values': [1, 2]},
+            'dim_ff': {'values': [256, 512]},
+            'dropout': {'values': [0.1, 0.2]},
+            'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0008, 'max': 0.006},
+            'batch_size': {'values': [64]},
+            'pos_enc_type': {'values': ['sinusoidal', 'rope']}
         }
     }
 
@@ -129,16 +140,94 @@ def train_transformer_sweep(data, vocabulary, validation_data, project_name, num
 def train_transformer_single(data, vocabulary, validation_data, project_name, num_epochs=1):
     # Set the configuration manually
     config = {
-        'embed_size': 768,
+        'embed_size': 256,
         'nhead': 8,
-        'num_layers': 6,
+        'num_layers': 5,
         'dim_ff': 1024,
         'dropout': 0.1,
-        'learning_rate': 0.00044,
-        'batch_size': 64
+        'learning_rate': 0.001,
+        'batch_size': 64,
+        'pos_enc_type': 'rope'  # 'rope' or 'sinusoidal'
     }
 
     train_function(config, data, vocabulary, validation_data, project_name, num_epochs)
+
+# Define the function to execute multiple sweeps
+def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project_name, num_epochs=1):
+    sweep_configuration_1M = {
+        'method': 'bayes',
+        'metric': {'name': 'eval_loss', 'goal': 'minimize'},
+        'early_terminate': {'type': 'hyperband', 'max_iter': 14},
+        'parameters': {
+            'embed_size': {'values': [128, 192]},
+            'nhead': {'values': [8]},
+            'num_layers': {'values': [1, 2]},
+            'dim_ff': {'values': [128, 256, 512]},
+            'dropout': {'values': [0.1, 0.2]},
+            'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0009, 'max': 0.007},
+            'batch_size': {'values': [64]},
+            'pos_enc_type': {'values': ['sinusoidal', 'rope']}
+        }
+    }
+
+    sweep_configuration_5M = {
+        'method': 'bayes',
+        'metric': {'name': 'eval_loss', 'goal': 'minimize'},
+        'early_terminate': {'type': 'hyperband', 'max_iter': 12},
+        'parameters': {
+            'embed_size': {'values': [256, 384]},
+            'nhead': {'values': [8]},
+            'num_layers': {'values': [3, 4, 5]},
+            'dim_ff': {'values': [256, 512, 1024]},
+            'dropout': {'values': [0.1, 0.2]},
+            'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0007, 'max': 0.005},
+            'batch_size': {'values': [64]},
+            'pos_enc_type': {'values': ['rope']}
+        }
+    }
+    sweep_configuration_10M = {
+        'method': 'bayes',
+        'metric': {'name': 'eval_loss', 'goal': 'minimize'},
+        'early_terminate': {'type': 'hyperband', 'max_iter': 10},
+        'parameters': {
+            'embed_size': {'values': [384, 512]},
+            'nhead': {'values': [8]},
+            'num_layers': {'values': [4, 5]},
+            'dim_ff': {'values': [512, 1024, 2048]},
+            'dropout': {'values': [0.1, 0.2]},
+            'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0004, 'max': 0.003},
+            'batch_size': {'values': [64]},
+            'pos_enc_type': {'values': ['rope']}
+        }
+    }
+
+    sweep_configuration_15M = {
+        'method': 'bayes',
+        'metric': {'name': 'eval_loss', 'goal': 'minimize'},
+        'early_terminate': {'type': 'hyperband', 'max_iter': 8},
+        'parameters': {
+            'embed_size': {'values': [512, 768]},
+            'nhead': {'values': [8]},
+            'num_layers': {'values': [5, 6]},
+            'dim_ff': {'values': [2048, 3072, 4096]},
+            'dropout': {'values': [0.1, 0.2]},
+            'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0002, 'max': 0.001},
+            'batch_size': {'values': [64]},
+            'pos_enc_type': {'values': ['rope']}
+        }
+    }
+
+    sweep_configs = {
+        '1M': sweep_configuration_1M,
+        '5M': sweep_configuration_5M,
+        '10M': sweep_configuration_10M,
+        '15M': sweep_configuration_15M
+    }
+
+    for sweep_name, config in sweep_configs.items():
+        sweep_id = wandb.sweep(sweep=config, project=f'{project_name}_{sweep_name}')
+        wandb.agent(sweep_id, function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name, num_epochs))
+
 
 if __name__ == "__main__":
     # Check if user is logged in
@@ -147,25 +236,26 @@ if __name__ == "__main__":
         exit(1)
 
     # Prepare data once
-    data, vocabulary = prepare_data()
-    validation_data, _ = prepare_data()  # Load the validation dataset separately
+    vocab_path = "trained_models/vocabulary.pkl"
+    train_data, validation_data, vocabulary = prepare_data(vocab_path)
 
-    # Run a sweep or a single configuration
-    run_sweep = False  # Set to True if you want to run a hyperparameter sweep
+    # Choose the run type
+    run_type = 'single'  # Choose from 'single', 'single_sweep', 'multiple_sweep'
 
     # Project name
     project_name = 'ml_llm_project'
 
     # Number of epochs to train
-    num_epochs = 3  # Set the desired number of epochs
+    num_epochs = 2  # Set the desired number of epochs
 
     # Global variable to track the best evaluation loss
     global best_eval_loss
     best_eval_loss = float('inf')
 
-    if run_sweep:
-        # Run the sweep
-        train_transformer_sweep(data, vocabulary, validation_data, project_name, num_epochs)
-    else:
-        # Run single configuration
-        train_transformer_single(data, vocabulary, validation_data, project_name, num_epochs)
+    match run_type:
+        case 'single':
+            train_transformer_single(train_data, vocabulary, validation_data, project_name, num_epochs)
+        case 'single_sweep':
+            train_transformer_sweep(train_data, vocabulary, validation_data, project_name, num_epochs)
+        case 'multiple_sweep':
+            train_transformer_multiple_sweeps(train_data, vocabulary, validation_data, project_name, num_epochs)

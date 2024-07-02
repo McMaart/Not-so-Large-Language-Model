@@ -110,7 +110,7 @@ def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Ten
 
 
 def do_training(model_name: str = "model", max_num_batches: int | None = None, load_model: bool = True,
-                load_vocab: bool = True, flags: list[bool] = None, hyper_search: bool = False, use_rope:bool = False):
+                load_vocab: bool = True, flags: list[bool] = None, hyper_search: bool = False):
     if hyper_search is True:
         study = optuna.create_study(direction='minimize')
         study.optimize(objective, n_trials=50)
@@ -137,9 +137,9 @@ def do_training(model_name: str = "model", max_num_batches: int | None = None, l
                 sys.exit(1)
         else:
             model = TransformerModel(len(vocabulary), 192, 6, 6, 768,
-                                     0.1, padding_idx=vocabulary["<pad>"], use_rope=use_rope).to(device)
+                                     0.1, padding_idx=vocabulary["<pad>"], pos_enc_type='rope').to(device)
             # model = RNNModel(2048).to(device)
-        data = TinyStories(vocabulary, get_tokenizer('spacy', language='en_core_web_sm'), max_seq_len=max_seq_len)
+        data = TinyStories(vocabulary, get_tokenizer('spacy', language='en_core_web_sm'), max_seq_len=max_seq_len, split="train")
         loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
         optimizer = torch.optim.AdamW(model.parameters(), learning_rate)
         params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -180,12 +180,13 @@ def objective(trial):
     batch_size = trial.suggest_categorical('batch_size', [32, 64, 128, 256])
     dim_ff = trial.suggest_int('dim_ff', 512, 4096, step=256)
     dropout = trial.suggest_float('dropout', 0.1, 0.5)
+    pos_enc_type = trial.suggest_categorical('pos_enc_type', ['sinusoidal', 'rope'])
 
     # Load data
     vocabulary = load_vocabulary()
     data = TinyStories(vocabulary, max_seq_len=max_seq_len)
 
-    model = TransformerModel(len(vocabulary), embed_size, nhead, num_layers, dim_ff=dim_ff, dropout=dropout).to(device)
+    model = TransformerModel(len(vocabulary), embed_size, nhead, num_layers, dim_ff=dim_ff, dropout=dropout, pos_enc_type=pos_enc_type).to(device)
     loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
@@ -197,7 +198,7 @@ def objective(trial):
 if __name__ == '__main__':
     model_name = "transformer"
     loss_list = do_training(model_name=model_name, max_num_batches=1000, load_model=False, load_vocab=True,
-                            hyper_search=False, use_rope=True)
+                            hyper_search=False)
     print(f"Loss list: {loss_list}")
     print("Starting evaluation...")
     eval_setup(model_name, max_num_batches=2400)

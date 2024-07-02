@@ -411,6 +411,7 @@ if __name__ == "__main__":
     plt.figure(figsize=(10, 6))
     plt.plot(train_token_coverage, label='Training set', alpha=0.7)
     plt.plot(test_token_coverage, label='Test set', alpha=0.7)
+    plt.axvline(x=2048)
     plt.xscale('log')
     plt.xlabel('Used number of unique tokens (log-scale)')
     plt.ylabel('Percentage of coverage')
