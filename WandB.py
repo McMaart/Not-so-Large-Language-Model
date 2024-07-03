@@ -1,13 +1,81 @@
 from datasets import load_from_disk
 import wandb
 from time import perf_counter, sleep
-from model_3 import TransformerModel, device
+from model_1 import TransformerModel, device
+from model_2 import RNNModel, LSTMModel, GRUModel
 from training import train, evaluate
 from io_utils import TinyStories, load_vocabulary
 import torch
 import torch.nn as nn
 from torch.optim import AdamW
 from torchtext.data import get_tokenizer
+
+def train_rnn_sweep(data, vocabulary, validation_data, project_name, num_epochs=1):
+    # Define the sweep configuration for RNN
+    sweep_configuration = {
+        'method': 'bayes',
+        'metric': {'name': 'eval_loss', 'goal': 'minimize'},
+        'early_terminate': {'type': 'hyperband', 'max_iter': 8},
+        'parameters': {
+            'model_type': {'values': ['rnn']},
+            'embed_size': {'values': [128, 192, 256]},
+            'hidden_size': {'values': [256, 512, 768]},
+            'num_layers': {'values': [1, 2, 3]},
+            'dropout': {'values': [0.1, 0.2]},
+            'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0008, 'max': 0.006},
+            'batch_size': {'values': [64]}
+        }
+    }
+
+    sweep_id = wandb.sweep(sweep=sweep_configuration, project=project_name)
+
+    # Start the sweep agent
+    wandb.agent(sweep_id, function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name, num_epochs))
+
+def train_lstm_sweep(data, vocabulary, validation_data, project_name, num_epochs=1):
+    # Define the sweep configuration for LSTM
+    sweep_configuration = {
+        'method': 'bayes',
+        'metric': {'name': 'eval_loss', 'goal': 'minimize'},
+        'early_terminate': {'type': 'hyperband', 'max_iter': 8},
+        'parameters': {
+            'model_type': {'values': ['lstm']},
+            'embed_size': {'values': [128, 192, 256]},
+            'hidden_size': {'values': [256, 512, 768]},
+            'num_layers': {'values': [1, 2, 3]},
+            'dropout': {'values': [0.1, 0.2]},
+            'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0008, 'max': 0.006},
+            'batch_size': {'values': [64]}
+        }
+    }
+
+    sweep_id = wandb.sweep(sweep=sweep_configuration, project=project_name)
+
+    # Start the sweep agent
+    wandb.agent(sweep_id, function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name, num_epochs))
+
+def train_gru_sweep(data, vocabulary, validation_data, project_name, num_epochs=1):
+    # Define the sweep configuration for GRU
+    sweep_configuration = {
+        'method': 'bayes',
+        'metric': {'name': 'eval_loss', 'goal': 'minimize'},
+        'early_terminate': {'type': 'hyperband', 'max_iter': 8},
+        'parameters': {
+            'model_type': {'values': ['gru']},
+            'embed_size': {'values': [128, 192, 256]},
+            'hidden_size': {'values': [256, 512, 768]},
+            'num_layers': {'values': [1, 2, 3]},
+            'dropout': {'values': [0.1, 0.2]},
+            'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0008, 'max': 0.006},
+            'batch_size': {'values': [64]}
+        }
+    }
+
+    sweep_id = wandb.sweep(sweep=sweep_configuration, project=project_name)
+
+    # Start the sweep agent
+    wandb.agent(sweep_id, function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name, num_epochs))
+
 
 # Function to handle wandb initialization with retries
 def init_wandb_with_retries(config, project_name, max_retries=3, delay=5):
@@ -44,21 +112,53 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
     with run:
         config = wandb.config
 
-        run_name = (f"Ep_{num_epochs}_Spa_Em_{config.embed_size}_L_{config.num_layers}_Dff_{config.dim_ff}"
-                    f"_Lr_{config.learning_rate:.5f}_D_{config.dropout}_B_{config.batch_size}_{config.pos_enc_type}")
+        # Update the run name to include model type and relevant hyperparameters
+        if config.model_type == 'transformer':
+            run_name = (f"Ep_{num_epochs}_Spa_Em_{config.embed_size}_L_{config.num_layers}_Dff_{config.dim_ff} "
+                        f"_Lr_{config.learning_rate:.5f}_D_{config.dropout}_B_{config.batch_size}_{config.model_type}")
+        else:
+            run_name = (f"Ep_{num_epochs}_Em_{config.embed_size}_Hs_{config.hidden_size}_L_{config.num_layers} "
+                        f"_Lr_{config.learning_rate:.5f}_D_{config.dropout}_B_{config.batch_size}_{config.model_type}")
+
         wandb.run.name = run_name
 
-        # Initialize the model with hyperparameters from the config
-        model = TransformerModel(
-            vocab_size=len(vocabulary),
-            embed_size=config.embed_size,
-            nhead=config.nhead,
-            num_layers=config.num_layers,
-            dim_ff=config.dim_ff,
-            dropout=config.dropout,
-            padding_idx=vocabulary["<pad>"],
-            pos_enc_type = config.pos_enc_type
-        ).to(device)
+        if config.model_type == 'transformer':
+            model = TransformerModel(
+                vocab_size=len(vocabulary),
+                embed_size=config.embed_size,
+                nhead=config.nhead,
+                num_layers=config.num_layers,
+                dim_ff=config.dim_ff,
+                dropout=config.dropout,
+                padding_idx=vocabulary["<pad>"],
+                pos_enc_type=config.pos_enc_type
+            ).to(device)
+        elif config.model_type == 'rnn':
+            model = RNNModel(
+                vocab_size=len(vocabulary),
+                embed_size=config.embed_size,
+                hidden_size=config.hidden_size,
+                num_layers=config.num_layers,
+                dropout_rnn=config.dropout
+            ).to(device)
+        elif config.model_type == 'lstm':
+            model = LSTMModel(
+                vocab_size=len(vocabulary),
+                embed_size=config.embed_size,
+                hidden_size=config.hidden_size,
+                num_layers=config.num_layers,
+                dropout_lstm=config.dropout
+            ).to(device)
+        elif config.model_type == 'gru':
+            model = GRUModel(
+                vocab_size=len(vocabulary),
+                embed_size=config.embed_size,
+                hidden_size=config.hidden_size,
+                num_layers=config.num_layers,
+                dropout_gru=config.dropout
+            ).to(device)
+        else:
+            raise ValueError(f"Unknown model type: {config.model_type}")
 
         # Define loss function and optimizer
         loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
@@ -120,6 +220,7 @@ def train_transformer_sweep(data, vocabulary, validation_data, project_name, num
         'metric': {'name': 'eval_loss', 'goal': 'minimize'},
         'early_terminate': {'type': 'hyperband', 'max_iter': 8},
         'parameters': {
+            'model_type': {'values': ['transformer']},
             'embed_size': {'values': [128, 192]},
             'nhead': {'values': [8]},
             'num_layers': {'values': [1, 2]},
@@ -140,7 +241,8 @@ def train_transformer_sweep(data, vocabulary, validation_data, project_name, num
 def train_transformer_single(data, vocabulary, validation_data, project_name, num_epochs=1):
     # Set the configuration manually
     config = {
-        'embed_size': 256,
+        'model_type': {'values': ['transformer']},
+        'embed_size': 272,
         'nhead': 8,
         'num_layers': 5,
         'dim_ff': 1024,
@@ -159,6 +261,7 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
         'metric': {'name': 'eval_loss', 'goal': 'minimize'},
         'early_terminate': {'type': 'hyperband', 'max_iter': 14},
         'parameters': {
+            'model_type': {'values': ['transformer']},
             'embed_size': {'values': [128, 192]},
             'nhead': {'values': [8]},
             'num_layers': {'values': [1, 2]},
@@ -175,6 +278,7 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
         'metric': {'name': 'eval_loss', 'goal': 'minimize'},
         'early_terminate': {'type': 'hyperband', 'max_iter': 12},
         'parameters': {
+            'model_type': {'values': ['transformer']},
             'embed_size': {'values': [256, 384]},
             'nhead': {'values': [8]},
             'num_layers': {'values': [3, 4, 5]},
@@ -190,6 +294,7 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
         'metric': {'name': 'eval_loss', 'goal': 'minimize'},
         'early_terminate': {'type': 'hyperband', 'max_iter': 10},
         'parameters': {
+            'model_type': {'values': ['transformer']},
             'embed_size': {'values': [384, 512]},
             'nhead': {'values': [8]},
             'num_layers': {'values': [4, 5]},
@@ -206,6 +311,7 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
         'metric': {'name': 'eval_loss', 'goal': 'minimize'},
         'early_terminate': {'type': 'hyperband', 'max_iter': 8},
         'parameters': {
+            'model_type': {'values': ['transformer']},
             'embed_size': {'values': [512, 768]},
             'nhead': {'values': [8]},
             'num_layers': {'values': [5, 6]},
@@ -240,7 +346,7 @@ if __name__ == "__main__":
     train_data, validation_data, vocabulary = prepare_data(vocab_path)
 
     # Choose the run type
-    run_type = 'single'  # Choose from 'single', 'single_sweep', 'multiple_sweep'
+    run_type = 'multiple_sweep'  # Choose 'single', 'single_sweep', 'multiple_sweep', 'rnn_sweep', 'lstm_sweep', 'gru_sweep'
 
     # Project name
     project_name = 'ml_llm_project'
@@ -259,3 +365,9 @@ if __name__ == "__main__":
             train_transformer_sweep(train_data, vocabulary, validation_data, project_name, num_epochs)
         case 'multiple_sweep':
             train_transformer_multiple_sweeps(train_data, vocabulary, validation_data, project_name, num_epochs)
+        case 'rnn_sweep':
+            train_rnn_sweep(train_data, vocabulary, validation_data, project_name, num_epochs)
+        case 'lstm_sweep':
+            train_lstm_sweep(train_data, vocabulary, validation_data, project_name, num_epochs)
+        case 'gru_sweep':
+            train_gru_sweep(train_data, vocabulary, validation_data, project_name, num_epochs)
