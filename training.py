@@ -13,6 +13,7 @@ from model_1 import TransformerModel, device, learning_rate, max_seq_len
 from time import perf_counter
 import optuna
 from model_2 import RNNModel, LSTMModel, GRUModel
+from torch.cuda.amp import autocast, GradScaler
 
 writer = SummaryWriter()
 
@@ -25,6 +26,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
     log_interval = 250
     batch_loss = []
     scheduler = StepLR(optimizer, step_size=2500, gamma=0.87)
+    #scaler = GradScaler()  # Initialize GradScaler
 
     # just for IDE
     x: Tensor
@@ -43,7 +45,18 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
             pred = model(x, lengths)
 
             optimizer.zero_grad(set_to_none=True)
+
+            #with autocast():  # Enable mixed precision
+                #pred = model(x, lengths)
+                #loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
+
+           # scaler.scale(loss).backward()  # Scale the loss
+            #scaler.step(optimizer)  # Apply gradients
+            #scaler.update()  # Update the scaler
+            #scheduler.step()
+
             loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
+
             loss_item = loss.item()
             total_loss += loss_item
             curr_loss += loss_item
@@ -82,7 +95,12 @@ def evaluate(data: TinyStories, model: nn.Module, loss_fn, max_num_batches: int 
         lengths = lengths.to(device, non_blocking=True)
         pred = model(x, lengths)
 
+        #with autocast():  # Enable mixed precision
+            #pred = model(x, lengths)
+            #loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
+
         loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
+
         total_loss += loss.item()
     return total_loss / min(max_num_batches, len(dataloader))
 
