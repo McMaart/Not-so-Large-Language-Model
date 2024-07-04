@@ -19,14 +19,14 @@ writer = SummaryWriter()
 
 
 def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int = 1, max_num_batches: int | None = None,
-          flags: list[bool] = None, batch_size: int = 32) -> list[float]:
+          flags: list[bool] = None, batch_size: int = 32, opti_steptsize: int = 2500, opti_gamma: float = 0.87) -> list[float]:
     model.train()
     total_loss = 0.
     curr_loss = 0.
     log_interval = 250
     batch_loss = []
-    scheduler = StepLR(optimizer, step_size=2500, gamma=0.87)
-    #scaler = GradScaler()  # Initialize GradScaler
+    scheduler = StepLR(optimizer, step_size=opti_steptsize, gamma=opti_gamma)
+    scaler = GradScaler()  # Initialize GradScaler
 
     # just for IDE
     x: Tensor
@@ -42,18 +42,18 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
 
         for batch, (x, y, lengths) in zip(range(1, min(max_num_batches, len(dataloader)) + 1), dataloader):
             x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
-            pred = model(x, lengths)
+            #pred = model(x, lengths)
 
             optimizer.zero_grad(set_to_none=True)
 
-            #with autocast():  # Enable mixed precision
-                #pred = model(x, lengths)
-                #loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
+            with autocast():  # Enable mixed precision
+                pred = model(x, lengths)
+                loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
 
-           # scaler.scale(loss).backward()  # Scale the loss
-            #scaler.step(optimizer)  # Apply gradients
-            #scaler.update()  # Update the scaler
-            #scheduler.step()
+            scaler.scale(loss).backward()  # Scale the loss
+            scaler.step(optimizer)  # Apply gradients
+            scaler.update()  # Update the scaler
+            scheduler.step()
 
             loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
 
@@ -62,9 +62,9 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
             curr_loss += loss_item
             #epoch_loss += loss_item
             writer.add_scalar("Loss/batch", loss_item, batch)
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
+            #loss.backward()
+            #optimizer.step()
+            #scheduler.step()
 
             if batch % log_interval == 0:
                 print(f"Batch: {batch:5}, curr. loss: {curr_loss / log_interval:.5f}")

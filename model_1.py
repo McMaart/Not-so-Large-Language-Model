@@ -199,5 +199,5 @@ if __name__ == '__main__':
 
     string = '"What do birds like to eat?", Tom asked his mother.'
     #string = 'Once'
-    story = prompt_model("transformer", string, 255, 0.5, 'beam', beam_width=8)
+    story = prompt_model("1M.pth", string, 255, 0.5, '', beam_width=8)
     print(story)
