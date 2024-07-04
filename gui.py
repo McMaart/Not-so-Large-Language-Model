@@ -4,6 +4,8 @@ import datetime
 import training as m1
 import glob
 import os
+from io_utils import prompt_model
+from tests.uhhgpt_eval import setup, get_ratings
 
 ctk.set_default_color_theme("dark-blue")
 ctk.set_appearance_mode("system")
@@ -142,7 +144,7 @@ class Interaction(ctk.CTkFrame):
         self.grid_columnconfigure(3, weight=4)
         self.grid_columnconfigure(4, weight=1)
 
-        self.models = glob.glob(os.path.join("trained_models", "*.pth"))
+        self.models = [os.path.splitext(os.path.basename(model))[0] for model in glob.glob(os.path.join("trained_models", "*.pth"))]
         # self.models = ["Model 1", "Model 2", "Model 3"]
 
         # Prompt and response history
@@ -179,22 +181,50 @@ class Interaction(ctk.CTkFrame):
     def submit_prompt(self):
         prompt = self.entry.get()
         self.chat.insert("end", f"Prompt {len(self.history) + 1}:\n")
-        self.chat.insert("end", f"User: {prompt}\n")
+        self.chat.insert("end", f"{prompt}\n")
         self.entry.delete(0, "end")
-        # TODO function for generating response
-        response = "This functionality is coming soon..."  #Dummy
-        self.chat.insert("end", f"{self.model_selection.get()}: {response}\n\n")
+        response = prompt_model(self.model_selection.get(), prompt)
+        self.chat.insert("end", f"{self.model_selection.get()}:\n {response}\n\n")
         self.history.append((prompt, response, self.model_selection.get()))
         self.evaluate()
         return
 
     def evaluate(self):
-        # TODO function for evaluating response
-        score = [(len(self.history[-1][0]) % 10) * 10, (len(self.history[-1][0]) % 8) * 10]  # dummy
-        self.eval.insert("end", f"Prompt {len(self.history):>3} ({self.model_selection.get()}):\n")
-        self.eval.insert("end", f"Metric 1: {score[0]:>3}")
-        self.eval.insert("end", f" Metric 2: {score[1]:>3}")
-        self.eval.insert("end", "\n\n")
+        # import this from somewhere in future
+        eval_prompt = """
+        The following story is a story written for children at the age of around 5 years old.
+        Your task is to rate the story objectively.
+
+        Story:
+        {}
+
+        Please rate the story in the following categories:
+        - GRAMMAR (exclusively rate the grammar of the story)
+        - SPELLING (exclusively rate the spelling of the story)
+        - CONSISTENCY (exclusively rate the consistency of the story)
+        - STORY (exclusively rate the story/plot of the story)
+        - CREATIVITY (exclusively rate the creativity of the story)
+        - STYLE (exclusively rate the linguistic style of the story)
+
+        Rate objectively and rate each category independently from the others.
+        Rate each category with a score from 1 to 10, with 1 being the worst and 10 being the best.
+
+        It is crucial that your response ends with the following format (substitute <YOUR_CATEGORY_SCORE> with the score you gave for the respective category) and does not include any other text afterwords:
+
+        GRAMMAR: <YOUR_GRAMMAR_SCORE>
+        SPELLING: <YOUR_SPELLING_SCORE>
+        CONSISTENCY: <YOUR_CONSISTENCY_SCORE>
+        STORY: <YOUR_STORY_SCORE>
+        CREATIVITY: <YOUR_CREATIVITY_SCORE>
+        STYLE: <YOUR_STYLE_SCORE>
+        """
+        from prompt_testing.parse_model_reply import categories
+        if not hasattr(self, 'driver') or self.driver is None:
+            self.driver = setup()
+        ratings = get_ratings(self.driver, eval_prompt, [self.history[-1][1]])[-1]
+        for cat, score in zip(categories.values(), ratings):
+            self.eval.insert("end", f"{cat}: {score}\n")
+        self.eval.insert("end", "\n")
         return
 
 
