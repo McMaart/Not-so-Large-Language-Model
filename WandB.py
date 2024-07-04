@@ -267,8 +267,8 @@ def train_transformer_single(data, vocabulary, validation_data, project_name, nu
         'learning_rate': 0.004,
         'batch_size': 64,
         'pos_enc_type': 'rope',  # 'rope' or 'sinusoidal'
-        'opti_stepsize': 5000,
-        'opti_gamma': 0.8
+        'opti_stepsize': 10000,
+        'opti_gamma': 0.75
     }
 
     train_function(config, data, vocabulary, validation_data, project_name, num_epochs)
