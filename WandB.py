@@ -244,8 +244,8 @@ def train_transformer_sweep(data, vocabulary, validation_data, project_name, num
             'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.001, 'max': 0.005},
             'batch_size': {'values': [64]},
             'pos_enc_type': {'values': ['sinusoidal', 'rope']},
-            'opti_stepsize': {'values': [2500, 5000, 10000]},
-            'opti_gamma': {'values': [0.85, 0.87, 0.9]}
+            'opti_stepsize': {'values': [5000, 7500, 10000, 12500, 15000, 20000]},
+            'opti_gamma': {'distribution': 'log_uniform', 'min': 0.5, 'max': 0.9}
         }
     }
 
@@ -259,16 +259,16 @@ def train_transformer_single(data, vocabulary, validation_data, project_name, nu
     # Set the configuration manually
     config = {
         'model_type': 'transformer',  # Correct this to directly set the value
-        'embed_size': 128,
+        'embed_size': 256,
         'nhead': 8,
-        'num_layers': 3,
-        'dim_ff': 355,
+        'num_layers': 11,
+        'dim_ff': 1072,
         'dropout': 0.1,
-        'learning_rate': 0.004,
+        'learning_rate': 0.00035,
         'batch_size': 64,
         'pos_enc_type': 'rope',  # 'rope' or 'sinusoidal'
-        'opti_stepsize': 10000,
-        'opti_gamma': 0.70
+        'opti_stepsize': 7500,
+        'opti_gamma': 0.75
     }
 
     train_function(config, data, vocabulary, validation_data, project_name, num_epochs)
@@ -425,7 +425,7 @@ if __name__ == "__main__":
     run_type = 'single'  # Choose 'single', 'single_sweep', 'multiple_sweep', 'rnn_sweep', 'lstm_sweep', 'gru_sweep'
 
     # Project name
-    project_name = 'ml_llm_project_1M'
+    project_name = 'ml_llm_project_10M'
 
     # Number of epochs to train
     num_epochs = 1  # Set the desired number of epochs

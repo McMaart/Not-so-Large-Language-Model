@@ -3,6 +3,7 @@ from torch import nn, Tensor
 import torch.nn.functional as F
 import packaging
 from torchtune.modules import RotaryPositionalEmbeddings
+#from flash_attn.flash_attention import FlashMHA  # only for flash attention
 
 
 device = (
@@ -34,9 +35,16 @@ class TransformerModel(nn.Module):
         elif pos_enc_type == 'rope':
             self.pos_encoding = RotaryPositionalEmbeddings(dim=embed_size // nhead, max_seq_len=max_seq_len, base=10000)
 
+        # with flash attention
+        #self.encoder_layers = nn.ModuleList([
+           # FlashMHA(embed_size, nhead, p_dropout=dropout, causal=True) for _ in range(num_layers)
+        #])
+
+        #without flash attention
         encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=nhead, dim_feedforward=dim_ff, dropout=dropout,
                                                    batch_first=True, activation="gelu", norm_first=False)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers, enable_nested_tensor=False)
+
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
 
     def forward(self, x: Tensor, lengths: Tensor | None = None) -> Tensor:
@@ -56,6 +64,11 @@ class TransformerModel(nn.Module):
             seq_indices = torch.arange(x.size(1), device=device)
             pad_mask = seq_indices >= lengths[:, None]
 
+        # with flash attention
+        #for layer in self.encoder_layers:
+           # embedding, _ = layer(embedding, attn_mask=mask)
+
+        # without flash attention
         embedding = self.encoder(embedding, mask=mask, src_key_padding_mask=pad_mask, is_causal=True)
         return self.linear(embedding)
 
@@ -199,5 +212,5 @@ if __name__ == '__main__':
 
     string = '"What do birds like to eat?", Tom asked his mother.'
     #string = 'Once'
-    story = prompt_model("1M.pth", string, 255, 0.5, '', beam_width=8)
+    story = prompt_model("10M", string, 255, 0, '', beam_width=8)
     print(story)

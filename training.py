@@ -42,18 +42,18 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
 
         for batch, (x, y, lengths) in zip(range(1, min(max_num_batches, len(dataloader)) + 1), dataloader):
             x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
-            #pred = model(x, lengths)
+            #pred = model(x, lengths)  # non mixed precision
 
             optimizer.zero_grad(set_to_none=True)
 
             with autocast():  # Enable mixed precision
-                pred = model(x, lengths)
-                loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
+                pred = model(x, lengths)  # Enable mixed precision
+                loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))  # Enable mixed precision
 
-            scaler.scale(loss).backward()  # Scale the loss
-            scaler.step(optimizer)  # Apply gradients
-            scaler.update()  # Update the scaler
-            scheduler.step()
+            scaler.scale(loss).backward()  # Scale the loss Enable mixed precision
+            scaler.step(optimizer)  # Apply gradients Enable mixed precision
+            scaler.update()  # Update the scaler Enable mixed precision
+            scheduler.step()  # Enable mixed precision
 
             loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
 
@@ -62,9 +62,9 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
             curr_loss += loss_item
             #epoch_loss += loss_item
             writer.add_scalar("Loss/batch", loss_item, batch)
-            #loss.backward()
-            #optimizer.step()
-            #scheduler.step()
+            #loss.backward()  # non mixed precision
+            #optimizer.step()  # non mixed precision
+            #scheduler.step()  # non mixed precision
 
             if batch % log_interval == 0:
                 print(f"Batch: {batch:5}, curr. loss: {curr_loss / log_interval:.5f}")
