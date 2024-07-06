@@ -5,7 +5,7 @@ from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import torchtext
-#torchtext.disable_torchtext_deprecation_warning()
+torchtext.disable_torchtext_deprecation_warning()
 from torchtext.data import get_tokenizer
 from io_utils import (create_vocabulary, map_story_to_tensor, load_tiny_stories, save_vocabulary,
                       load_vocabulary, TinyStories)
@@ -50,10 +50,10 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
                 pred = model(x, lengths)  # Enable mixed precision
                 loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))  # Enable mixed precision
 
-            scaler.scale(loss).backward()  # Scale the loss Enable mixed precision
-            scaler.step(optimizer)  # Apply gradients Enable mixed precision
-            scaler.update()  # Update the scaler Enable mixed precision
-            scheduler.step()  # Enable mixed precision
+            scaler.scale(loss).backward()  # Scale the loss - Enable mixed precision
+            scaler.step(optimizer)  # Apply gradients - Enable mixed precision
+            scaler.update()  # Update the scaler - Enable mixed precision
+            scheduler.step()  # - Enable mixed precision
 
             loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
 

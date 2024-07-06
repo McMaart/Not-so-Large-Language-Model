@@ -117,12 +117,12 @@ if __name__ == "__main__":
     print(f"Number of test stories: {len(test_stories)}")
     print(f"Number of validation stories: {len(validation_stories)}")
 
-    # Plot histogram with more bins for smoothness
-    plt.figure(figsize=(10, 6))
+    # Plot histogram with more bins for smoothness and enhanced visibility
+    plt.figure(figsize=(10, 6), dpi=300)
     bins = range(0, 700, 1)
-    plt.hist(train_token_counts, bins=bins, alpha=0.7, label='Training set', density=False)
-    plt.hist(test_token_counts, bins=bins, alpha=0.7, label='Test set', density=False)
-    plt.hist(validation_token_counts, bins=bins, alpha=0.7, label='Validation set', density=False)
+    plt.hist(train_token_counts, bins=bins, alpha=0.7, label='Training set', density=False, color='lightblue')
+    plt.hist(test_token_counts, bins=bins, alpha=0.7, label='Test set', density=False, color='red')
+    plt.hist(validation_token_counts, bins=bins, alpha=0.7, label='Validation set', density=False, color='green')
     plt.xlabel('Number of tokens')
     plt.ylabel('Frequency')
     plt.title('Distribution of story lengths')
@@ -147,11 +147,11 @@ if __name__ == "__main__":
     peak_bin_validation = validation_token_counts[np.argmax(validation_token_counts)]
     print(f"Peak frequency in validation set: {peak_frequency_validation} in bin starting at {peak_bin_validation} tokens")
 
-    # Plot coverage graph
-    plt.figure(figsize=(10, 6))
-    plt.plot(train_token_coverage, label='Training set', alpha=0.7)
-    plt.plot(test_token_coverage, label='Test set', alpha=0.7)
-    plt.plot(validation_token_coverage, label='Validation set', alpha=0.7)
+    # Plot coverage graph with enhanced visibility
+    plt.figure(figsize=(10, 6), dpi=300)
+    plt.plot(train_token_coverage, label='Training set', alpha=0.7, color='lightblue')
+    plt.plot(test_token_coverage, label='Test set', alpha=0.7, color='red')
+    plt.plot(validation_token_coverage, label='Validation set', alpha=0.7, color='green')
     plt.axvline(x=2048)
     plt.xscale('log')
     plt.xlabel('Used number of unique tokens (log-scale)')

@@ -80,7 +80,7 @@ def format_training_time(seconds):
 
 # Function to plot WandB run data as lines
 def plot_wandb_data(run_df, plot_info):
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(12, 6), dpi=300)
     colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
     color_map = {run_id: colors[i % len(colors)] for i, run_id in enumerate(run_df['run_id'])}
 
@@ -120,7 +120,7 @@ def plot_wandb_scatter(run_df):
     print("Scatter plot data:")
     print(run_df[['num_parameters', 'training_time', 'eval_loss']].head())
 
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(12, 6), dpi=300)
 
     scatter = plt.scatter(
         run_df['num_parameters'],
@@ -140,7 +140,7 @@ def plot_wandb_scatter(run_df):
 
 # Function to plot model size vs training time
 def plot_model_training_time(run_df):
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(12, 6), dpi=300)
 
     # Filter out rows with missing or invalid data
     run_df = run_df.dropna(subset=['num_parameters', 'training_time'])

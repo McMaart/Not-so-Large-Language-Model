@@ -237,15 +237,15 @@ def train_transformer_sweep(data, vocabulary, validation_data, project_name, num
         'parameters': {
             'model_type': {'values': ['transformer']},
             'embed_size': {'values': [128]},
-            'nhead': {'values': [4, 8, 16]},
+            'nhead': {'values': [2, 4, 8, 16]},
             'num_layers': {'values': [3]},
             'dim_ff': {'values': [355]},
             'dropout': {'distribution': 'uniform', 'min': 0.08, 'max': 0.27},
-            'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.001, 'max': 0.005},
+            'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.002, 'max': 0.005},
             'batch_size': {'values': [64]},
-            'pos_enc_type': {'values': ['sinusoidal', 'rope']},
-            'opti_stepsize': {'values': [5000, 7500, 10000, 12500, 15000, 20000]},
-            'opti_gamma': {'distribution': 'log_uniform', 'min': 0.5, 'max': 0.9}
+            'pos_enc_type': {'values': ['rope']},
+            'opti_stepsize': {'values': [2000, 2500, 5000, 7500, 10000, 12500, 15000, 20000]},
+            'opti_gamma': {'distribution': 'uniform', 'min': 0.5, 'max': 0.9}
         }
     }
 
@@ -255,23 +255,6 @@ def train_transformer_sweep(data, vocabulary, validation_data, project_name, num
     wandb.agent(sweep_id, function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name, num_epochs))
 
 # Define the function to execute the single configuration
-def train_transformer_single(data, vocabulary, validation_data, project_name, num_epochs=1):
-    # Set the configuration manually
-    config = {
-        'model_type': 'transformer',  # Correct this to directly set the value
-        'embed_size': 256,
-        'nhead': 8,
-        'num_layers': 11,
-        'dim_ff': 1072,
-        'dropout': 0.1,
-        'learning_rate': 0.00035,
-        'batch_size': 64,
-        'pos_enc_type': 'rope',  # 'rope' or 'sinusoidal'
-        'opti_stepsize': 7500,
-        'opti_gamma': 0.75
-    }
-
-    train_function(config, data, vocabulary, validation_data, project_name, num_epochs)
 
 
 # Define the function to execute multiple sweeps
@@ -383,7 +366,7 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
                 'parameters': {
                     'model_type': {'value': 'transformer'},
                     'embed_size': {'value': config['embed_size']},
-                    'nhead': {'values': [4, 8, 16]},
+                    'nhead': {'values': [2, 4, 8, 16]},
                     'num_layers': {'value': config['num_layers']},
                     'dim_ff': {'value': config['dim_ff']},
                     'dropout': {'distribution': 'uniform', 'min': 0.08, 'max': 0.27},
@@ -410,6 +393,24 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
         sweep_id = wandb.sweep(sweep=config, project=f'{project_name}_{sweep_name}')
         wandb.agent(sweep_id, function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name, num_epochs))
 
+def train_transformer_single(data, vocabulary, validation_data, project_name, num_epochs=1):
+    # Set the configuration manually
+    config = {
+        'model_type': 'transformer',  # Correct this to directly set the value
+        'embed_size': 128,
+        'nhead': 8,
+        'num_layers': 3,
+        'dim_ff': 355,
+        'dropout': 0.1007,
+        'learning_rate': 0.0048,
+        'batch_size': 64,
+        'pos_enc_type': 'rope',  # 'rope' or 'sinusoidal'
+        'opti_stepsize': 12500,
+        'opti_gamma': 0.5551
+    }
+
+    train_function(config, data, vocabulary, validation_data, project_name, num_epochs)
+
 
 if __name__ == "__main__":
     # Check if user is logged in
@@ -425,10 +426,10 @@ if __name__ == "__main__":
     run_type = 'single'  # Choose 'single', 'single_sweep', 'multiple_sweep', 'rnn_sweep', 'lstm_sweep', 'gru_sweep'
 
     # Project name
-    project_name = 'ml_llm_project_10M'
+    project_name = 'ml_llm_project_1M'
 
     # Number of epochs to train
-    num_epochs = 1  # Set the desired number of epochs
+    num_epochs = 2  # Set the desired number of epochs
 
     # Global variable to track the best evaluation loss
     global best_eval_loss
