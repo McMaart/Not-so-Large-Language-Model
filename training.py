@@ -5,7 +5,7 @@ from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import torchtext
-#torchtext.disable_torchtext_deprecation_warning()
+torchtext.disable_torchtext_deprecation_warning()
 from torchtext.data import get_tokenizer
 from io_utils import (create_vocabulary, map_story_to_tensor, load_tiny_stories, save_vocabulary,
                       load_vocabulary, TinyStories)

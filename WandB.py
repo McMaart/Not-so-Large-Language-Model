@@ -191,11 +191,9 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
 
             # Train the model
             max_num_batches = 200000  # Define max number of batches
-            avg_loss, batch_losses = train(data, model, loss_fn, optimizer, epochs=1,
-                                           max_num_batches=max_num_batches,
-                                           batch_size=config.batch_size,
-                                           opti_steptsize=config.opti_stepsize,
-                                           opti_gamma=config.opti_gamma)
+            avg_loss, batch_losses = train(data=data, model=model,loss_fn=loss_fn, optimizer=optimizer,
+                                           max_num_batches=max_num_batches, batch_size=64,
+                                           scheduler_stepsize=config.opti_stepsize, scheduler_gamma=config.opti_gamma)
 
             total_batches += len(batch_losses)  # Update total steps
 
