@@ -4,18 +4,18 @@ import torch
 from datasets import load_from_disk
 from torch.nn.utils.rnn import pad_sequence
 import torchtext
-#torchtext.disable_torchtext_deprecation_warning()
+torchtext.disable_torchtext_deprecation_warning()
 from torchtext.data import get_tokenizer
 from torch import Tensor
-import nltk
-from nltk.tokenize.treebank import TreebankWordDetokenizer
+# import nltk
+# from nltk.tokenize.treebank import TreebankWordDetokenizer
 import re
 from model_1 import device, num_special_tokens, generate_tokens, generate_tokens_beam, generate_tokens_beam_multinomial
 from torch.utils.data import Dataset
 import numpy as np
 from collections import Counter
 import matplotlib.pyplot as plt
-import seaborn as sns
+# import seaborn as sns
 
 
 def load_tiny_stories(end: int, start: int = 0, split: str = "train") -> list[str]:
@@ -184,9 +184,14 @@ def tokens_to_story(token_list: list[str]) -> str:
 
     story = re.sub(r'(,"\s*)([A-Z])', lambda x: x.group(1) + x.group(2).lower(), story)
 
-    names = {'ben', 'billy', 'bob', 'emily', 'jack', 'joe', 'john', 'lily', 'lucy', 'max', 'mia', 'polly', 'sam', 'sara', 'sarah', 'timmy', 'tom'}
+    names = {'ben', 'billy', 'bob', 'emily', 'jack', 'joe', 'john', 'lily', 'lucy', 'max', 'mia', 'polly', 'sam',
+             'sara', 'sarah', 'timmy', 'tom'}
     # names obtained from GPT-4o by providing list of vocabulary and asking for names:
-    names_gpt = ['alice', 'amy', 'anna', 'ben', 'bella', 'benny', 'billy', 'bob', 'bobo', 'daisy', 'dave', 'emma', 'ellie', 'ella', 'george', 'jack', 'jake', 'jane', 'jen', 'jenny', 'jim', 'jimmy', 'joe', 'john', 'johnny', 'leo', 'lila', 'lily', 'lisa', 'lola', 'lucy', 'mandy', 'mark', 'mary', 'max', 'mia', 'mike', 'molly', 'pete', 'peter', 'rex', 'sally', 'sam', 'sammy', 'sara', 'sarah', 'sophie', 'susie', 'tim', 'timmy', 'tom', 'tommy', 'toby']
+    names_gpt = ['alice', 'amy', 'anna', 'ben', 'bella', 'benny', 'billy', 'bob', 'bobo', 'daisy', 'dave', 'emma',
+                 'ellie', 'ella', 'george', 'jack', 'jake', 'jane', 'jen', 'jenny', 'jim', 'jimmy', 'joe', 'john',
+                 'johnny', 'leo', 'lila', 'lily', 'lisa', 'lola', 'lucy', 'mandy', 'mark', 'mary', 'max', 'mia', 'mike',
+                 'molly', 'pete', 'peter', 'rex', 'sally', 'sam', 'sammy', 'sara', 'sarah', 'sophie', 'susie', 'tim',
+                 'timmy', 'tom', 'tommy', 'toby']
     names = names.union(names_gpt)
 
     # replace names with capitalized names
@@ -195,7 +200,8 @@ def tokens_to_story(token_list: list[str]) -> str:
     return story
 
 
-def prompt_model(model_name: str, start_str: str, length: int = 250, temperature: float = 1.0, method: str = "default", beam_width: int = 5, top_k: int = 50, sampling_after: int = 5) -> str:
+def prompt_model(model_name: str, start_str: str, length: int = 250, temperature: float = 1.0, method: str = "default",
+                 beam_width: int = 5, top_k: int = 50, sampling_after: int = 5) -> str:
     vocab = load_vocabulary()
     vocab_rev = {k: v for v, k in vocab.items()}
 
@@ -205,9 +211,9 @@ def prompt_model(model_name: str, start_str: str, length: int = 250, temperature
         print(f"Model 'trained_models/{model_name}.pth could not be found", file=sys.stderr)
         sys.exit(1)
 
-        # Ensure nhead attribute is present
-    #if not hasattr(model, 'nhead'):
-        #raise AttributeError(f"Loaded model does not have 'nhead' attribute (cannot use ROPE).")
+    # Ensure nhead attribute is present
+    # if not hasattr(model, 'nhead'):
+        # raise AttributeError(f"Loaded model does not have 'nhead' attribute (cannot use ROPE).")
 
     print("Number of parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
     tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
@@ -236,7 +242,6 @@ def prompt_model(model_name: str, start_str: str, length: int = 250, temperature
             token_list.append(token)
         story_list.append(tokens_to_story(token_list))
     return story_list[0]  # ToDo: maybe adjust function for generating multiple stories at once
-
 
 
 class TinyStories(Dataset):
@@ -304,6 +309,7 @@ def calculate_token_coverage(stories, tokenizer):
 
     return cumulative_coverage
 
+
 def calculate_statistics(stories, tokenizer):
     token_counts = [len(tokenizer(story)) for story in stories]
     total_tokens = sum(token_counts)
@@ -331,7 +337,9 @@ def calculate_statistics(stories, tokenizer):
     # Calculate token coverage
     token_coverage = calculate_token_coverage(stories, tokenizer)
 
-    return total_tokens, unique_tokens, avg_seq_length, std_dev_seq_length, token_counts, lower_50_percent_max_frequency, lower_25_percent_max_frequency, token_coverage
+    return (total_tokens, unique_tokens, avg_seq_length, std_dev_seq_length, token_counts,
+            lower_50_percent_max_frequency, lower_25_percent_max_frequency, token_coverage)
+
 
 if __name__ == "__main__":
     # Load datasets
@@ -350,7 +358,8 @@ if __name__ == "__main__":
 
     # Calculate statistics for training set
     train_stats = calculate_statistics(train_stories, tokenizer)
-    train_total_tokens, train_unique_tokens, train_avg_seq_length, train_std_dev_seq_length, train_token_counts, train_lower_50_percent_max_frequency, train_lower_25_percent_max_frequency, train_token_coverage = train_stats
+    (train_total_tokens, train_unique_tokens, train_avg_seq_length, train_std_dev_seq_length, train_token_counts,
+     train_lower_50_percent_max_frequency, train_lower_25_percent_max_frequency, train_token_coverage) = train_stats
     print("Training Set Statistics:")
     print(f"Number of tokens: {train_total_tokens}")
     print(f"Number of unique tokens: {train_unique_tokens}")
@@ -360,7 +369,8 @@ if __name__ == "__main__":
 
     # Calculate statistics for test set
     test_stats = calculate_statistics(test_stories, tokenizer)
-    test_total_tokens, test_unique_tokens, test_avg_seq_length, test_std_dev_seq_length, test_token_counts, test_lower_50_percent_max_frequency, test_lower_25_percent_max_frequency, test_token_coverage = test_stats
+    (test_total_tokens, test_unique_tokens, test_avg_seq_length, test_std_dev_seq_length, test_token_counts,
+     test_lower_50_percent_max_frequency, test_lower_25_percent_max_frequency, test_token_coverage) = test_stats
     print("Test Set Statistics:")
     print(f"Number of tokens: {test_total_tokens}")
     print(f"Number of unique tokens: {test_unique_tokens}")
@@ -371,7 +381,9 @@ if __name__ == "__main__":
     # Combine train and test sets to calculate statistics for the entire dataset (without validation)
     combined_stories = train_stories + test_stories
     combined_stats = calculate_statistics(combined_stories, tokenizer)
-    combined_total_tokens, combined_unique_tokens, combined_avg_seq_length, combined_std_dev_seq_length, combined_token_counts, combined_lower_50_percent_max_frequency, combined_lower_25_percent_max_frequency, combined_token_coverage = combined_stats
+    (combined_total_tokens, combined_unique_tokens, combined_avg_seq_length, combined_std_dev_seq_length,
+     combined_token_counts, combined_lower_50_percent_max_frequency, combined_lower_25_percent_max_frequency,
+     combined_token_coverage) = combined_stats
     print("Combined Dataset Statistics:")
     print(f"Number of tokens: {combined_total_tokens}")
     print(f"Number of unique tokens: {combined_unique_tokens}")

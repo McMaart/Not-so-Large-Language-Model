@@ -18,17 +18,15 @@ num_special_tokens = 3
 
 
 class TransformerModel(nn.Module):
-    def __init__(self, vocab_size: int, embed_size: int = 512, nhead: int = 4, num_layers: int = 4, dim_ff: int = 2048,
+    def __init__(self, vocab_size: int, embed_size: int = 512, nhead: int = 8, num_layers: int = 4, dim_ff: int = 2048,
                  dropout: float = 0.1, padding_idx: int | None = None, pos_enc_type: str = 'sinusoidal'):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
         self.nhead = nhead
         self.pos_enc_type = pos_enc_type
-        #self.use_rope = use_rope
 
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size, padding_idx=padding_idx)
-
         if pos_enc_type == 'sinusoidal':
             self.pos_encoding = PositionalEncoding(embed_size, base=10000)
         elif pos_enc_type == 'rope':
@@ -102,7 +100,8 @@ def generate_tokens(model: nn.Module, token_tensor: Tensor, length: int = 250, t
 
 
 @torch.no_grad()
-def generate_tokens_beam(model: nn.Module, input_tensor: Tensor, beam_width: int, length: int = 250, temperature: float = 1.0, eos_token: int = None) -> Tensor:
+def generate_tokens_beam(model: nn.Module, input_tensor: Tensor, beam_width: int, length: int = 250,
+                         temperature: float = 1.0, eos_token: int = None) -> Tensor:
     model.eval()
     sequences = [(input_tensor.squeeze(0).tolist(), 0.0)]  # List of sequences with their scores
     completed_sequences = []
@@ -144,7 +143,6 @@ def generate_tokens_beam(model: nn.Module, input_tensor: Tensor, beam_width: int
 
     best_sequence = max(completed_sequences + sequences, key=lambda tup: tup[1])[0]
     return torch.tensor(best_sequence).unsqueeze(0)
-
 
 
 @torch.no_grad()
@@ -192,12 +190,10 @@ def generate_tokens_beam_multinomial(model: nn.Module, input_tensor: Tensor, bea
     return torch.tensor(best_sequence).unsqueeze(0)
 
 
-
-
 if __name__ == '__main__':
     from io_utils import prompt_model
 
     string = '"What do birds like to eat?", Tom asked his mother.'
-    #string = 'Once'
-    story = prompt_model("1M.pth", string, 255, 0.5, '', beam_width=8)
+    # string = 'Once'
+    story = prompt_model("transformer_mask", string, 255, 0.5, beam_width=8)
     print(story)
