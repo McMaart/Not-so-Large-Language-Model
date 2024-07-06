@@ -4,18 +4,18 @@ import torch
 from datasets import load_from_disk
 from torch.nn.utils.rnn import pad_sequence
 import torchtext
-#torchtext.disable_torchtext_deprecation_warning()
+torchtext.disable_torchtext_deprecation_warning()
 from torchtext.data import get_tokenizer
 from torch import Tensor
-import nltk
-from nltk.tokenize.treebank import TreebankWordDetokenizer
+# import nltk
+# from nltk.tokenize.treebank import TreebankWordDetokenizer
 import re
 from model_1 import device, num_special_tokens, generate_tokens, generate_tokens_beam, generate_tokens_beam_multinomial
 from torch.utils.data import Dataset
 import numpy as np
 from collections import Counter
 import matplotlib.pyplot as plt
-import seaborn as sns
+# import seaborn as sns
 
 
 def load_tiny_stories(end: int, start: int = 0, split: str = "train") -> list[str]:

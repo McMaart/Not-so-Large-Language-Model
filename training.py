@@ -5,7 +5,7 @@ from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import torchtext
-torchtext.disable_torchtext_deprecation_warning()
+#torchtext.disable_torchtext_deprecation_warning()
 from torchtext.data import get_tokenizer
 from io_utils import (create_vocabulary, map_story_to_tensor, load_tiny_stories, save_vocabulary,
                       load_vocabulary, TinyStories)
@@ -15,18 +15,18 @@ import optuna
 from model_2 import RNNModel, LSTMModel, GRUModel
 from torch.cuda.amp import autocast, GradScaler
 
-writer = SummaryWriter()
-
 
 def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int = 1, max_num_batches: int | None = None,
-          flags: list[bool] = None, batch_size: int = 32, opti_steptsize: int = 2500, opti_gamma: float = 0.87) -> list[float]:
+          flags: list[bool] = None, batch_size: int = 32, scheduler_stepsize: int = 2500,
+          scheduler_gamma: float = 0.87) -> list[float]:
     model.train()
     total_loss = 0.
     curr_loss = 0.
     log_interval = 250
     batch_loss = []
-    scheduler = StepLR(optimizer, step_size=opti_steptsize, gamma=opti_gamma)
-    scaler = GradScaler()  # Initialize GradScaler
+    writer = SummaryWriter()
+    scheduler = StepLR(optimizer, step_size=scheduler_stepsize, gamma=scheduler_gamma)
+    scaler = GradScaler()
 
     # just for IDE
     x: Tensor
@@ -70,7 +70,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
                 print(f"Batch: {batch:5}, curr. loss: {curr_loss / log_interval:.5f}")
                 # ToDO: Adjust the GUI implementation to receive only the loss (instead of a string containing the loss)
                 batch_loss.append(curr_loss / log_interval)
-                curr_loss = 0.
+                curr_loss = 0.0
 
         #epoch_loss = epoch_loss / (min(max_num_batches, len(dataloader)))
         #epoch_losses.append(epoch_loss)
@@ -157,7 +157,8 @@ def do_training(model_name: str = "model", max_num_batches: int | None = None, l
             model = TransformerModel(len(vocabulary), 192, 6, 6, 768,
                                      0.1, padding_idx=vocabulary["<pad>"], pos_enc_type='rope').to(device)
             # model = RNNModel(2048).to(device)
-        data = TinyStories(vocabulary, get_tokenizer('spacy', language='en_core_web_sm'), max_seq_len=max_seq_len, split="train")
+        data = TinyStories(vocabulary, get_tokenizer('spacy', language='en_core_web_sm'), max_seq_len=max_seq_len,
+                           split="train")
         loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
         optimizer = torch.optim.AdamW(model.parameters(), learning_rate)
         params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -186,7 +187,7 @@ def eval_setup(model_name: str = "model", max_num_batches: int = 1000):
     data = TinyStories(vocabulary, max_seq_len=max_seq_len, split="validation")
 
     loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
-    print(evaluate(data, model, loss_fn, max_num_batches))
+    print(f"Evaluation loss: {evaluate(data, model, loss_fn, max_num_batches)}")
 
 
 def objective(trial):
@@ -204,19 +205,21 @@ def objective(trial):
     vocabulary = load_vocabulary()
     data = TinyStories(vocabulary, max_seq_len=max_seq_len)
 
-    model = TransformerModel(len(vocabulary), embed_size, nhead, num_layers, dim_ff=dim_ff, dropout=dropout, pos_enc_type=pos_enc_type).to(device)
+    model = TransformerModel(len(vocabulary), embed_size, nhead, num_layers, dim_ff=dim_ff, dropout=dropout,
+                             pos_enc_type=pos_enc_type).to(device)
     loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
     # Train model
-    avg_loss, _ = train(data, model, loss_fn, optimizer, epochs=2, max_num_batches=39500, batch_size=batch_size)
-    return avg_loss
+    batch_loss = train(data, model, loss_fn, optimizer, epochs=2, max_num_batches=39500, batch_size=batch_size)
+    newest_batch_loss = batch_loss[-8:]
+    return sum(newest_batch_loss) / len(newest_batch_loss)
 
 
 if __name__ == '__main__':
     model_name = "transformer"
-    loss_list = do_training(model_name=model_name, max_num_batches=1000, load_model=False, load_vocab=True,
-                            hyper_search=False)
+    delta_t,avg_loss, mnbatches, loss_list = do_training(model_name=model_name, max_num_batches=None, load_model=False, load_vocab=True,
+                                     hyper_search=False)
     print(f"Loss list: {loss_list}")
     print("Starting evaluation...")
     eval_setup(model_name, max_num_batches=2400)

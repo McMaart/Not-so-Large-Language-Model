@@ -3,7 +3,6 @@ from torch import nn, Tensor
 import torch.nn.functional as F
 import packaging
 from torchtune.modules import RotaryPositionalEmbeddings
-#from flash_attn.flash_attention import FlashMHA  # only for flash attention
 
 
 device = (
@@ -26,10 +25,8 @@ class TransformerModel(nn.Module):
         self.embed_size = embed_size
         self.nhead = nhead
         self.pos_enc_type = pos_enc_type
-        #self.use_rope = use_rope
 
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size, padding_idx=padding_idx)
-
         if pos_enc_type == 'sinusoidal':
             self.pos_encoding = PositionalEncoding(embed_size, base=10000)
         elif pos_enc_type == 'rope':
@@ -44,7 +41,6 @@ class TransformerModel(nn.Module):
         encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=nhead, dim_feedforward=dim_ff, dropout=dropout,
                                                    batch_first=True, activation="gelu", norm_first=False)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers, enable_nested_tensor=False)
-
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
 
     def forward(self, x: Tensor, lengths: Tensor | None = None) -> Tensor:
@@ -115,7 +111,8 @@ def generate_tokens(model: nn.Module, token_tensor: Tensor, length: int = 250, t
 
 
 @torch.no_grad()
-def generate_tokens_beam(model: nn.Module, input_tensor: Tensor, beam_width: int, length: int = 250, temperature: float = 1.0, eos_token: int = None) -> Tensor:
+def generate_tokens_beam(model: nn.Module, input_tensor: Tensor, beam_width: int, length: int = 250,
+                         temperature: float = 1.0, eos_token: int = None) -> Tensor:
     model.eval()
     sequences = [(input_tensor.squeeze(0).tolist(), 0.0)]  # List of sequences with their scores
     completed_sequences = []
@@ -157,7 +154,6 @@ def generate_tokens_beam(model: nn.Module, input_tensor: Tensor, beam_width: int
 
     best_sequence = max(completed_sequences + sequences, key=lambda tup: tup[1])[0]
     return torch.tensor(best_sequence).unsqueeze(0)
-
 
 
 @torch.no_grad()

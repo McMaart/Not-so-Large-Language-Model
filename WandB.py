@@ -254,7 +254,7 @@ def train_transformer_sweep(data, vocabulary, validation_data, project_name, num
     # Start the sweep agent
     wandb.agent(sweep_id, function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name, num_epochs))
 
-# Define the function to execute the single configuration
+
 
 
 # Define the function to execute multiple sweeps
@@ -366,7 +366,7 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
                 'parameters': {
                     'model_type': {'value': 'transformer'},
                     'embed_size': {'value': config['embed_size']},
-                    'nhead': {'values': [2, 4, 8, 16]},
+                    'nhead': {'values': [4, 8, 16]},
                     'num_layers': {'value': config['num_layers']},
                     'dim_ff': {'value': config['dim_ff']},
                     'dropout': {'distribution': 'uniform', 'min': 0.08, 'max': 0.27},
