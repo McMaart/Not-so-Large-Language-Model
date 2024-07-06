@@ -178,7 +178,7 @@ def do_training(model_name: str = "model", max_num_batches: int | None = None, l
             print(f"Average Loss: {avg_loss:.5}")
         print(f"Time:{t}")
 
-        return t, avg_loss, max_num_batches, batch_loss
+        return t, avg_loss, batch_loss
 
 
 def eval_setup(model_name: str = "model", max_num_batches: int = 1000):
@@ -211,15 +211,15 @@ def objective(trial):
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
     # Train model
-    batch_loss = train(data, model, loss_fn, optimizer, epochs=2, max_num_batches=39500, batch_size=batch_size)
+    batch_loss = train(data, model, loss_fn, optimizer, epochs=2, max_num_batches=100000, batch_size=batch_size)
     newest_batch_loss = batch_loss[-8:]
     return sum(newest_batch_loss) / len(newest_batch_loss)
 
 
 if __name__ == '__main__':
     model_name = "transformer"
-    delta_t,avg_loss, mnbatches, loss_list = do_training(model_name=model_name, max_num_batches=None, load_model=False, load_vocab=True,
+    delta_t, avg_loss, loss_list = do_training(model_name=model_name, max_num_batches=None, load_model=False, load_vocab=True,
                                      hyper_search=False)
     print(f"Loss list: {loss_list}")
     print("Starting evaluation...")
-    eval_setup(model_name, max_num_batches=2400)
+    eval_setup(model_name, max_num_batches=50000)

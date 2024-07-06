@@ -403,7 +403,7 @@ def train_transformer_single(data, vocabulary, validation_data, project_name, nu
         'learning_rate': 0.0048,
         'batch_size': 64,
         'pos_enc_type': 'rope',  # 'rope' or 'sinusoidal'
-        'opti_stepsize': 12500,
+        'opti_stepsize': 12000,
         'opti_gamma': 0.5551
     }
 
