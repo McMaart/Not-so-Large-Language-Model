@@ -171,7 +171,7 @@ def do_training(model_name: str = "model", max_num_batches: int | None = None, l
         t0 = perf_counter()
         try:
             avg_loss, batch_loss = train(data, model, loss_fn, optimizer, epochs=2, max_num_batches=max_num_batches,
-                                         flags=flags, batch_size=512, scheduler_stepsize=1050, scheduler_gamma=0.5551)
+                                         flags=flags, batch_size=128, scheduler_stepsize=6250, scheduler_gamma=0.5551)
         except KeyboardInterrupt:
             print("Cancelling training, loss statistics will not be available")
             avg_loss = None
