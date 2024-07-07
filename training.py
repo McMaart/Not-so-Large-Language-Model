@@ -1,5 +1,6 @@
 import sys
 import torch
+from datasets import load_from_disk
 from torch import nn, Tensor
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
@@ -7,8 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 import torchtext
 torchtext.disable_torchtext_deprecation_warning()
 from torchtext.data import get_tokenizer
-from io_utils import (create_vocabulary, map_story_to_tensor, load_tiny_stories, save_vocabulary,
-                      load_vocabulary, TinyStories)
+from io_utils import create_vocabulary, map_story_to_tensor, save_vocabulary, load_vocabulary, TinyStories
 from model_1 import TransformerModel, device, learning_rate, max_seq_len
 from time import perf_counter
 import optuna
@@ -17,11 +17,10 @@ from torch.cuda.amp import autocast, GradScaler
 
 
 def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int = 1, max_num_batches: int | None = None,
-          flags: list[bool] = None, batch_size: int = 32, scheduler_stepsize: int = 2500,scheduler_gamma: float = 0.87,
-          accumulation_steps: int = 4, max_grad_norm: float = 1.0) -> list[float]:
+          flags: list[bool] = None, batch_size: int = 32, scheduler_stepsize: int = 2500, scheduler_gamma: float = 0.87,
+          accumulation_steps: int = 4, max_grad_norm: float = 1.0) -> tuple[float, list[float]]:
     model.train()
     total_loss = 0.
-    curr_loss = 0.
     log_interval = 250
     batch_loss = []
     writer = SummaryWriter()
@@ -34,6 +33,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
 
     for epoch in range(1, epochs + 1):
         #epoch_loss = 0.
+        curr_loss = 0.0
         shuffle = True  # shuffle = False if epoch == 1 else True
         dataloader = DataLoader(data, batch_size=batch_size, collate_fn=data.get_batch, num_workers=2, shuffle=shuffle,
                                 pin_memory=True)
@@ -100,8 +100,8 @@ def evaluate(data: TinyStories, model: nn.Module, loss_fn, max_num_batches: int 
         pred = model(x, lengths)
 
         #with autocast():  # Enable mixed precision
-            #pred = model(x, lengths)
-            #loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
+        #pred = model(x, lengths)
+        #loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
 
         loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
 
@@ -132,7 +132,7 @@ def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Ten
 
 
 def do_training(model_name: str = "model", max_num_batches: int | None = None, load_model: bool = True,
-                load_vocab: bool = True, flags: list[bool] = None, hyper_search: bool = False):
+                load_vocab: bool = True, flags: list[bool] = None, hyper_search: bool = False, epochs: int = 1):
     if hyper_search is True:
         study = optuna.create_study(direction='minimize')
         study.optimize(objective, n_trials=50)
@@ -147,10 +147,11 @@ def do_training(model_name: str = "model", max_num_batches: int | None = None, l
                 sys.exit(1)
         else:
             print("Creating vocabulary...")
-            stories = load_tiny_stories(
-                900000)  # Number of stories used for creating the vocabulary, not the vocabulary size
-            vocabulary = create_vocabulary(stories, 2048)
+            dataset = load_from_disk("data/TinyStories")
+            train_stories = dataset["train"][:]["text"]
+            vocabulary = create_vocabulary(train_stories, 2048)
             save_vocabulary(vocabulary)
+
         if load_model is True:
             try:
                 model = torch.load(f'trained_models/{model_name}.pth', map_location=device).to(device)
@@ -170,7 +171,7 @@ def do_training(model_name: str = "model", max_num_batches: int | None = None, l
 
         t0 = perf_counter()
         try:
-            avg_loss, batch_loss = train(data, model, loss_fn, optimizer, epochs=2, max_num_batches=max_num_batches,
+            avg_loss, batch_loss = train(data, model, loss_fn, optimizer, epochs=epochs, max_num_batches=max_num_batches,
                                          flags=flags, batch_size=128, scheduler_stepsize=6250, scheduler_gamma=0.5551)
         except KeyboardInterrupt:
             print("Cancelling training, loss statistics will not be available")
@@ -185,7 +186,7 @@ def do_training(model_name: str = "model", max_num_batches: int | None = None, l
         return t, avg_loss, batch_loss
 
 
-def eval_setup(model_name: str = "model", max_num_batches: int = 1000):
+def eval_setup(model_name: str = "model", max_num_batches: int | None = None):
     model = torch.load(f'trained_models/{model_name}.pth').to(device)
     vocabulary = load_vocabulary()
     data = TinyStories(vocabulary, max_seq_len=max_seq_len, split="validation")
@@ -222,8 +223,8 @@ def objective(trial):
 
 if __name__ == '__main__':
     model_name = "transformer"
-    delta_t, avg_loss, loss_list = do_training(model_name=model_name, max_num_batches=None, load_model=False, load_vocab=True,
-                                     hyper_search=False)
+    delta_t, avg_loss, loss_list = do_training(model_name=model_name, max_num_batches=None, load_model=False,
+                                               load_vocab=True, hyper_search=False)
     print(f"Loss list: {loss_list}")
     print("Starting evaluation...")
-    eval_setup(model_name, max_num_batches=100000)
+    eval_setup(model_name)

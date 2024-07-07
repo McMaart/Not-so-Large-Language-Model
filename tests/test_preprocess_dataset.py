@@ -6,6 +6,7 @@ from data.preprocess_dataset import (
     allowed_non_ascii_symbols
 )
 
+
 class TestPreprocessDataset(unittest.TestCase):
     def setUp(self):
         self.raw_stories = [
@@ -25,7 +26,7 @@ class TestPreprocessDataset(unittest.TestCase):
 
     def test_find_non_ascii_symbols(self):
         story_with_non_ascii = "This is a test story with non-ascii character â."
-        story_with_allowed_non_ascii = "This is a test story with allowed non-ascii characters “ and ” and –."
+        story_with_allowed_non_ascii = "This is a test story with allowed non-ascii character –."
         story_without_non_ascii = "This is a plain ascii story."
 
         self.assertTrue(find_non_ascii_symbols(story_with_non_ascii))
@@ -42,6 +43,7 @@ class TestPreprocessDataset(unittest.TestCase):
         cleaned_stories_high_min_length = clean_dataset(self.raw_stories, min_length=50)
         print(f"Cleaned stories (min_length=50): {cleaned_stories_high_min_length}")
         self.assertEqual(cleaned_stories_high_min_length, self.cleaned_stories_min_length_50)
+
 
 if __name__ == '__main__':
     unittest.main()

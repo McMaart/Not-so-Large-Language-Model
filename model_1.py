@@ -13,8 +13,8 @@ device = (
 learning_rate = 0.006
 batch_size = 128
 max_seq_len = 256
-num_special_non_eos_tokens = 2
-num_special_tokens = 3
+num_special_non_eos_tokens = 3
+num_special_tokens = 4
 
 
 class TransformerModel(nn.Module):
@@ -201,12 +201,10 @@ def generate_tokens_beam_multinomial(model: nn.Module, input_tensor: Tensor, bea
     return torch.tensor(best_sequence).unsqueeze(0)
 
 
-
-
 if __name__ == '__main__':
     from io_utils import prompt_model
 
-    string = '"What do birds like to eat?", Tom asked his mother.'
-    #string = 'Once'
-    story = prompt_model("10M", string, 255, 0, '', beam_width=8)
+    # string = '"What do birds like to eat?", Tom asked his mother.'
+    string = ''
+    story = prompt_model("transformer", string, 255, 1.0, '', beam_width=8)
     print(story)

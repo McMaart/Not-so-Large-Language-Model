@@ -4,6 +4,7 @@ import torch
 from datasets import load_from_disk
 from torch.nn.utils.rnn import pad_sequence
 import torchtext
+from data.preprocess_dataset import clean_dataset
 torchtext.disable_torchtext_deprecation_warning()
 from torchtext.data import get_tokenizer
 from torch import Tensor
@@ -85,7 +86,9 @@ def create_vocabulary(story_list: list[str], tokenizer=get_tokenizer('spacy', la
             vocab[k] = v
         vocab_freq = vocab
 
+    # Note: <eos> must have a lower index in the vocabulary than the other tokens
     vocab_freq["<eos>"] = 0  # end of sequence token
+    vocab_freq['<bos>'] = 0  # begin of sequence token
     vocab_freq['<unk>'] = 0  # Placeholder for tokens that do not appear in the story
     vocab_freq['<pad>'] = 0  # Pad token for batching
     return {k: idx for idx, k in enumerate(vocab_freq.keys())}
@@ -200,7 +203,7 @@ def prompt_model(model_name: str, start_str: str, length: int = 250, temperature
     vocab_rev = {k: v for v, k in vocab.items()}
 
     try:
-        model = torch.load(f'trained_models/{model_name}.pth').to(device)
+        model = torch.load(f'trained_models/{model_name}.pth', map_location=device).to(device)
     except FileNotFoundError:
         print(f"Model 'trained_models/{model_name}.pth could not be found", file=sys.stderr)
         sys.exit(1)
@@ -212,8 +215,13 @@ def prompt_model(model_name: str, start_str: str, length: int = 250, temperature
     print("Number of parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
     tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
     default = vocab["<unk>"]
+    bos_token = vocab.get("<bos>")
+    if bos_token is None:
+        raise ValueError("<bos> token is not in vocabulary!")
 
-    input_tensor = torch.tensor([vocab.get(token, default) for token in tokenizer(start_str.lower())],
+    start_str = clean_dataset([start_str], True)[0].lower()
+    # todo: improve efficiency
+    input_tensor = torch.tensor([bos_token] + [vocab.get(token, default) for token in tokenizer(start_str)],
                                 dtype=torch.int32)
     input_tensor = input_tensor.view(1, -1)
 
@@ -228,6 +236,7 @@ def prompt_model(model_name: str, start_str: str, length: int = 250, temperature
             tl = generate_tokens(model, input_tensor.to(device), length, eos_token=vocab.get("<eos>"),
                                  temperature=temperature)
 
+    tl = tl[:, 1:]  # Strip <bos> token
     story_list = []
     for batch in tl:
         token_list = []
@@ -236,7 +245,6 @@ def prompt_model(model_name: str, start_str: str, length: int = 250, temperature
             token_list.append(token)
         story_list.append(tokens_to_story(token_list))
     return story_list[0]  # ToDo: maybe adjust function for generating multiple stories at once
-
 
 
 class TinyStories(Dataset):
@@ -249,7 +257,14 @@ class TinyStories(Dataset):
 
         self.unk_token = self.vocab["<unk>"]
         self.pad_token = self.vocab["<pad>"]
+        self.eos_token = self.vocab.get("<eos>")
+        self.bos_token = self.vocab.get("<bos>")
         self.max_seq_len = max_seq_len if max_seq_len is not None else 10000
+
+        if self.eos_token is None:
+            raise ValueError("<eos> token is not found in the vocabulary.")
+        elif self.bos_token is None:
+            raise ValueError("<bos> token is not found in the vocabulary.")
 
     def get_batch(self, sequences: list[Tensor]) -> tuple[Tensor, Tensor, Tensor]:
         lengths = torch.cat([torch.tensor(s.shape)-1 for s in sequences])
@@ -259,16 +274,13 @@ class TinyStories(Dataset):
     def __getitem__(self, index: int) -> Tensor:
         story = self.stories[index]['text']
 
-        token_list = []
+        token_list = [self.bos_token]
         tokens = self.tokenizer(story.lower())
-        for _, word in zip(range(self.max_seq_len + 1), tokens):
+        for _, word in zip(range(self.max_seq_len), tokens):
             token_list.append(self.vocab.get(word, self.unk_token))
 
         if len(token_list) <= self.max_seq_len:
-            eos_token = self.vocab.get("<eos>")
-            if eos_token is None:
-                raise ValueError("<eos> token is not found in the vocabulary.")
-            token_list.append(eos_token)
+            token_list.append(self.eos_token)
         # token_list = token_list[:self.max_seq_len + 1]
 
         data = torch.tensor(token_list, dtype=torch.int64)
@@ -288,12 +300,10 @@ def load_vocabulary(filename: str = "trained_models/vocabulary.pkl") -> dict:
         return pickle.load(file)
 
 
-
 if __name__ == "__main__":
-    # Load datasets
+    # Load dataset
     dataset = load_from_disk("data/TinyStories")
     train_stories = dataset["train"][:]["text"]
-    test_stories = dataset["test"][:]["text"]
 
     # Create and save vocabulary
     vocab = create_vocabulary(train_stories, get_tokenizer('spacy', language='en_core_web_sm'), 2048)
@@ -301,6 +311,4 @@ if __name__ == "__main__":
     loaded_vocab = load_vocabulary("trained_models/vocabulary.pkl")
     print(f"Vocab with 2048 tokens: {loaded_vocab}")
 
-    # Tokenizer
     tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
-

@@ -8,15 +8,17 @@ replacement_table = {
     '\xa0': '',
     '\xad': '',
     '…': '...',
-    '«': '“',
-    '»': '”',
+    '«': '"',
+    '»': '"',
     '‘': "'",
     '’': "'",
     ' – ': ' – ',
     '—': ' – ',
-    '\n': ' '
+    '\n': ' ',
+    '”': '"',
+    '“': '"'
 }
-allowed_non_ascii_symbols = {'”', '“', '–'}
+allowed_non_ascii_symbols = {'–'}
 
 
 def find_non_ascii_symbols(story: str) -> bool:
@@ -35,30 +37,22 @@ def clean_dataset(stories: list[str] | set[str], is_test_split: bool = False, mi
     """
     cleaned_stories = []
     for story in stories:
-        #original_story = story  # Keep the original story for debugging
         for k, v in replacement_table.items():
             story = story.replace(k, v)
-        if "  " in story or "*" in story or "_" in story:
+        if "  " in story or "*" in story:  # ToDo: also remove _
             story = " ".join(story_part.strip("*") for story_part in story.split())
 
-        # Debug prints
-        #print(f"Original story: {original_story}")
-        #rint(f"Cleaned story: {story}")
-
-        # if "\n" in story:
-        #     story = " ".join(story_part.strip() for story_part in story.split("\n"))
-        if (is_test_split is True or (len(story) >= min_length and (story.isascii() is True or find_non_ascii_symbols(story) is False))):
+        allowed_chars_only = (story.isascii() is True or find_non_ascii_symbols(story) is False)
+        if is_test_split is True or (len(story) >= min_length and allowed_chars_only):
             cleaned_stories.append(story)
-            #print(f"Story added: {story}") #Debugging
-        #else: #Debugging
-            #print(f"Story removed: {story}") #Debugging
+
     return cleaned_stories
 
 
 if __name__ == '__main__':
     with open("TinyStories-train.txt", "r", encoding="utf-8") as f:
         data = f.read()
-    story_list = [story.strip() for story in data.split("<|endoftext|>")]
+    story_list = [story.strip() for story in data.split("<|endoftext|>")[:-1]]
     story_set = set(story_list)
 
     initial_story_count = len(story_list)
@@ -81,12 +75,12 @@ if __name__ == '__main__':
     print(f"Number of training stories: {len(train_stories)}")
     print(f"Number of validation stories: {len(val_stories)}")
 
-    shortest_train_story_length = min(len(story) for story in train_stories)
-    print(f"Length of the shortest training story after cleaning: {shortest_train_story_length}")
+    # shortest_train_story_length = min(len(story) for story in train_stories)
+    # print(f"Length of the shortest training story after cleaning: {shortest_train_story_length}")
 
     with open("TinyStories-valid.txt", "r", encoding="utf-8") as f:
         data = f.read()
-    story_list = [story.strip() for story in data.split("<|endoftext|>")]
+    story_list = [story.strip() for story in data.split("<|endoftext|>")[1:]]
     test_stories = clean_dataset(story_list, is_test_split=True)
     print(f"Number of test stories: {len(test_stories)}")
 
