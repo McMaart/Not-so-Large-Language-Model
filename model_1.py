@@ -39,7 +39,7 @@ class TransformerModel(nn.Module):
 
         #without flash attention
         encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=nhead, dim_feedforward=dim_ff, dropout=dropout,
-                                                   batch_first=True, activation="gelu", norm_first=False)
+                                                   batch_first=True, activation="gelu", norm_first=True)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers, enable_nested_tensor=False)
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
 
