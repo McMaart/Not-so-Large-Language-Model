@@ -189,9 +189,12 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
 
             # Train the model
             max_num_batches = 200000  # Define max number of batches
+            accumulation_steps = 1
+            max_grad_norm = None
             avg_loss, batch_losses = train(data=data, model=model,loss_fn=loss_fn, optimizer=optimizer,
                                            max_num_batches=max_num_batches, batch_size=config.batch_size,
-                                           scheduler_stepsize=config.opti_stepsize, scheduler_gamma=config.opti_gamma)
+                                           scheduler_stepsize=config.opti_stepsize, scheduler_gamma=config.opti_gamma,
+                                           accumulation_steps=accumulation_steps, max_grad_norm=max_grad_norm)
 
             total_batches += len(batch_losses)  # Update total steps
 
@@ -233,12 +236,12 @@ def train_transformer_sweep(data, vocabulary, validation_data, project_name, num
         'parameters': {
             'model_type': {'values': ['transformer']},
             'embed_size': {'values': [128]},
-            'nhead': {'values': [2, 4, 8, 16]},
+            'nhead': {'values': [4, 8, 16]},
             'num_layers': {'values': [3]},
             'dim_ff': {'values': [355]},
             'dropout': {'distribution': 'uniform', 'min': 0.08, 'max': 0.27},
-            'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.002, 'max': 0.005},
-            'batch_size': {'values': [64]},
+            'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0049, 'max': 0.0075},
+            'batch_size': {'values': [128]},
             'pos_enc_type': {'values': ['rope']},
             'opti_stepsize': {'values': [2000, 2500, 5000, 7500, 10000, 12500, 15000, 20000]},
             'opti_gamma': {'distribution': 'uniform', 'min': 0.5, 'max': 0.9}
@@ -398,10 +401,10 @@ def train_transformer_single(data, vocabulary, validation_data, project_name, nu
         'num_layers': 3,
         'dim_ff': 355,
         'dropout': 0.1007,
-        'learning_rate': 0.0055,
+        'learning_rate': 0.00678,
         'batch_size': 128,
         'pos_enc_type': 'rope',  # 'rope' or 'sinusoidal'
-        'opti_stepsize': 6000,
+        'opti_stepsize': 6125,
         'opti_gamma': 0.5551
     }
 

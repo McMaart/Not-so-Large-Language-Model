@@ -204,7 +204,7 @@ def generate_tokens_beam_multinomial(model: nn.Module, input_tensor: Tensor, bea
 if __name__ == '__main__':
     from io_utils import prompt_model
 
-    # string = '"What do birds like to eat?", Tom asked his mother.'
-    string = ''
-    story = prompt_model("transformer", string, 255, 1.0, '', beam_width=8)
+    string = '"What do birds like to eat?", Tom asked his mother.'
+    #string = ''
+    story = prompt_model("best_model", string, 255, 0.5, '', beam_width=8)
     print(story)

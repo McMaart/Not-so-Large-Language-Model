@@ -18,7 +18,7 @@ from torch.cuda.amp import autocast, GradScaler
 
 def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int = 1, max_num_batches: int | None = None,
           flags: list[bool] = None, batch_size: int = 32, scheduler_stepsize: int = 2500, scheduler_gamma: float = 0.87,
-          accumulation_steps: int = 4, max_grad_norm: float = 1.0) -> tuple[float, list[float]]:
+          accumulation_steps: int = 1, max_grad_norm: float = None) -> tuple[float, list[float]]:
     model.train()
     total_loss = 0.
     log_interval = 250
@@ -53,7 +53,8 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
             scaler.scale(loss).backward()  # Scale the loss - Enable mixed precision
             if batch % accumulation_steps == 0:
                 scaler.unscale_(optimizer)
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
+                if max_grad_norm is not None:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
                 scaler.step(optimizer)  # Apply gradients - Enable mixed precision
                 scaler.update()  # Update the scaler - Enable mixed precision
                 optimizer.zero_grad(set_to_none=True)
