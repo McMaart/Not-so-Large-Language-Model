@@ -367,7 +367,7 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
                     'dim_ff': {'value': config['dim_ff']},
                     'dropout': {'distribution': 'uniform', 'min': 0.08, 'max': 0.27},
                     'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0009, 'max': 0.003},
-                    'batch_size': {'value': 64},
+                    'batch_size': {'value': 128},
                     'pos_enc_type': {'values': ['sinusoidal', 'rope']},
                     'opti_stepsize': {'values': [2500, 5000, 10000]},
                     'opti_gamma': {'values': [0.85, 0.87, 0.9]}
@@ -399,10 +399,10 @@ def train_transformer_single(data, vocabulary, validation_data, project_name, nu
         'dim_ff': 355,
         'dropout': 0.1007,
         'learning_rate': 0.007,
-        'batch_size': 64,
+        'batch_size': 128,
         'pos_enc_type': 'rope',  # 'rope' or 'sinusoidal'
-        'opti_stepsize': 2500,
-        'opti_gamma': 0.9
+        'opti_stepsize': 5500,
+        'opti_gamma': 0.5551
     }
 
     train_function(config, data, vocabulary, validation_data, project_name, num_epochs)
