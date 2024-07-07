@@ -10,8 +10,8 @@ device = (
     else "mps" if torch.backends.mps.is_available()
     else "cpu"
 )
-learning_rate = 1e-3
-batch_size = 32
+learning_rate = 0.007
+batch_size = 64
 max_seq_len = 256
 num_special_non_eos_tokens = 2
 num_special_tokens = 3
@@ -39,7 +39,7 @@ class TransformerModel(nn.Module):
 
         #without flash attention
         encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=nhead, dim_feedforward=dim_ff, dropout=dropout,
-                                                   batch_first=True, activation="gelu", norm_first=False)
+                                                   batch_first=True, activation="gelu", norm_first=True)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers, enable_nested_tensor=False)
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
 

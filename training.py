@@ -17,8 +17,8 @@ from torch.cuda.amp import autocast, GradScaler
 
 
 def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int = 1, max_num_batches: int | None = None,
-          flags: list[bool] = None, batch_size: int = 32, scheduler_stepsize: int = 2500,
-          scheduler_gamma: float = 0.87) -> list[float]:
+          flags: list[bool] = None, batch_size: int = 32, scheduler_stepsize: int = 2500,scheduler_gamma: float = 0.87,
+          accumulation_steps: int = 4, max_grad_norm: float = 1.0) -> list[float]:
     model.train()
     total_loss = 0.
     curr_loss = 0.
@@ -51,11 +51,15 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
                 loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))  # Enable mixed precision
 
             scaler.scale(loss).backward()  # Scale the loss - Enable mixed precision
-            scaler.step(optimizer)  # Apply gradients - Enable mixed precision
-            scaler.update()  # Update the scaler - Enable mixed precision
-            scheduler.step()  # - Enable mixed precision
+            if batch % accumulation_steps == 0:
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
+                scaler.step(optimizer)  # Apply gradients - Enable mixed precision
+                scaler.update()  # Update the scaler - Enable mixed precision
+                optimizer.zero_grad(set_to_none=True)
+                scheduler.step()  # Step the scheduler
 
-            loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
+            #loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
 
             loss_item = loss.item()
             total_loss += loss_item
@@ -85,7 +89,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
 def evaluate(data: TinyStories, model: nn.Module, loss_fn, max_num_batches: int | None = None) -> float:
     model.eval()
     total_loss = 0.0
-    dataloader = DataLoader(data, batch_size=32, collate_fn=data.get_batch, num_workers=2, shuffle=True,
+    dataloader = DataLoader(data, batch_size=64, collate_fn=data.get_batch, num_workers=2, shuffle=True,
                             pin_memory=True)
     if max_num_batches is None:
         max_num_batches = len(dataloader)
@@ -154,8 +158,8 @@ def do_training(model_name: str = "model", max_num_batches: int | None = None, l
                 print(f"Model/vocabulary does not exist!\n{err}", file=sys.stderr)
                 sys.exit(1)
         else:
-            model = TransformerModel(len(vocabulary), 192, 6, 6, 768,
-                                     0.1, padding_idx=vocabulary["<pad>"], pos_enc_type='rope').to(device)
+            model = TransformerModel(len(vocabulary), 128, 8, 3, 355,
+                                     0.1007, padding_idx=vocabulary["<pad>"], pos_enc_type='rope').to(device)
             # model = RNNModel(2048).to(device)
         data = TinyStories(vocabulary, get_tokenizer('spacy', language='en_core_web_sm'), max_seq_len=max_seq_len,
                            split="train")
@@ -166,8 +170,8 @@ def do_training(model_name: str = "model", max_num_batches: int | None = None, l
 
         t0 = perf_counter()
         try:
-            avg_loss, batch_loss = train(data, model, loss_fn, optimizer, epochs=1, max_num_batches=max_num_batches,
-                                         flags=flags)
+            avg_loss, batch_loss = train(data, model, loss_fn, optimizer, epochs=2, max_num_batches=max_num_batches,
+                                         flags=flags, batch_size=512, scheduler_stepsize=1050, scheduler_gamma=0.5551)
         except KeyboardInterrupt:
             print("Cancelling training, loss statistics will not be available")
             avg_loss = None
@@ -222,4 +226,4 @@ if __name__ == '__main__':
                                      hyper_search=False)
     print(f"Loss list: {loss_list}")
     print("Starting evaluation...")
-    eval_setup(model_name, max_num_batches=50000)
+    eval_setup(model_name, max_num_batches=100000)

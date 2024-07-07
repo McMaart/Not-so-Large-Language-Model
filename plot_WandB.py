@@ -91,7 +91,7 @@ def plot_wandb_data(run_df, plot_info):
         if '# batches' in history_df.columns and 'batch_loss' in history_df.columns:
             eval_loss = run['eval_loss']
             training_time = run['training_time']
-            label = f"{run['name']} ({run['project']})"
+            label = f"{run['name']}"
             if 'eval_loss' in plot_info:
                 label += f" - Eval Loss: {eval_loss}"
             if 'training_time' in plot_info:
@@ -104,6 +104,7 @@ def plot_wandb_data(run_df, plot_info):
 
             # Add hardcoded vertical line for the second epoch
             plt.axvline(x=26954, color='black', linestyle='--', linewidth=1)
+
         else:
             print(f"Skipping run {run['name']} from project {run['project']} due to missing data.")
 

@@ -15,17 +15,16 @@ def train_rnn_sweep(data, vocabulary, validation_data, project_name, num_epochs=
     sweep_configuration = {
         'method': 'bayes',
         'metric': {'name': 'eval_loss', 'goal': 'minimize'},
-        'early_terminate': {'type': 'hyperband', 'max_iter': 8},
         'parameters': {
             'model_type': {'values': ['rnn']},
-            'embed_size': {'values': [128, 192, 256]},
-            'hidden_size': {'values': [256, 512, 768]},
-            'num_layers': {'values': [1, 2, 3]},
-            'dropout': {'values': [0.1, 0.2]},
-            'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0008, 'max': 0.006},
+            'embed_size': {'values': [512]},
+            'hidden_size': {'values': [590]},
+            'num_layers': {'values': [4]},
+            'dropout': {'values': [0.1005]},
+            'learning_rate': {'values': [0.0006]},
             'batch_size': {'values': [64]},
-            'opti_stepsize': {'values': [2500, 5000, 10000]},
-            'opti_gamma': {'values': [0.85, 0.87, 0.9]}
+            'opti_stepsize': {'values': [2500]},
+            'opti_gamma': {'values': [0.75]}
         }
     }
 
@@ -39,17 +38,16 @@ def train_lstm_sweep(data, vocabulary, validation_data, project_name, num_epochs
     sweep_configuration = {
         'method': 'bayes',
         'metric': {'name': 'eval_loss', 'goal': 'minimize'},
-        'early_terminate': {'type': 'hyperband', 'max_iter': 8},
         'parameters': {
             'model_type': {'values': ['lstm']},
-            'embed_size': {'values': [128, 192, 256]},
-            'hidden_size': {'values': [256, 512, 768]},
-            'num_layers': {'values': [1, 2, 3]},
-            'dropout': {'values': [0.1, 0.2]},
-            'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0008, 'max': 0.006},
+            'embed_size': {'values': [384]},
+            'hidden_size': {'values': [464]},
+            'num_layers': {'values': [2]},
+            'dropout': {'values': [0.1005]},
+            'learning_rate': {'values': [0.0011]},
             'batch_size': {'values': [64]},
-            'opti_stepsize': {'values': [2500, 5000, 10000]},
-            'opti_gamma': {'values': [0.85, 0.87, 0.9]}
+            'opti_stepsize': {'values': [2500]},
+            'opti_gamma': {'values': [0.78]}
         }
     }
 
@@ -63,17 +61,16 @@ def train_gru_sweep(data, vocabulary, validation_data, project_name, num_epochs=
     sweep_configuration = {
         'method': 'bayes',
         'metric': {'name': 'eval_loss', 'goal': 'minimize'},
-        'early_terminate': {'type': 'hyperband', 'max_iter': 8},
         'parameters': {
             'model_type': {'values': ['gru']},
-            'embed_size': {'values': [128, 192, 256]},
-            'hidden_size': {'values': [256, 512, 768]},
-            'num_layers': {'values': [1, 2, 3]},
-            'dropout': {'values': [0.1, 0.2]},
-            'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0008, 'max': 0.006},
+            'embed_size': {'values': [384]},
+            'hidden_size': {'values': [546]},
+            'num_layers': {'values': [2]},
+            'dropout': {'values': [0.1005]},
+            'learning_rate': {'values': [0.0011]},
             'batch_size': {'values': [64]},
-            'opti_stepsize': {'values': [2500, 5000, 10000]},
-            'opti_gamma': {'values': [0.85, 0.87, 0.9]}
+            'opti_stepsize': {'values': [2500]},
+            'opti_gamma': {'values': [0.78]}
         }
     }
 
@@ -103,6 +100,7 @@ def init_wandb_with_retries(config, project_name, max_retries=3, delay=5):
 def prepare_data(vocab_path):
 
     # Use the tokenizer and vocabulary directly
+    #tokenizer = get_tokenizer('basic_english')
     tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
     vocabulary = load_vocabulary(vocab_path)
 
@@ -400,11 +398,11 @@ def train_transformer_single(data, vocabulary, validation_data, project_name, nu
         'num_layers': 3,
         'dim_ff': 355,
         'dropout': 0.1007,
-        'learning_rate': 0.0048,
+        'learning_rate': 0.007,
         'batch_size': 64,
         'pos_enc_type': 'rope',  # 'rope' or 'sinusoidal'
-        'opti_stepsize': 12000,
-        'opti_gamma': 0.5551
+        'opti_stepsize': 2500,
+        'opti_gamma': 0.9
     }
 
     train_function(config, data, vocabulary, validation_data, project_name, num_epochs)
