@@ -10,7 +10,7 @@ device = (
     else "mps" if torch.backends.mps.is_available()
     else "cpu"
 )
-learning_rate = 0.01
+learning_rate = 0.007
 batch_size = 128
 max_seq_len = 256
 num_special_non_eos_tokens = 2
