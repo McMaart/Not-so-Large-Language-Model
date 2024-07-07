@@ -190,7 +190,7 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
             # Train the model
             max_num_batches = 200000  # Define max number of batches
             avg_loss, batch_losses = train(data=data, model=model,loss_fn=loss_fn, optimizer=optimizer,
-                                           max_num_batches=max_num_batches, batch_size=64,
+                                           max_num_batches=max_num_batches, batch_size=config.batch_size,
                                            scheduler_stepsize=config.opti_stepsize, scheduler_gamma=config.opti_gamma)
 
             total_batches += len(batch_losses)  # Update total steps
@@ -205,7 +205,7 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
 
             # Optionally log batch losses for finer granularity
             for batch_idx, batch_loss in enumerate(batch_losses):
-                total_batches += 250  # Increment the batch counter for each batch logged
+                total_batches += 250  # log_intervall in train() from training.py!
                 wandb.log({"# batches": total_batches, "batch_loss": batch_loss, "epoch": epoch + 1})
 
         # Evaluate the model on the validation set after all epochs
@@ -398,10 +398,10 @@ def train_transformer_single(data, vocabulary, validation_data, project_name, nu
         'num_layers': 3,
         'dim_ff': 355,
         'dropout': 0.1007,
-        'learning_rate': 0.007,
+        'learning_rate': 0.0055,
         'batch_size': 128,
         'pos_enc_type': 'rope',  # 'rope' or 'sinusoidal'
-        'opti_stepsize': 5500,
+        'opti_stepsize': 6000,
         'opti_gamma': 0.5551
     }
 
