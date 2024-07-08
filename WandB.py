@@ -241,7 +241,7 @@ def train_transformer_sweep(data, vocabulary, validation_data, project_name, num
             'dim_ff': {'values': [355]},
             'dropout': {'distribution': 'uniform', 'min': 0.08, 'max': 0.27},
             'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0049, 'max': 0.0075},
-            'batch_size': {'values': [128]},
+            'batch_size': {'values': [64]},
             'pos_enc_type': {'values': ['rope']},
             'opti_stepsize': {'values': [2000, 2500, 5000, 7500, 10000, 12500, 15000, 20000]},
             'opti_gamma': {'distribution': 'uniform', 'min': 0.5, 'max': 0.9}
@@ -396,16 +396,16 @@ def train_transformer_single(data, vocabulary, validation_data, project_name, nu
     # Set the configuration manually
     config = {
         'model_type': 'transformer',  # Correct this to directly set the value
-        'embed_size': 128,
-        'nhead': 8,
+        'embed_size': 1024,
+        'nhead': 16,
         'num_layers': 3,
-        'dim_ff': 355,
+        'dim_ff': 3072,
         'dropout': 0.1007,
-        'learning_rate': 0.00678,
-        'batch_size': 128,
-        'pos_enc_type': 'rope',  # 'rope' or 'sinusoidal'
-        'opti_stepsize': 6125,
-        'opti_gamma': 0.5551
+        'learning_rate': 0.00065,
+        'batch_size': 64,
+        'pos_enc_type': 'sinusoidal',  # 'rope' or 'sinusoidal'
+        'opti_stepsize': 11500,
+        'opti_gamma': 0.555
     }
 
     train_function(config, data, vocabulary, validation_data, project_name, num_epochs)
@@ -422,7 +422,7 @@ if __name__ == "__main__":
     train_data, validation_data, vocabulary = prepare_data(vocab_path)
 
     # Choose the run type
-    run_type = 'single'  # Choose 'single', 'single_sweep', 'multiple_sweep', 'rnn_sweep', 'lstm_sweep', 'gru_sweep'
+    run_type = 'single_sweep'  # Choose 'single', 'single_sweep', 'multiple_sweep', 'rnn_sweep', 'lstm_sweep', 'gru_sweep'
 
     # Project name
     project_name = 'ml_llm_project_1M'

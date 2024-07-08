@@ -198,7 +198,7 @@ def tokens_to_story(token_list: list[str]) -> str:
     return story
 
 
-def prompt_model(model_name: str, start_str: str, length: int = 250, temperature: float = 1.0, method: str = "default", beam_width: int = 5, top_k: int = 50, sampling_after: int = 5) -> str:
+def prompt_model(model_name: str, start_str: str, length: int = 250, temperature: float = 1.0, method: str = "default", beam_width: int = 5, top_k: int = 30, sampling_after: int = 5) -> str:
     vocab = load_vocabulary()
     vocab_rev = {k: v for v, k in vocab.items()}
 

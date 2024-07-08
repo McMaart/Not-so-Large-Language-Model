@@ -1,19 +1,22 @@
 from datasets import load_from_disk
 import torchtext
-#torchtext.disable_torchtext_deprecation_warning()
+torchtext.disable_torchtext_deprecation_warning()
 from torchtext.data import get_tokenizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 
 if __name__ == '__main__':
-    generated_story = """"Once upon a time, there was a little girl named Lily. She loved to play outside in the park. One day, she saw a big tree with lots of leaves. She wanted to climb it, but it was too high. Lily asked her friend, Timmy, to help her. "Timmy, can you help me climb the tree?" She asked. Timmy said, "Sure, I can help you." He climbed up the tree and got a <unk> for Lily. Lily was so happy and said, "Thank you, Timmy! You are the best friend ever!" <eos>"""
+    generated_story = """"
+Once upon a time, there was a little boy named Timmy. Timmy loved to play outside with his friends. One day, Timmy's mom asked him to help her. Timmy was excited to help her, so his mom helped him. They went to the park and Timmy saw a big tree with lots of leaves. He wanted to climb the tree, but his mom said no. Timmy was sad and started to cry. His mom asked him if he could climb the tree, but Timmy said no. He was sad and frustrated. Suddenly, Timmy heard a loud noise outside. He looked around and saw a big dog. The dog looked scared and didn't know what to do. Timmy's mom said, "Don't worry, we can help you. We can help you." Timmy was relieved and thanked the dog. He went back to his friends and said, "Thank you for helping me, Timmy. You are so kind." <eos>
+    """
 
     # nlp = spacy.load("en_core_web_sm")
     # s1 = nlp(generated_story)
     tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
     vectorizer = TfidfVectorizer(tokenizer=tokenizer)
     dataset = load_from_disk("../data/TinyStories")
+
     max_sim = 0
     max_idx = 0
 
@@ -29,3 +32,4 @@ if __name__ == '__main__':
             max_sim = cosine_sim
             max_idx = i
             print(f"Index: {max_idx}, Similarity: {max_sim}, Story: {story}", end="\n\n")
+
