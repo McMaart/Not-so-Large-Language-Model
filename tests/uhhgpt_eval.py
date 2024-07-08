@@ -12,10 +12,12 @@ BAO1234Password420
 import sys
 import time
 from os import environ
+import numpy as np
 from selenium.common import NoSuchElementException
-from selenium.webdriver import Chrome, Keys
+from selenium.webdriver import Keys, Chrome, Firefox
 from selenium.webdriver.common.by import By
 from prompt_testing.parse_model_reply import parse_prompt_0
+np.set_printoptions(precision=4)
 
 
 class ChromeDriver(Chrome):
@@ -119,3 +121,7 @@ if __name__ == '__main__':
     driver = setup()
     ratings = get_ratings(driver, sample_prompt, stories)
     print(f"Rating list: {ratings}")
+
+    rating_arr = np.array(ratings)
+    print(f"Avg. rating: {rating_arr.mean(axis=0)}")
+    print(f"Std:         {rating_arr.std(axis=0)}")
