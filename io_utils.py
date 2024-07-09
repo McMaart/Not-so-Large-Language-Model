@@ -13,6 +13,7 @@ from torch import Tensor
 import re
 from model_1 import device, num_special_tokens, generate_tokens, generate_tokens_beam, generate_tokens_beam_multinomial
 from torch.utils.data import Dataset
+import os
 import numpy as np
 from collections import Counter
 import matplotlib.pyplot as plt
@@ -198,12 +199,14 @@ def tokens_to_story(token_list: list[str]) -> str:
     return story
 
 
-def prompt_model(model_name: str, start_str: str, length: int = 250, temperature: float = 1.0, method: str = "default", beam_width: int = 5, top_k: int = 50, sampling_after: int = 5) -> str:
+def prompt_model(model_name: str, start_str: str, length: int = 250, temperature: float = 1.0, method: str = "default", beam_width: int = 5, top_k: int = 30, sampling_after: int = 5) -> str:
     vocab = load_vocabulary()
     vocab_rev = {k: v for v, k in vocab.items()}
 
+    model_path = get_absolute_path(f"../trained_models/{model_name}.pth")
+
     try:
-        model = torch.load(f'trained_models/{model_name}.pth', map_location=device).to(device)
+        model = torch.load(f'../trained_models/{model_name}.pth', map_location=device).to(device)
     except FileNotFoundError:
         print(f"Model 'trained_models/{model_name}.pth could not be found", file=sys.stderr)
         sys.exit(1)
@@ -294,8 +297,12 @@ def save_vocabulary(vocab: dict[str, int], filename: str = "trained_models/vocab
     with open(filename, 'wb') as file:
         pickle.dump(vocab, file)
 
+def get_absolute_path(relative_path):
+    return os.path.join(os.path.dirname(__file__), relative_path)
 
-def load_vocabulary(filename: str = "trained_models/vocabulary.pkl") -> dict:
+def load_vocabulary(filename: str = "../trained_models/vocabulary.pkl") -> dict:
+    if filename is None:
+        filename = get_absolute_path("../trained_models/vocabulary.pkl")
     with open(filename, 'rb') as file:
         return pickle.load(file)
 

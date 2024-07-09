@@ -91,11 +91,11 @@ if __name__ == "__main__":
     # from eval import calculate_rouge_scores, get_stories, max_rouge_score
     from io_utils import prompt_model
 
-    prompt = "there"
+    prompt = "Once"
     length = 100
     num_stories = 1
 
-    story = prompt_model("rnn", prompt, length)
+    story = prompt_model("5M_GRU", prompt, length)
     print(story)
     # print(max_rouge_score(story, prompt))
 

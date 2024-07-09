@@ -1,0 +1,12 @@
+Method: beam_multinomial
+Temperature: 0
+Average Cosine Similarity: 0.4105813354142667
+Standard Deviation Cosine Similarity: 0.16806298315110138
+Average ROUGE Scores:
+  rouge1: 0.3792693773843447
+  rouge2: 0.11903885380268181
+  rougeL: 0.23572217717987162
+Standard Deviation ROUGE Scores:
+  rouge1: 0.10492365674263618
+  rouge2: 0.06892159740012456
+  rougeL: 0.07381043138491422

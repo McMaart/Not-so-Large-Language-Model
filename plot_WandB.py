@@ -3,7 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from time import sleep
 
-
 # Function to log in to WandB with retries
 def login_to_wandb(max_retries=3, delay=5):
     retries = 0
@@ -22,7 +21,6 @@ def login_to_wandb(max_retries=3, delay=5):
             else:
                 print("Failed to log in after multiple attempts. Exiting...")
                 exit(1)
-
 
 # Function to retrieve WandB run data from multiple projects
 def get_wandb_run_data(entity, project_names, run_ids=None, limit=None):
@@ -65,7 +63,6 @@ def get_wandb_run_data(entity, project_names, run_ids=None, limit=None):
 
     return run_df
 
-
 # Function to format the training time
 def format_training_time(seconds):
     if seconds is None:
@@ -76,7 +73,6 @@ def format_training_time(seconds):
         return f"{int(hours)}h {int(minutes)}m {int(seconds)}s"
     else:
         return f"{int(minutes)}m {int(seconds)}s"
-
 
 # Function to plot WandB run data as lines
 def plot_wandb_data(run_df, plot_info):
@@ -93,7 +89,7 @@ def plot_wandb_data(run_df, plot_info):
             training_time = run['training_time']
             label = f"{run['name']}"
             if 'eval_loss' in plot_info:
-                label += f" - Eval Loss: {eval_loss}"
+                label += f" - Eval Loss: {eval_loss:.2f}"
             if 'training_time' in plot_info:
                 formatted_time = format_training_time(training_time)
                 label += f" - Training Time: {formatted_time}"
@@ -102,18 +98,15 @@ def plot_wandb_data(run_df, plot_info):
             plt.plot(history_df['# batches'], history_df['batch_loss'],
                      label=label, color=color_map[run['run_id']], linewidth=2)
 
-            # Add hardcoded vertical line for the second epoch
-            plt.axvline(x=26954, color='black', linestyle='--', linewidth=1)
-
         else:
             print(f"Skipping run {run['name']} from project {run['project']} due to missing data.")
 
+    plt.axvline(x=26955, color='black', linestyle='--')  # Hardcoded line for second epoch
     plt.xlabel('Number of Batches')
     plt.ylabel('Loss')
     plt.title('Batch Loss')
     plt.legend()
     plt.show()
-
 
 # Function to plot WandB run data as scatter plot
 def plot_wandb_scatter(run_df):
@@ -138,7 +131,6 @@ def plot_wandb_scatter(run_df):
     plt.grid(True)
     plt.show()
 
-
 # Function to plot model size vs training time
 def plot_model_training_time(run_df):
     plt.figure(figsize=(12, 6), dpi=300)
@@ -157,7 +149,6 @@ def plot_model_training_time(run_df):
     plt.grid(True)
     plt.show()
 
-
 # Function to list run IDs for specific projects
 def list_run_ids(entity, project_names):
     api = wandb.Api()
@@ -167,14 +158,12 @@ def list_run_ids(entity, project_names):
         for run in runs:
             print(f"Project: {project_name}, Run ID: {run.id}, Name: {run.name}")
 
-
 # Function to list all available projects
 def list_projects(entity):
     api = wandb.Api()
     projects = api.projects(entity=entity)
     project_names = [project.name for project in projects]
     return project_names
-
 
 # Main function to execute the data retrieval and plotting
 def main():
@@ -268,7 +257,6 @@ def main():
 
     else:
         print("Invalid choice. Exiting.")
-
 
 if __name__ == "__main__":
     main()
