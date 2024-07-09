@@ -10,7 +10,7 @@ device = (
     else "mps" if torch.backends.mps.is_available()
     else "cpu"
 )
-learning_rate = 0.006
+learning_rate = 0.00492
 batch_size = 128
 max_seq_len = 256
 num_special_non_eos_tokens = 3
@@ -205,7 +205,7 @@ if __name__ == '__main__':
     from io_utils import prompt_model
 
     method = ''  # Choose the generation method: default, beam, beam_multinomial
-    string = 'Alice and Jack walked up the street and met a girl in a red dress. The girl said to them, ”Hi, I’m Jane. What are your name ?"'
+    string = ''
     #string = ''
     story = prompt_model("35MGPT4", string, 255, 0, method, beam_width=10)
     print(story)

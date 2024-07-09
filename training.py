@@ -35,7 +35,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
         #epoch_loss = 0.
         curr_loss = 0.0
         shuffle = True  # shuffle = False if epoch == 1 else True
-        dataloader = DataLoader(data, batch_size=batch_size, collate_fn=data.get_batch, num_workers=2, shuffle=shuffle,
+        dataloader = DataLoader(data, batch_size=batch_size, collate_fn=data.get_batch, num_workers=12, shuffle=shuffle,
                                 pin_memory=True)
         if max_num_batches is None:
             max_num_batches = len(dataloader)
@@ -90,7 +90,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
 def evaluate(data: TinyStories, model: nn.Module, loss_fn, max_num_batches: int | None = None) -> float:
     model.eval()
     total_loss = 0.0
-    dataloader = DataLoader(data, batch_size=64, collate_fn=data.get_batch, num_workers=2, shuffle=True,
+    dataloader = DataLoader(data, batch_size=64, collate_fn=data.get_batch, num_workers=12, shuffle=True,
                             pin_memory=True)
     if max_num_batches is None:
         max_num_batches = len(dataloader)
@@ -133,7 +133,7 @@ def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Ten
 
 
 def do_training(model_name: str = "model", max_num_batches: int | None = None, load_model: bool = True,
-                load_vocab: bool = True, flags: list[bool] = None, hyper_search: bool = False, epochs: int = 1):
+                load_vocab: bool = True, flags: list[bool] = None, hyper_search: bool = False, epochs: int = 4):
     if hyper_search is True:
         study = optuna.create_study(direction='minimize')
         study.optimize(objective, n_trials=50)
@@ -173,7 +173,7 @@ def do_training(model_name: str = "model", max_num_batches: int | None = None, l
         t0 = perf_counter()
         try:
             avg_loss, batch_loss = train(data, model, loss_fn, optimizer, epochs=epochs, max_num_batches=max_num_batches,
-                                         flags=flags, batch_size=128, scheduler_stepsize=6250, scheduler_gamma=0.5551)
+                                         flags=flags, batch_size=128, scheduler_stepsize=2500, scheduler_gamma=0.7997)
         except KeyboardInterrupt:
             print("Cancelling training, loss statistics will not be available")
             avg_loss = None

@@ -106,7 +106,7 @@ def save_scores_to_file(model_name, avg_cosim, std_cosim, avg_rouge, std_rouge, 
 
 
 def main():
-    model_name = "5M_GRU"  # Replace with your actual model name
+    model_name = "1MGPT4"  # Replace with your actual model name
     dataset_path = 'data/TinyStories'  # Path to the dataset
     method = ""  # Choose the generation method: default, beam, beam_multinomial
     temperature = 0.75  # Set the temperature for generation

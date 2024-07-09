@@ -201,14 +201,14 @@ def tokens_to_story(token_list: list[str]) -> str:
 
 def prompt_model(model_name: str, start_str: str, length: int = 250, temperature: float = 1.0, method: str = "default", beam_width: int = 5, top_k: int = 30, sampling_after: int = 5) -> str:
     vocab = load_vocabulary()
-    vocab_rev = {k: v for v, k in vocab.items()}
+    vocab_rev = {v: k for k, v in vocab.items()}
 
-    model_path = get_absolute_path(f"../trained_models/{model_name}.pth")
+    model_path = get_absolute_path(f"trained_models/{model_name}.pth")
 
     try:
-        model = torch.load(f'../trained_models/{model_name}.pth', map_location=device).to(device)
+        model = torch.load(model_path, map_location=torch.device('cuda' if torch.cuda.is_available() else 'cpu')).to(device)
     except FileNotFoundError:
-        print(f"Model 'trained_models/{model_name}.pth could not be found", file=sys.stderr)
+        print(f"Model '{model_path}' could not be found", file=sys.stderr)
         sys.exit(1)
 
         # Ensure nhead attribute is present
@@ -298,12 +298,17 @@ def save_vocabulary(vocab: dict[str, int], filename: str = "trained_models/vocab
         pickle.dump(vocab, file)
 
 def get_absolute_path(relative_path):
-    return os.path.join(os.path.dirname(__file__), relative_path)
+    script_dir = os.path.dirname(os.path.abspath(__file__))  # Get the directory of the current script
+    abs_path = os.path.abspath(os.path.join(script_dir, relative_path))
+    return abs_path
 
-def load_vocabulary(filename: str = "../trained_models/vocabulary.pkl") -> dict:
-    if filename is None:
-        filename = get_absolute_path("../trained_models/vocabulary.pkl")
-    with open(filename, 'rb') as file:
+def load_vocabulary(filename: str = "trained_models/vocabulary.pkl") -> dict:
+    # First, try the given relative path directly
+    abs_filename = get_absolute_path(filename)
+    print(f"Trying to load vocabulary from: {abs_filename}")  # Debug print
+    if not os.path.exists(abs_filename):
+        raise FileNotFoundError(f"Vocabulary file not found: {abs_filename}")
+    with open(abs_filename, 'rb') as file:
         return pickle.load(file)
 
 
