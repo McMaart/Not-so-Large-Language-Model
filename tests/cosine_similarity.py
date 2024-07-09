@@ -8,7 +8,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 if __name__ == '__main__':
     generated_story = """"
-Once upon a time, there was a little girl named Lily. She loved to play in the park with her friends. One day, she found a big box in her yard. She was very excited and wanted to find out what was inside. Lily went to her friend, Tom. "Tom, look at this box!" She said, holding the box. Tom looked at the box and said, "Wow, it's a big box!" They opened the box and found a lot of toys inside. Lily and Tom played with the toys all day. They had so much fun with the toys and the big box. At the end of the day, they were tired but happy. They sat down and ate the toys. They were glad they found the big box in the park. <eos>
+Once upon a time, there was a small hill. On top of the hill, there was a white house. In this house lived a kind doctor who loved to help others. One day, a little girl named Lucy came to the doctor. She fell down the hill and hurt her knee. The doctor was very kind and wanted to help her. He put a band - hop on Lucy's knee and gave her a hug. Lucy felt better and said, "Thank you, doctor, for helping me." The doctor smiled and waved goodbye. Lucy went back to the white house, feeling safe and happy on the hill. From that day on, Lucy would visit the white hospital and play there. <eos>
  """
     # nlp = spacy.load("en_core_web_sm")
     # s1 = nlp(generated_story)
