@@ -16,6 +16,30 @@ from selenium.common import NoSuchElementException
 from selenium.webdriver import Chrome, Keys
 from selenium.webdriver.common.by import By
 from prompt_testing.parse_model_reply import parse_prompt_0
+import torch
+from io_utils import prompt_model
+
+
+def generate_multiple_stories(model_name: str, start_str: str, n: int = 5, length: int = 250, temperature: float = 1.0,
+                              method: str = "default", beam_width: int = 5, top_k: int = 30) -> list:
+    """
+    Generates n stories using the specified model and returns them in a list.
+
+    :param model_name: Name of the model to use for story generation
+    :param start_str: Starting string for the stories
+    :param n: Number of stories to generate
+    :param length: Length of each story
+    :param temperature: Sampling temperature
+    :param method: Generation method ('default', 'beam', 'beam_multinomial')
+    :param beam_width: Beam width for beam search (if method is 'beam' or 'beam_multinomial')
+    :param top_k: Top-k sampling for beam_multinomial method
+    :return: List of generated stories
+    """
+    stories = []
+    for _ in range(n):
+        story = prompt_model(model_name, start_str, length, temperature, method, beam_width, top_k)
+        stories.append(story)
+    return stories
 
 
 class ChromeDriver(Chrome):
@@ -293,7 +317,17 @@ Remember: Ensure there is no additional text, explanations, or comments after th
     sample_story = """
 Once upon a time, in a big house, there was a still, Alice somewhere. Every day, the somewhere would make a while run and make win strong. Inside, they found a standing shadow and promised it with any looks who wanted to know what was the tie and what was inside. The looks smiled each other kept the tells were now pick and fun. Fruit is some what it's replied to did. One day, a little girl named hat went to the spoon. She saw a little
 """
-    stories = [sample_story, sample_story, sample_story]
+
+    model_name = "35MGPT4"  # Example model name
+    start_str = ""
+    n = 5  # Number of stories to generate
+    length = 255
+    temperature = 0.7
+    method = "default"  # Change to 'beam' or 'beam_multinomial' if needed
+    beam_width = 10  # if beam
+    top_k = 25  # if beam_multinomial
+
+    stories = generate_multiple_stories(model_name, start_str, n=n, length=length, temperature=temperature, method=method)
 
     driver = setup()
     ratings = get_ratings(driver, sample_prompt, stories)

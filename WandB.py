@@ -396,15 +396,15 @@ def train_transformer_single(data, vocabulary, validation_data, project_name, nu
     # Set the configuration manually
     config = {
         'model_type': 'transformer',  # Correct this to directly set the value
-        'embed_size': 128,
+        'embed_size': 1024,
         'nhead': 8,
         'num_layers': 3,
-        'dim_ff': 355,
-        'dropout': 0.08004,
-        'learning_rate': 0.004902,
-        'batch_size': 64,
-        'pos_enc_type': 'rope',  # 'rope' or 'sinusoidal'
-        'opti_stepsize': 5000,
+        'dim_ff': 3072,
+        'dropout': 0.09304,
+        'learning_rate': 0.0006402,
+        'batch_size': 128,
+        'pos_enc_type': 'sinusoidal',  # 'rope' or 'sinusoidal'
+        'opti_stepsize': 2500,
         'opti_gamma': 0.7997
     }
 
@@ -428,7 +428,7 @@ if __name__ == "__main__":
     project_name = 'ml_llm_project_GPT4'
 
     # Number of epochs to train
-    num_epochs = 2  # Set the desired number of epochs
+    num_epochs = 4  # Set the desired number of epochs
 
     # Global variable to track the best evaluation loss
     global best_eval_loss
