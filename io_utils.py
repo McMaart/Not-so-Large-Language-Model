@@ -305,7 +305,7 @@ def get_absolute_path(relative_path):
 def load_vocabulary(filename: str = "trained_models/vocabulary.pkl") -> dict:
     # First, try the given relative path directly
     abs_filename = get_absolute_path(filename)
-    print(f"Trying to load vocabulary from: {abs_filename}")  # Debug print
+    #print(f"Trying to load vocabulary from: {abs_filename}")  # Debug print
     if not os.path.exists(abs_filename):
         raise FileNotFoundError(f"Vocabulary file not found: {abs_filename}")
     with open(abs_filename, 'rb') as file:

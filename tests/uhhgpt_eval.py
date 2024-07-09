@@ -138,7 +138,8 @@ if __name__ == '__main__':
     STYLE: <YOUR_STYLE_SCORE>
     """
 
-    sample_prompt ="""The following story is a story written for children at the age of around 5 years old. Your task is to rate the story objectively.
+    #sample_prompt =
+    """The following story is a story written for children at the age of around 5 years old. Your task is to rate the story objectively.
 
     Story:
     Story:
@@ -316,13 +317,13 @@ STYLE: <YOUR_STYLE_SCORE>
 Remember: Ensure there is no additional text, explanations, or comments after the scores. """
 
 
-    sample_story = """
-Once upon a time, in a big house, there was a still, Alice somewhere. Every day, the somewhere would make a while run and make win strong. Inside, they found a standing shadow and promised it with any looks who wanted to know what was the tie and what was inside. The looks smiled each other kept the tells were now pick and fun. Fruit is some what it's replied to did. One day, a little girl named hat went to the spoon. She saw a little
-"""
+    #sample_story = """
+#Once upon a time, in a big house, there was a still, Alice somewhere. Every day, the somewhere would make a while run and make win strong. Inside, they found a standing shadow and promised it with any looks who wanted to know what was the tie and what was inside. The looks smiled each other kept the tells were now pick and fun. Fruit is some what it's replied to did. One day, a little girl named hat went to the spoon. She saw a little
+#"""
 
-    model_name = "35MGPT4"  # Example model name
+    model_name = "35M"  # Example model name
     start_str = ""
-    n = 5  # Number of stories to generate
+    n = 100  # Number of stories to generate
     length = 255
     temperature = 0.7
     method = "default"  # Change to 'beam' or 'beam_multinomial' if needed

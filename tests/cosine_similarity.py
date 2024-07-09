@@ -8,7 +8,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 if __name__ == '__main__':
     generated_story = """"
- There was once a little girl named Ella. Everyday Ella would look out her window and admire the beautiful, colorful world outside her window, it had so many things to see. One day, Ella saw something different in the sky. It was called a rainbow. It was so beautiful and made her very excited. She had never seen anything like it before! Ella was so happy to see the rainbow, and she waved to it. Then, she realized that the rainbow was too far away for her to see. Ella decided to try something new. She decided to build a bridge out of blocks. She found some sticks and stones and put it the way she wanted. She even used her special blocks to make a big bridge, with four small rocks. Ella was so proud of her new bridge. Her mom was happy too, because even though she was only three years old, Ella was determined to do something amazing.
+Once upon a time, there was a little girl named Lily. She loved to play in the park with her friends. One day, she found a big box in her yard. She was very excited and wanted to find out what was inside. Lily went to her friend, Tom. "Tom, look at this box!" She said, holding the box. Tom looked at the box and said, "Wow, it's a big box!" They opened the box and found a lot of toys inside. Lily and Tom played with the toys all day. They had so much fun with the toys and the big box. At the end of the day, they were tired but happy. They sat down and ate the toys. They were glad they found the big box in the park. <eos>
  """
     # nlp = spacy.load("en_core_web_sm")
     # s1 = nlp(generated_story)
