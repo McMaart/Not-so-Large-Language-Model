@@ -207,5 +207,5 @@ if __name__ == '__main__':
     method = ''  # Choose the generation method: default, beam, beam_multinomial
     string = ''
     #string = ''
-    story = prompt_model("35MGPT4", string, 255, 0, method, beam_width=10)
+    story = prompt_model("35MGPT4", string, 255, 1.1, method, beam_width=5)
     print(story)
