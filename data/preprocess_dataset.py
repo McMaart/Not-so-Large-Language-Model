@@ -50,7 +50,7 @@ def clean_dataset(stories: list[str] | set[str], is_test_split: bool = False, mi
 
 
 if __name__ == '__main__':
-    with open("TinyStories-train.txt", "r", encoding="utf-8") as f:
+    with open("TinyStoriesV2-GPT4-train.txt", "r", encoding="utf-8") as f:
         data = f.read()
     story_list = [story.strip() for story in data.split("<|endoftext|>")[:-1]]
     story_set = set(story_list)
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     # shortest_train_story_length = min(len(story) for story in train_stories)
     # print(f"Length of the shortest training story after cleaning: {shortest_train_story_length}")
 
-    with open("TinyStories-valid.txt", "r", encoding="utf-8") as f:
+    with open("TinyStoriesV2-GPT4-valid.txt", "r", encoding="utf-8") as f:
         data = f.read()
     story_list = [story.strip() for story in data.split("<|endoftext|>")[1:]]
     test_stories = clean_dataset(story_list, is_test_split=True)

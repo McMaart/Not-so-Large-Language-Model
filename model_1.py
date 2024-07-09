@@ -205,7 +205,7 @@ if __name__ == '__main__':
     from io_utils import prompt_model
 
     method = ''  # Choose the generation method: default, beam, beam_multinomial
-    string = ''
+    string = 'Alice and Jack walked up the street and met a girl in a red dress. The girl said to them, ”Hi, I’m Jane. What are your names?”'
     #string = ''
-    story = prompt_model("1M", string, 255, 0.5, method, beam_width=8)
+    story = prompt_model("35M", string, 255, 0, method, beam_width=10)
     print(story)

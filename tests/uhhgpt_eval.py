@@ -85,8 +85,7 @@ def get_ratings(driver: ChromeDriver, instruction: str, generated_stories: list[
 if __name__ == '__main__':
     # ToDo: Import (/replace with) the best prompt
     #sample_prompt =
-    """
-    The following story is a story written for children at the age of around 5 years old.
+    """  The following story is a story written for children at the age of around 5 years old.
     Your task is to rate the story objectively.
 
     Story:
@@ -113,10 +112,10 @@ if __name__ == '__main__':
     STYLE: <YOUR_STYLE_SCORE>
     """
 
-    sample_prompt = """The following story is a story written for children at the age of around 5 years old. Your task is to rate the story objectively.
+    sample_prompt ="""The following story is a story written for children at the age of around 5 years old. Your task is to rate the story objectively.
 
-Story:
-Story:
+    Story:
+    Story:
     {}
 
 Please rate the story in the following categories:
@@ -292,8 +291,8 @@ Remember: Ensure there is no additional text, explanations, or comments after th
 
 
     sample_story = """
-    Once upon a time, there was a little girl named Lily. She had a big, red ball that she loved to play with. One day, she saw a small, helpless bird on the ground. The bird could not fly. Lily wanted to help the bird. Lily said to the bird, "Don't worry, little bird. I will help you." She picked up the bird and took it to her mom. Her mom knew how to help the bird. Her mom said, "We can give the bird some food and water." Lily and her mom gave the bird some food and water. The bird started to feel better. It was not helpless anymore. The bird said, "Thank you, Lily and mom." Lily was happy to help the bird. She learned that helping others can make you feel good too. And from that day on, Lily always tried to help others when they needed it.
-    """
+Once upon a time, in a big house, there was a still, Alice somewhere. Every day, the somewhere would make a while run and make win strong. Inside, they found a standing shadow and promised it with any looks who wanted to know what was the tie and what was inside. The looks smiled each other kept the tells were now pick and fun. Fruit is some what it's replied to did. One day, a little girl named hat went to the spoon. She saw a little
+"""
     stories = [sample_story, sample_story, sample_story]
 
     driver = setup()

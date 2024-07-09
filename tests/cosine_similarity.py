@@ -8,9 +8,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 if __name__ == '__main__':
     generated_story = """"
-Once upon a time, there was a little boy named Timmy. Timmy loved to play outside with his friends. One day, Timmy's mom asked him to help her. Timmy was excited to help her, so his mom helped him. They went to the park and Timmy saw a big tree with lots of leaves. He wanted to climb the tree, but his mom said no. Timmy was sad and started to cry. His mom asked him if he could climb the tree, but Timmy said no. He was sad and frustrated. Suddenly, Timmy heard a loud noise outside. He looked around and saw a big dog. The dog looked scared and didn't know what to do. Timmy's mom said, "Don't worry, we can help you. We can help you." Timmy was relieved and thanked the dog. He went back to his friends and said, "Thank you for helping me, Timmy. You are so kind." <eos>
-    """
-
+ There was once a little girl named Ella. Everyday Ella would look out her window and admire the beautiful, colorful world outside her window, it had so many things to see. One day, Ella saw something different in the sky. It was called a rainbow. It was so beautiful and made her very excited. She had never seen anything like it before! Ella was so happy to see the rainbow, and she waved to it. Then, she realized that the rainbow was too far away for her to see. Ella decided to try something new. She decided to build a bridge out of blocks. She found some sticks and stones and put it the way she wanted. She even used her special blocks to make a big bridge, with four small rocks. Ella was so proud of her new bridge. Her mom was happy too, because even though she was only three years old, Ella was determined to do something amazing.
+ """
     # nlp = spacy.load("en_core_web_sm")
     # s1 = nlp(generated_story)
     tokenizer = get_tokenizer('spacy', language='en_core_web_sm')

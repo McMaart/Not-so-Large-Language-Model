@@ -106,10 +106,10 @@ def save_scores_to_file(model_name, avg_cosim, std_cosim, avg_rouge, std_rouge, 
 
 
 def main():
-    model_name = "1M"  # Replace with your actual model name
+    model_name = "5M_GRU"  # Replace with your actual model name
     dataset_path = 'data/TinyStories'  # Path to the dataset
     method = ""  # Choose the generation method: default, beam, beam_multinomial
-    temperature = 0.5  # Set the temperature for generation
+    temperature = 0.75  # Set the temperature for generation
     beam_width = 5  # Set the beam width for beam search
     top_k = 25  # Set the top_k for beam_multinomial
 
