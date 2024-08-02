@@ -13,63 +13,59 @@ from model_1 import TransformerModel, device, learning_rate, max_seq_len
 from time import perf_counter
 import optuna
 from model_2 import RNNModel, LSTMModel, GRUModel
-from torch.cuda.amp import autocast, GradScaler
+from torch.cuda.amp import GradScaler
+from torch.amp import autocast
 
 
 def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int = 1, max_num_batches: int | None = None,
-          flags: list[bool] = None, batch_size: int = 32, scheduler_stepsize: int = 2500, scheduler_gamma: float = 0.87,
-          accumulation_steps: int = 1, max_grad_norm: float = None) -> tuple[float, list[float]]:
+          batch_size: int = 32, scheduler_stepsize: int = 2500, scheduler_gamma: float = 0.9,
+          accumulation_steps: int = 1, max_grad_norm: float = None, flags: list[bool] = None,
+          accelerate: bool = False) -> list[float]:
     model.train()
-    total_loss = 0.
     log_interval = 250
     batch_loss = []
     writer = SummaryWriter()
     scheduler = StepLR(optimizer, step_size=scheduler_stepsize, gamma=scheduler_gamma)
+    # accelerate = accelerate if device == "cuda" else False
     scaler = GradScaler()
 
     # just for IDE
     x: Tensor
-    batch, epoch = 1, 1
 
     for epoch in range(1, epochs + 1):
-        #epoch_loss = 0.
         curr_loss = 0.0
         shuffle = True  # shuffle = False if epoch == 1 else True
-        dataloader = DataLoader(data, batch_size=batch_size, collate_fn=data.get_batch, num_workers=12, shuffle=shuffle,
+        dataloader = DataLoader(data, batch_size=batch_size, collate_fn=data.get_batch, num_workers=2, shuffle=shuffle,
                                 pin_memory=True)
-        if max_num_batches is None:
-            max_num_batches = len(dataloader)
+        max_num_batches = min(max_num_batches, len(dataloader)) if max_num_batches is not None else len(dataloader)
 
-        for batch, (x, y, lengths) in zip(range(1, min(max_num_batches, len(dataloader)) + 1), dataloader):
+        for batch, (x, y, lengths) in zip(range(1, max_num_batches + 1), dataloader):
             x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
-            #pred = model(x, lengths)  # non mixed precision
-
             optimizer.zero_grad(set_to_none=True)
 
-            with autocast():  # Enable mixed precision
-                pred = model(x, lengths)  # Enable mixed precision
-                loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))  # Enable mixed precision
+            if accelerate is True:
+                with autocast("cuda"):  # Enable mixed precision
+                    pred = model(x, lengths)  # Enable mixed precision
+                    loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))  # Enable mixed precision
 
-            scaler.scale(loss).backward()  # Scale the loss - Enable mixed precision
-            if batch % accumulation_steps == 0:
-                scaler.unscale_(optimizer)
-                if max_grad_norm is not None:
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
-                scaler.step(optimizer)  # Apply gradients - Enable mixed precision
-                scaler.update()  # Update the scaler - Enable mixed precision
-                optimizer.zero_grad(set_to_none=True)
-                scheduler.step()  # Step the scheduler
-
-            #loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
+                scaler.scale(loss).backward()  # Scale the loss - Enable mixed precision
+                if batch % accumulation_steps == 0:
+                    scaler.unscale_(optimizer)
+                    if max_grad_norm is not None:
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
+                    scaler.step(optimizer)  # Apply gradients - Enable mixed precision
+                    scaler.update()  # Update the scaler - Enable mixed precision
+                    scheduler.step()  # Step the scheduler
+            else:
+                pred = model(x, lengths)
+                loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
+                loss.backward()
+                optimizer.step()
+                scheduler.step()
 
             loss_item = loss.item()
-            total_loss += loss_item
             curr_loss += loss_item
-            #epoch_loss += loss_item
             writer.add_scalar("Loss/batch", loss_item, batch)
-            #loss.backward()  # non mixed precision
-            #optimizer.step()  # non mixed precision
-            #scheduler.step()  # non mixed precision
 
             if batch % log_interval == 0:
                 print(f"Batch: {batch:5}, curr. loss: {curr_loss / log_interval:.5f}")
@@ -77,37 +73,29 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
                 batch_loss.append(curr_loss / log_interval)
                 curr_loss = 0.0
 
-        #epoch_loss = epoch_loss / (min(max_num_batches, len(dataloader)))
-        #epoch_losses.append(epoch_loss)
-        #print(f"Epoch {epoch}/{epochs}, Loss: {epoch_loss:.4f}")
-
     writer.flush()
     writer.close()
-    return total_loss / (max_num_batches * (epoch - 1) + batch), batch_loss
+    return batch_loss
 
 
 @torch.no_grad()
-def evaluate(data: TinyStories, model: nn.Module, loss_fn, max_num_batches: int | None = None) -> float:
+def evaluate(data: TinyStories, model: nn.Module, loss_fn, max_num_batches: int | None = None,
+             use_autocast: bool = True) -> float:
     model.eval()
     total_loss = 0.0
-    dataloader = DataLoader(data, batch_size=64, collate_fn=data.get_batch, num_workers=12, shuffle=True,
+    dataloader = DataLoader(data, batch_size=64, collate_fn=data.get_batch, num_workers=2, shuffle=True,
                             pin_memory=True)
-    if max_num_batches is None:
-        max_num_batches = len(dataloader)
+    max_num_batches = min(max_num_batches, len(dataloader)) if max_num_batches is not None else len(dataloader)
 
-    for batch, (x, y, lengths) in zip(range(1, min(max_num_batches, len(dataloader)) + 1), dataloader):
+    for batch, (x, y, lengths) in zip(range(1, max_num_batches + 1), dataloader):
         x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
-        lengths = lengths.to(device, non_blocking=True)
-        pred = model(x, lengths)
 
-        #with autocast():  # Enable mixed precision
-        #pred = model(x, lengths)
-        #loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
-
-        loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
+        with autocast(device, enabled=use_autocast):
+            pred = model(x, lengths)
+            loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
 
         total_loss += loss.item()
-    return total_loss / min(max_num_batches, len(dataloader))
+    return total_loss / max_num_batches
 
 
 def get_batch(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Tensor, Tensor]:
@@ -133,7 +121,8 @@ def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Ten
 
 
 def do_training(model_name: str = "model", max_num_batches: int | None = None, load_model: bool = True,
-                load_vocab: bool = True, flags: list[bool] = None, hyper_search: bool = False, epochs: int = 4):
+                batch_size: int = 32, load_vocab: bool = True, flags: list[bool] = None, hyper_search: bool = False,
+                epochs: int = 1, model_type: str = "transformer") -> list[float]:
     if hyper_search is True:
         study = optuna.create_study(direction='minimize')
         study.optimize(objective, n_trials=50)
@@ -160,9 +149,17 @@ def do_training(model_name: str = "model", max_num_batches: int | None = None, l
                 print(f"Model/vocabulary does not exist!\n{err}", file=sys.stderr)
                 sys.exit(1)
         else:
-            model = TransformerModel(len(vocabulary), 128, 8, 3, 355,
-                                     0.1007, padding_idx=vocabulary["<pad>"], pos_enc_type='rope').to(device)
-            # model = RNNModel(2048).to(device)
+            if model_type == "transformer":
+                model = TransformerModel(len(vocabulary), 192, 8, 6, 768,
+                                         padding_idx=vocabulary["<pad>"])
+            elif model_type == "lstm":
+                model = LSTMModel(len(vocabulary), padding_idx=vocabulary["<pad>"])
+            elif model_type == "rnn":
+                model = RNNModel(len(vocabulary), padding_idx=vocabulary["<pad>"])
+            else:
+                model = GRUModel(len(vocabulary), padding_idx=vocabulary["<pad>"])
+            model = model.to(device)
+
         data = TinyStories(vocabulary, get_tokenizer('spacy', language='en_core_web_sm'), max_seq_len=max_seq_len,
                            split="train")
         loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
@@ -172,19 +169,16 @@ def do_training(model_name: str = "model", max_num_batches: int | None = None, l
 
         t0 = perf_counter()
         try:
-            avg_loss, batch_loss = train(data, model, loss_fn, optimizer, epochs=epochs, max_num_batches=max_num_batches,
-                                         flags=flags, batch_size=128, scheduler_stepsize=2500, scheduler_gamma=0.7997)
+            batch_loss = train(data, model, loss_fn, optimizer, epochs=epochs,
+                               max_num_batches=max_num_batches, flags=flags, batch_size=batch_size)
         except KeyboardInterrupt:
             print("Cancelling training, loss statistics will not be available")
-            avg_loss = None
             batch_loss = []
         t = perf_counter() - t0
         torch.save(model, f'trained_models/{model_name}.pth')
-        if avg_loss is not None:
-            print(f"Average Loss: {avg_loss:.5}")
         print(f"Time:{t}")
 
-        return t, avg_loss, batch_loss
+        return batch_loss
 
 
 def eval_setup(model_name: str = "model", max_num_batches: int | None = None):
@@ -217,15 +211,15 @@ def objective(trial):
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
     # Train model
-    batch_loss = train(data, model, loss_fn, optimizer, epochs=2, max_num_batches=100000, batch_size=batch_size)
+    batch_loss = train(data, model, loss_fn, optimizer, epochs=1, max_num_batches=100000, batch_size=batch_size)
     newest_batch_loss = batch_loss[-8:]
     return sum(newest_batch_loss) / len(newest_batch_loss)
 
 
 if __name__ == '__main__':
-    model_name = "transformer"
-    delta_t, avg_loss, loss_list = do_training(model_name=model_name, max_num_batches=None, load_model=False,
-                                               load_vocab=True, hyper_search=False)
+    model_name = "transformer_model"
+    loss_list = do_training(model_name=model_name, max_num_batches=None, load_model=False,
+                            load_vocab=True, hyper_search=False, model_type="transformer")
     print(f"Loss list: {loss_list}")
     print("Starting evaluation...")
     eval_setup(model_name)
