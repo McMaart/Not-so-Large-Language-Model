@@ -8,16 +8,10 @@ from data.preprocess_dataset import clean_dataset
 torchtext.disable_torchtext_deprecation_warning()
 from torchtext.data import get_tokenizer
 from torch import Tensor
-# import nltk
-# from nltk.tokenize.treebank import TreebankWordDetokenizer
 import re
 from model_1 import device, num_special_tokens, generate_tokens, generate_tokens_beam, generate_tokens_beam_multinomial
 from torch.utils.data import Dataset
 import os
-import numpy as np
-from collections import Counter
-import matplotlib.pyplot as plt
-# import seaborn as sns
 
 
 def load_tiny_stories(end: int, start: int = 0, split: str = "train") -> list[str]:
@@ -103,39 +97,10 @@ def map_story_to_tensor(story: str, vocab: dict, tokenizer) -> Tensor:
     return torch.tensor([vocab.get(word, default) for word in tokenizer(story)], dtype=torch.int32)
 
 
-# def clean_stories(story_list: list[str]) -> list[str]:
-#     """
-#     Fixes certain encoding errors in the stories and removes all stories that either are empty or still contain
-#     non-ascii characters. Removes approximately 0.8% of all stories (802 of first 100K stories).
-#     """
-#     story_set = set(story_list)
-#     story_set.discard("")
-#     new_story_list = []
-#
-#     for idx, story in enumerate(story_set):
-#         if 'â' in story:
-#             story = remove_enc_errors(story)
-#         if story.isascii() is True:
-#             new_story_list.append(story)
-#     return new_story_list
-
-
-# def remove_enc_errors(story: str) -> str:
-#     story = story.replace('â€™', "'")
-#     story = story.replace("â€“", "-")
-#     story = story.replace("â€”", " - ")
-#     story = story.replace("â€š", ",")
-#     story = story.replace("â€œ", '"')
-#     story = story.replace('â€', '"')
-#     return story
-
-
 def tokens_to_story(token_list: list[str]) -> str:
-
     story = " ".join(token_list)
-    
     story = re.sub(r'\si\s', r' I ', story)  # Fix capitalization of 'i'
-    
+
     # Fix contraction, possessive, 'd, 're
     patterns = {
         r"n' t": "n't",
@@ -156,7 +121,7 @@ def tokens_to_story(token_list: list[str]) -> str:
 
     for pattern, replacement in patterns.items():
         story = re.sub(pattern, replacement, story)
-    
+
     # Fix spaces around punctuation
     story = re.sub(r'\s([?.!,;:](?:\s|$))', r'\1', story)
 
@@ -177,21 +142,22 @@ def tokens_to_story(token_list: list[str]) -> str:
     for i, char in enumerate(story_list):
         if char == '"':
             if in_quote:  # Closing quote
-                if story_list[i-1] == ' ':
-                    story_list[i-1] = ''
+                if story_list[i - 1] == ' ':
+                    story_list[i - 1] = ''
             elif i != len(story_list) - 1:  # Opening quote
-                if story_list[i+1] == ' ':
-                    story_list[i+1] = ''
+                if story_list[i + 1] == ' ':
+                    story_list[i + 1] = ''
             in_quote = not in_quote
-    
-    story = ''.join(story_list)
 
+    story = ''.join(story_list)
     story = re.sub(r'(,"\s*)([A-Z])', lambda x: x.group(1) + x.group(2).lower(), story)
 
-    names = {'ben', 'billy', 'bob', 'emily', 'jack', 'joe', 'john', 'lily', 'lucy', 'max', 'mia', 'polly', 'sam', 'sara', 'sarah', 'timmy', 'tom'}
     # names obtained from GPT-4o by providing list of vocabulary and asking for names:
-    names_gpt = ['alice', 'amy', 'anna', 'ben', 'bella', 'benny', 'billy', 'bob', 'bobo', 'daisy', 'dave', 'emma', 'ellie', 'ella', 'george', 'jack', 'jake', 'jane', 'jen', 'jenny', 'jim', 'jimmy', 'joe', 'john', 'johnny', 'leo', 'lila', 'lily', 'lisa', 'lola', 'lucy', 'mandy', 'mark', 'mary', 'max', 'mia', 'mike', 'molly', 'pete', 'peter', 'rex', 'sally', 'sam', 'sammy', 'sara', 'sarah', 'sophie', 'susie', 'tim', 'timmy', 'tom', 'tommy', 'toby']
-    names = names.union(names_gpt)
+    names = {'alice', 'amy', 'anna', 'ben', 'bella', 'benny', 'billy', 'bob', 'bobo', 'daisy', 'dave', 'emily',
+             'emma', 'ellie', 'ella', 'george', 'jack', 'jake', 'jane', 'jen', 'jenny', 'jim', 'jimmy', 'joe',
+             'john', 'johnny', 'leo', 'lila', 'lily', 'lisa', 'lola', 'lucy', 'mandy', 'mark', 'mary', 'max', 'mia',
+             'mike', 'molly', 'pete', 'peter', 'polly', 'rex', 'sally', 'sam', 'sammy', 'sara', 'sarah', 'sophie',
+             'susie', 'tim', 'timmy', 'tom', 'tommy', 'toby'}
 
     # replace names with capitalized names
     story = re.sub(r'\b(' + '|'.join(names) + r')\b', lambda x: x.group().capitalize(), story)
@@ -199,31 +165,26 @@ def tokens_to_story(token_list: list[str]) -> str:
     return story
 
 
-def prompt_model(model_name: str, start_str: str, length: int = 250, temperature: float = 1.0, method: str = "default", beam_width: int = 5, top_k: int = 30, sampling_after: int = 5) -> str:
+def prompt_model(model_name: str, start_str: str, length: int = 250, temperature: float = 1.0, method: str = "default",
+                 beam_width: int = 5, top_k: int = 30) -> str:
     vocab = load_vocabulary()
     vocab_rev = {v: k for k, v in vocab.items()}
-
+    tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
     model_path = get_absolute_path(f"trained_models/{model_name}.pth")
 
     try:
-        model = torch.load(model_path, map_location=torch.device('cuda' if torch.cuda.is_available() else 'cpu')).to(device)
+        model = torch.load(model_path, map_location=device, weights_only=False).to(device)
     except FileNotFoundError:
         print(f"Model '{model_path}' could not be found", file=sys.stderr)
         sys.exit(1)
 
-        # Ensure nhead attribute is present
-    #if not hasattr(model, 'nhead'):
-        #raise AttributeError(f"Loaded model does not have 'nhead' attribute (cannot use ROPE).")
-
     print("Number of parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
-    tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
     default = vocab["<unk>"]
     bos_token = vocab.get("<bos>")
     if bos_token is None:
         raise ValueError("<bos> token is not in vocabulary!")
 
     start_str = clean_dataset([start_str], True)[0].lower()
-    # todo: improve efficiency
     input_tensor = torch.tensor([bos_token] + [vocab.get(token, default) for token in tokenizer(start_str)],
                                 dtype=torch.int32)
     input_tensor = input_tensor.view(1, -1)
@@ -239,15 +200,15 @@ def prompt_model(model_name: str, start_str: str, length: int = 250, temperature
             tl = generate_tokens(model, input_tensor.to(device), length, eos_token=vocab.get("<eos>"),
                                  temperature=temperature)
 
+    if tl.size(0) != 1:
+        print(f"Batch size must be 1, got {tl.size(0)}", file=sys.stderr)
     tl = tl[:, 1:]  # Strip <bos> token
-    story_list = []
-    for batch in tl:
-        token_list = []
-        for val in batch:
-            token = vocab_rev[val.item()]
-            token_list.append(token)
-        story_list.append(tokens_to_story(token_list))
-    return story_list[0]  # ToDo: maybe adjust function for generating multiple stories at once
+
+    token_list = []
+    for val in tl[0]:
+        token = vocab_rev[val.item()]
+        token_list.append(token)
+    return tokens_to_story(token_list)
 
 
 class TinyStories(Dataset):
@@ -284,7 +245,6 @@ class TinyStories(Dataset):
 
         if len(token_list) <= self.max_seq_len:
             token_list.append(self.eos_token)
-        # token_list = token_list[:self.max_seq_len + 1]
 
         data = torch.tensor(token_list, dtype=torch.int64)
         return data
@@ -297,15 +257,16 @@ def save_vocabulary(vocab: dict[str, int], filename: str = "trained_models/vocab
     with open(filename, 'wb') as file:
         pickle.dump(vocab, file)
 
+
 def get_absolute_path(relative_path):
     script_dir = os.path.dirname(os.path.abspath(__file__))  # Get the directory of the current script
     abs_path = os.path.abspath(os.path.join(script_dir, relative_path))
     return abs_path
 
+
 def load_vocabulary(filename: str = "trained_models/vocabulary.pkl") -> dict:
     # First, try the given relative path directly
     abs_filename = get_absolute_path(filename)
-    #print(f"Trying to load vocabulary from: {abs_filename}")  # Debug print
     if not os.path.exists(abs_filename):
         raise FileNotFoundError(f"Vocabulary file not found: {abs_filename}")
     with open(abs_filename, 'rb') as file:
@@ -322,5 +283,3 @@ if __name__ == "__main__":
     save_vocabulary(vocab)
     loaded_vocab = load_vocabulary("trained_models/vocabulary.pkl")
     print(f"Vocab with 2048 tokens: {loaded_vocab}")
-
-    tokenizer = get_tokenizer('spacy', language='en_core_web_sm')

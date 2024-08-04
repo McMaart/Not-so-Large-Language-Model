@@ -13,8 +13,7 @@ from model_1 import TransformerModel, device, learning_rate, max_seq_len
 from time import perf_counter
 import optuna
 from model_2 import RNNModel, LSTMModel, GRUModel
-from torch.cuda.amp import GradScaler
-from torch.amp import autocast
+from torch.amp import autocast, GradScaler
 
 
 def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int = 1, max_num_batches: int | None = None,
@@ -26,8 +25,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
     batch_loss = []
     writer = SummaryWriter()
     scheduler = StepLR(optimizer, step_size=scheduler_stepsize, gamma=scheduler_gamma)
-    # accelerate = accelerate if device == "cuda" else False
-    scaler = GradScaler()
+    scaler = GradScaler(device)
 
     # just for IDE
     x: Tensor
@@ -44,7 +42,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
             optimizer.zero_grad(set_to_none=True)
 
             if accelerate is True:
-                with autocast("cuda"):  # Enable mixed precision
+                with autocast(device):  # Enable mixed precision
                     pred = model(x, lengths)  # Enable mixed precision
                     loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))  # Enable mixed precision
 
@@ -144,7 +142,8 @@ def do_training(model_name: str = "model", max_num_batches: int | None = None, l
 
         if load_model is True:
             try:
-                model = torch.load(f'trained_models/{model_name}.pth', map_location=device).to(device)
+                model = torch.load(f'trained_models/{model_name}.pth', map_location=device,
+                                   weights_only=False).to(device)
             except FileNotFoundError as err:
                 print(f"Model/vocabulary does not exist!\n{err}", file=sys.stderr)
                 sys.exit(1)
