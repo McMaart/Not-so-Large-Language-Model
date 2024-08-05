@@ -1,19 +1,16 @@
 import sys
-import torch
+from time import perf_counter
 from datasets import load_from_disk
+import torch
 from torch import nn, Tensor
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-import torchtext
-torchtext.disable_torchtext_deprecation_warning()
-from torchtext.data import get_tokenizer
+from torch.amp import autocast, GradScaler
+import optuna
 from io_utils import create_vocabulary, map_story_to_tensor, save_vocabulary, load_vocabulary, TinyStories
 from model_1 import TransformerModel, device, learning_rate, max_seq_len
-from time import perf_counter
-import optuna
 from model_2 import RNNModel, LSTMModel, GRUModel
-from torch.amp import autocast, GradScaler
 
 
 def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int = 1, max_num_batches: int | None = None,
@@ -159,8 +156,7 @@ def do_training(model_name: str = "model", max_num_batches: int | None = None, l
                 model = GRUModel(len(vocabulary), padding_idx=vocabulary["<pad>"])
             model = model.to(device)
 
-        data = TinyStories(vocabulary, get_tokenizer('spacy', language='en_core_web_sm'), max_seq_len=max_seq_len,
-                           split="train")
+        data = TinyStories(vocabulary, max_seq_len=max_seq_len, split="train")
         loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
         optimizer = torch.optim.AdamW(model.parameters(), learning_rate)
         params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -181,7 +177,7 @@ def do_training(model_name: str = "model", max_num_batches: int | None = None, l
 
 
 def eval_setup(model_name: str = "model", max_num_batches: int | None = None):
-    model = torch.load(f'trained_models/{model_name}.pth').to(device)
+    model = torch.load(f'trained_models/{model_name}.pth', map_location=device, weights_only=False).to(device)
     vocabulary = load_vocabulary()
     data = TinyStories(vocabulary, max_seq_len=max_seq_len, split="validation")
 

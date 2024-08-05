@@ -1,17 +1,15 @@
-import pickle
 import sys
-import torch
-from datasets import load_from_disk
-from torch.nn.utils.rnn import pad_sequence
-import torchtext
-from data.preprocess_dataset import clean_dataset
-torchtext.disable_torchtext_deprecation_warning()
-from torchtext.data import get_tokenizer
-from torch import Tensor
-import re
-from model_1 import device, num_special_tokens, generate_tokens, generate_tokens_beam, generate_tokens_beam_multinomial
-from torch.utils.data import Dataset
 import os
+import re
+import pickle
+import torch
+from torch import Tensor
+from torch.nn.utils.rnn import pad_sequence
+from torch.utils.data import Dataset
+import spacy
+from datasets import load_from_disk
+from data.preprocess_dataset import clean_dataset
+from model_1 import device, num_special_tokens, generate_tokens, generate_tokens_beam, generate_tokens_beam_multinomial
 
 
 def load_tiny_stories(end: int, start: int = 0, split: str = "train") -> list[str]:
@@ -45,7 +43,15 @@ def save_to_file(filename: str, story_list: list):
             f.write(f"{item}\n<end>\n\n")
 
 
-def get_token_frequencies(story_list: list[str], tokenizer=get_tokenizer('spacy', language='en_core_web_sm'),
+class SpacyTokenizer:
+    def __init__(self):
+        self.tokenizer = spacy.blank('en')
+
+    def __call__(self, story: str):
+        return [token.text for token in self.tokenizer(story)]
+
+
+def get_token_frequencies(story_list: list[str], tokenizer=SpacyTokenizer(),
                           split_on_hyphen: bool = True) -> dict[str, int]:
     """
     Returns a dict of all tokens and their absolute frequencies
@@ -68,7 +74,7 @@ def get_token_frequencies(story_list: list[str], tokenizer=get_tokenizer('spacy'
     return vocabulary
 
 
-def create_vocabulary(story_list: list[str], tokenizer=get_tokenizer('spacy', language='en_core_web_sm'),
+def create_vocabulary(story_list: list[str], tokenizer=SpacyTokenizer(),
                       max_words: int | None = None) -> dict[str, int]:
     """
     Assigns an index to each word that appears in the list of stories
@@ -94,7 +100,7 @@ def map_story_to_tensor(story: str, vocab: dict, tokenizer) -> Tensor:
     Maps a story to a Tensor of Integers, according to the index in the vocabulary
     """
     default = vocab["<unk>"]
-    return torch.tensor([vocab.get(word, default) for word in tokenizer(story)], dtype=torch.int32)
+    return torch.tensor([vocab.get(token, default) for token in tokenizer(story)], dtype=torch.int32)
 
 
 def tokens_to_story(token_list: list[str]) -> str:
@@ -169,7 +175,7 @@ def prompt_model(model_name: str, start_str: str, length: int = 250, temperature
                  beam_width: int = 5, top_k: int = 30) -> str:
     vocab = load_vocabulary()
     vocab_rev = {v: k for k, v in vocab.items()}
-    tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
+    tokenizer = SpacyTokenizer()
     model_path = get_absolute_path(f"trained_models/{model_name}.pth")
 
     try:
@@ -212,7 +218,7 @@ def prompt_model(model_name: str, start_str: str, length: int = 250, temperature
 
 
 class TinyStories(Dataset):
-    def __init__(self, vocabulary: dict, tokenizer=get_tokenizer('spacy', language='en_core_web_sm'),
+    def __init__(self, vocabulary: dict, tokenizer=SpacyTokenizer(),
                  split: str = "train", max_seq_len: int | None = None, split_on_hyphen: bool = False):
         self.stories = load_from_disk("data/TinyStories")[split]
         self.vocab = vocabulary
@@ -231,7 +237,7 @@ class TinyStories(Dataset):
             raise ValueError("<bos> token is not found in the vocabulary.")
 
     def get_batch(self, sequences: list[Tensor]) -> tuple[Tensor, Tensor, Tensor]:
-        lengths = torch.cat([torch.tensor(s.shape)-1 for s in sequences])
+        lengths = torch.tensor([s.shape[0] - 1 for s in sequences])
         padded_seq = pad_sequence(sequences, batch_first=True, padding_value=self.pad_token)
         return padded_seq[:, :-1].contiguous(), padded_seq[:, 1:].contiguous(), lengths
 
@@ -240,8 +246,8 @@ class TinyStories(Dataset):
 
         token_list = [self.bos_token]
         tokens = self.tokenizer(story.lower())
-        for _, word in zip(range(self.max_seq_len), tokens):
-            token_list.append(self.vocab.get(word, self.unk_token))
+        for _, token in zip(range(self.max_seq_len), tokens):
+            token_list.append(self.vocab.get(token, self.unk_token))
 
         if len(token_list) <= self.max_seq_len:
             token_list.append(self.eos_token)
@@ -264,8 +270,7 @@ def get_absolute_path(relative_path):
     return abs_path
 
 
-def load_vocabulary(filename: str = "trained_models/vocabulary.pkl") -> dict:
-    # First, try the given relative path directly
+def load_vocabulary(filename: str = "trained_models/vocabulary.pkl") -> dict[str, int]:
     abs_filename = get_absolute_path(filename)
     if not os.path.exists(abs_filename):
         raise FileNotFoundError(f"Vocabulary file not found: {abs_filename}")
@@ -279,7 +284,7 @@ if __name__ == "__main__":
     train_stories = dataset["train"][:]["text"]
 
     # Create and save vocabulary
-    vocab = create_vocabulary(train_stories, get_tokenizer('spacy', language='en_core_web_sm'), 2048)
+    vocab = create_vocabulary(train_stories, max_words=2048)
     save_vocabulary(vocab)
     loaded_vocab = load_vocabulary("trained_models/vocabulary.pkl")
     print(f"Vocab with 2048 tokens: {loaded_vocab}")

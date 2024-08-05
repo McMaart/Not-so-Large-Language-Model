@@ -1,7 +1,6 @@
 import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
-import packaging
 from torchtune.modules import RotaryPositionalEmbeddings
 
 
@@ -10,11 +9,11 @@ device = (
     else "mps" if torch.backends.mps.is_available()
     else "cpu"
 )
-learning_rate = 0.00492
-batch_size = 128
+learning_rate = 1e-3
+batch_size = 32
 max_seq_len = 256
-num_special_non_eos_tokens = 3
 num_special_tokens = 4
+num_special_non_eos_tokens = 3
 
 
 class TransformerModel(nn.Module):
@@ -28,16 +27,11 @@ class TransformerModel(nn.Module):
 
         self.embedding = nn.Embedding(self.vocab_size, self.embed_size, padding_idx=padding_idx)
         if pos_enc_type == 'sinusoidal':
-            self.pos_encoding = PositionalEncoding(embed_size, base=10000)
+            self.pos_encoding = PositionalEncoding(embed_size, base=10_000)
         elif pos_enc_type == 'rope':
-            self.pos_encoding = RotaryPositionalEmbeddings(dim=embed_size // nhead, max_seq_len=max_seq_len, base=10000)
+            self.pos_encoding = RotaryPositionalEmbeddings(dim=embed_size // nhead, max_seq_len=max_seq_len,
+                                                           base=10_000)
 
-        # with flash attention
-        #self.encoder_layers = nn.ModuleList([
-           # FlashMHA(embed_size, nhead, p_dropout=dropout, causal=True) for _ in range(num_layers)
-        #])
-
-        #without flash attention
         encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=nhead, dim_feedforward=dim_ff, dropout=dropout,
                                                    batch_first=True, activation="gelu", norm_first=False)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers, enable_nested_tensor=False)
@@ -60,17 +54,12 @@ class TransformerModel(nn.Module):
             seq_indices = torch.arange(x.size(1), device=device)
             pad_mask = seq_indices >= lengths[:, None]
 
-        # with flash attention
-        #for layer in self.encoder_layers:
-           # embedding, _ = layer(embedding, attn_mask=mask)
-
-        # without flash attention
         embedding = self.encoder(embedding, mask=mask, src_key_padding_mask=pad_mask, is_causal=True)
         return self.linear(embedding)
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, embed_size: int, dropout: float = 0.07, base: int = 10000):
+    def __init__(self, embed_size: int, dropout: float = 0.07, base: int = 10_000):
         super().__init__()
         pos_enc = torch.empty(max_seq_len, embed_size, dtype=torch.float)
         self.dropout = nn.Dropout(p=dropout)
@@ -206,6 +195,5 @@ if __name__ == '__main__':
 
     method = ''  # Choose the generation method: default, beam, beam_multinomial
     string = ''
-    #string = ''
-    story = prompt_model("35MGPT4", string, 255, 1.1, method, beam_width=5)
+    story = prompt_model("transformer_model", string, 255, 0.7, method, beam_width=5)
     print(story)

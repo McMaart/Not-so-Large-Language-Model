@@ -1,5 +1,7 @@
-playground/
 runs/
+backup/
+playground/
+
 # disable temporarily
 trained_models/
 data/TinyStories*.txt

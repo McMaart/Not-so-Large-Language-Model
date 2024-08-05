@@ -3,8 +3,7 @@ import gui_mvc
 import training
 import model_1
 import datetime
-from io_utils import load_tiny_stories, load_vocabulary
-from torchtext.data.utils import get_tokenizer
+from io_utils import load_tiny_stories, load_vocabulary, SpacyTokenizer
 from time import perf_counter
 import torch
 
@@ -50,7 +49,7 @@ class Controller:
                 stories = load_tiny_stories(20000)
                 vocabulary = load_vocabulary()
                 vocabulary_rev = {k: v for v, k in vocabulary.items()}
-                tokenizer = get_tokenizer('basic_english')
+                tokenizer = SpacyTokenizer()
 
                 # model = torch.load('trained_models/model.pth').to(device)
                 model = model_1.TransformerModel(len(vocabulary)).to(device)
