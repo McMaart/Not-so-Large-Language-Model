@@ -158,8 +158,8 @@ def tokens_to_story(token_list: list[str]) -> str:
     story = re.sub(r'(,"\s*)([A-Z])', lambda x: x.group(1) + x.group(2).lower(), story)
 
     # handle capitalization after closing quotes
-    story = re.sub(r'"\s+([a-z])', lambda x: '" ' + x.group(1).upper(), story)
-    story = re.sub(r'",\s+([a-z])', lambda x: '", ' + x.group(1).upper(), story)
+    story = re.sub(r'"\s+([a-z])', lambda x: '" ' + x.group(1).lower(), story)
+    story = re.sub(r'",\s+([a-z])', lambda x: '", ' + x.group(1).lower(), story)
 
     # names obtained from GPT-4o by providing list of vocabulary and asking for names:
     names = {'alice', 'amy', 'anna', 'ben', 'bella', 'benny', 'billy', 'bob', 'bobo', 'daisy', 'dave', 'emily',
