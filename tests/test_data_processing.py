@@ -31,3 +31,6 @@ class TestDataProcessing(unittest.TestCase):
             str_token_list = [self.vocabulary_rev[idx] for idx in input_tensor.tolist()[1:-1]]
             reconstructed_story = tokens_to_story(str_token_list)
             self.assertEqual(story_str, reconstructed_story)
+
+if __name__ == '__main__':
+    unittest.main()
