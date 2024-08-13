@@ -105,7 +105,6 @@ def map_story_to_tensor(story: str, vocab: dict, tokenizer) -> Tensor:
 
 def tokens_to_story(token_list: list[str]) -> str:
     story = " ".join(token_list)
-    story = re.sub(r'\si\s', r' I ', story)  # Fix capitalization of 'i'
 
     # Fix contraction, possessive, 'd, 're
     patterns = {
@@ -158,6 +157,10 @@ def tokens_to_story(token_list: list[str]) -> str:
     story = ''.join(story_list)
     story = re.sub(r'(,"\s*)([A-Z])', lambda x: x.group(1) + x.group(2).lower(), story)
 
+    # handle capitalization after closing quotes
+    story = re.sub(r'"\s+([a-z])', lambda x: '" ' + x.group(1).upper(), story)
+    story = re.sub(r'",\s+([a-z])', lambda x: '", ' + x.group(1).upper(), story)
+
     # names obtained from GPT-4o by providing list of vocabulary and asking for names:
     names = {'alice', 'amy', 'anna', 'ben', 'bella', 'benny', 'billy', 'bob', 'bobo', 'daisy', 'dave', 'emily',
              'emma', 'ellie', 'ella', 'george', 'jack', 'jake', 'jane', 'jen', 'jenny', 'jim', 'jimmy', 'joe',
@@ -168,6 +171,8 @@ def tokens_to_story(token_list: list[str]) -> str:
     # replace names with capitalized names
     story = re.sub(r'\b(' + '|'.join(names) + r')\b', lambda x: x.group().capitalize(), story)
 
+    story = re.sub(r'\bi\b', r' I ', story)  # Fix capitalization of 'i'
+    
     return story
 
 
