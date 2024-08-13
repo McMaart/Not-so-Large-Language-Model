@@ -223,12 +223,11 @@ def prompt_model(model_name: str, start_str: str, length: int = 250, temperature
 
 
 class TinyStories(Dataset):
-    def __init__(self, vocabulary: dict, tokenizer=SpacyTokenizer(),
-                 split: str = "train", max_seq_len: int | None = None, split_on_hyphen: bool = False):
-        self.stories = load_from_disk("data/TinyStories")[split]
+    def __init__(self, vocabulary: dict, tokenizer=SpacyTokenizer(), split: str = "train",
+                 dataset_path: str = "data/TinyStories", max_seq_len: int | None = None):
+        self.stories = load_from_disk(dataset_path)[split]
         self.vocab = vocabulary
         self.tokenizer = tokenizer
-        self.split_on_hyphen = split_on_hyphen
 
         self.unk_token = self.vocab["<unk>"]
         self.pad_token = self.vocab["<pad>"]
@@ -245,6 +244,9 @@ class TinyStories(Dataset):
         lengths = torch.tensor([s.shape[0] - 1 for s in sequences])
         padded_seq = pad_sequence(sequences, batch_first=True, padding_value=self.pad_token)
         return padded_seq[:, :-1].contiguous(), padded_seq[:, 1:].contiguous(), lengths
+
+    def get_stories(self):
+        return self.stories
 
     def __getitem__(self, index: int) -> Tensor:
         story = self.stories[index]['text']
