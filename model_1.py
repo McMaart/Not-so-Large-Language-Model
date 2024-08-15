@@ -8,16 +8,14 @@ device = (
     else "mps" if torch.backends.mps.is_available()
     else "cpu"
 )
-learning_rate = 1e-3
-batch_size = 32
 max_seq_len = 256
 num_special_tokens = 4
 num_special_non_eos_tokens = 3
 
 
 class TransformerModel(nn.Module):
-    def __init__(self, vocab_size: int, embed_size: int = 512, nhead: int = 4, num_layers: int = 4, dim_ff: int = 2048,
-                 dropout: float = 0.1, padding_idx: int | None = None, pos_enc_type: str = 'sinusoidal'):
+    def __init__(self, vocab_size: int, embed_size: int = 128, nhead: int = 4, num_layers: int = 4, dim_ff: int = 512,
+                 dropout: float = 0.0, padding_idx: int | None = None, pos_enc_type: str = 'sinusoidal'):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
@@ -32,7 +30,7 @@ class TransformerModel(nn.Module):
                                                            base=10_000)
 
         encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=nhead, dim_feedforward=dim_ff, dropout=dropout,
-                                                   batch_first=True, activation="gelu", norm_first=False)
+                                                   batch_first=True, activation="gelu", norm_first=True)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers, enable_nested_tensor=False)
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
 
@@ -58,7 +56,7 @@ class TransformerModel(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, embed_size: int, dropout: float = 0.07, base: int = 10_000):
+    def __init__(self, embed_size: int, dropout: float = 0.0, base: int = 10_000):
         super().__init__()
         pos_enc = torch.empty(max_seq_len, embed_size, dtype=torch.float)
         self.dropout = nn.Dropout(p=dropout)

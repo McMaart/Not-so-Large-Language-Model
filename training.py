@@ -9,7 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.amp import autocast, GradScaler
 import optuna
 from io_utils import create_vocabulary, map_story_to_tensor, save_vocabulary, load_vocabulary, TinyStories
-from model_1 import TransformerModel, device, learning_rate, max_seq_len
+from model_1 import TransformerModel, device, max_seq_len
 from model_2 import RNNModel, LSTMModel, GRUModel
 
 
@@ -116,8 +116,8 @@ def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Ten
 
 
 def do_training(model_name: str = "model", max_num_batches: int | None = None, load_model: bool = True,
-                batch_size: int = 32, load_vocab: bool = True, flags: list[bool] = None, hyper_search: bool = False,
-                epochs: int = 1, model_type: str = "transformer") -> list[float]:
+                lr: float = 1e-3, batch_size: int = 32, load_vocab: bool = True, flags: list[bool] = None,
+                hyper_search: bool = False, epochs: int = 1, model_type: str = "transformer") -> list[float]:
     if hyper_search is True:
         study = optuna.create_study(direction='minimize')
         study.optimize(objective, n_trials=50)
@@ -158,7 +158,7 @@ def do_training(model_name: str = "model", max_num_batches: int | None = None, l
 
         data = TinyStories(vocabulary, max_seq_len=max_seq_len, split="train")
         loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
-        optimizer = torch.optim.AdamW(model.parameters(), learning_rate)
+        optimizer = torch.optim.AdamW(model.parameters(), lr)
         params = sum(p.numel() for p in model.parameters() if p.requires_grad)
         print(f"Model ({params} parameters) and vocabulary ({len(vocabulary)} tokens) have been loaded")
 
@@ -214,7 +214,7 @@ def objective(trial):
 if __name__ == '__main__':
     model_name = "transformer_model"
     loss_list = do_training(model_name=model_name, max_num_batches=None, load_model=False,
-                            load_vocab=True, hyper_search=False, model_type="transformer")
+                            load_vocab=True, hyper_search=False, model_type="transformer", lr=1e-3)
     print(f"Loss list: {loss_list}")
     print("Starting evaluation...")
     eval_setup(model_name)

@@ -9,7 +9,8 @@ from torch.utils.data import Dataset
 import spacy
 from datasets import load_from_disk
 from data.preprocess_dataset import clean_dataset
-from model_1 import device, num_special_tokens, generate_tokens, generate_tokens_beam, generate_tokens_beam_multinomial
+from model_1 import device, num_special_tokens
+from generate import generate_tokens, generate_tokens_beam, generate_tokens_beam_multinomial
 
 
 def load_tiny_stories(end: int, start: int = 0, split: str = "train") -> list[str]:
@@ -289,7 +290,7 @@ if __name__ == "__main__":
     train_stories = dataset["train"][:]["text"]
 
     # Create and save vocabulary
-    vocab = create_vocabulary(train_stories, max_words=2048)
-    save_vocabulary(vocab)
+    # vocab = create_vocabulary(train_stories, max_words=2048)
+    # save_vocabulary(vocab)
     loaded_vocab = load_vocabulary("trained_models/vocabulary.pkl")
     print(f"Vocab with 2048 tokens: {loaded_vocab}")
