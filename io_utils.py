@@ -157,14 +157,26 @@ def tokens_to_story(token_list: list[str]) -> str:
 
     story = ''.join(story_list)
     
-    # handle capitalization after closing quotes
-    story = re.sub(r'(",?\s+)([A-Z])', lambda x: x.group(1) + x.group(2).lower(), story)
+    # handle capitalization after closing quotes for hardcoded cases
+    speech = ['said', 'explained', 'replied', 'responded', 'answered', 'shouted', 'whispered', 'called', 'asked', 'cried']
+    speech += [word.capitalize() for word in speech]
+    
+    pattern = re.compile(r'",?\s+[\w ]*(' + "|".join(speech) + ')[\w ]*[^\w\s]')
+
+    def lower_after_speech(match):
+        sub_match = re.search(r'",?\s+(\w)', match.group(0))
+        if sub_match:
+            lowered = sub_match.group(1).lower()
+            return match.group(0).replace(sub_match.group(1), lowered)
+        return match.group(0)
+    
+    story = pattern.sub(lower_after_speech, story)    
 
     # names obtained from GPT-4o by providing list of vocabulary and asking for names:
     names = {'alice', 'amy', 'anna', 'ben', 'bella', 'benny', 'billy', 'bob', 'bobo', 'daisy', 'dave', 'emily',
              'emma', 'ellie', 'ella', 'george', 'jack', 'jake', 'jane', 'jen', 'jenny', 'jim', 'jimmy', 'joe',
-             'john', 'johnny', 'leo', 'lila', 'lily', 'lisa', 'lola', 'lucy', 'mandy', 'mark', 'mary', 'max', 'mia',
-             'mike', 'molly', 'pete', 'peter', 'polly', 'rex', 'sally', 'sam', 'sammy', 'sara', 'sarah', 'sophie',
+             'john', 'johnny', 'kitty', 'leo', 'lila', 'lily', 'lisa', 'lola', 'lucy', 'mandy', 'mark', 'mary', 'max', 'mia',
+             'mike', 'molly', 'pete', 'peter', 'polly', 'rex', 'sally', 'sam', 'sammy', 'sara', 'sarah', 'sophie', 'sue',
              'susie', 'tim', 'timmy', 'tom', 'tommy', 'toby'}
 
     # replace names with capitalized names
