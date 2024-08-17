@@ -24,13 +24,14 @@ class TestDataProcessing(unittest.TestCase):
             story_str = self.stories[i]
             input_tensor = self.data[i]
             if self.unk_token in input_tensor:
-                print(f"Dataset or vocabulary has changed, the story with index {i} contains unknown tokens\n"
-                      "Skipping this story...", file=sys.stderr)
+                print(f"Warning: Dataset or vocabulary has changed, the story with index {i} contains unknown tokens; "
+                      "skipping this story...", file=sys.stderr)
                 continue
 
             str_token_list = [self.vocabulary_rev[idx] for idx in input_tensor.tolist()[1:-1]]
             reconstructed_story = tokens_to_story(str_token_list)
             self.assertEqual(story_str, reconstructed_story)
+
 
 if __name__ == '__main__':
     unittest.main()
