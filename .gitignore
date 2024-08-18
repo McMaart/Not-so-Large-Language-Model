@@ -1,10 +1,13 @@
 runs/
 backup/
 playground/
+data/*.csv
+evaluation/tensorboard_csv_data/
 
 # disable temporarily
 trained_models/
 data/TinyStories*.txt
+evaluation/*.pdf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

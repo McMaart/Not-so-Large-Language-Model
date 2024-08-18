@@ -16,7 +16,6 @@ if __name__ == '__main__':
     max_idx = 0
 
     for i, story in enumerate(dataset["train"]["text"]):
-        # cosine_sim = s1.similarity(nlp(story))
         tfidf_matrix = vectorizer.fit_transform([story, generated_story])
         cosine_sim = cosine_similarity(tfidf_matrix[0], tfidf_matrix[1])[0][0]
 

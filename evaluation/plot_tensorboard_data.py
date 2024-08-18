@@ -18,7 +18,7 @@ def add_plot(filename: str, label: str, smoothing_factor: float = 0.9,
 
 
 def plot_tensorboard_loss(filenames: Iterable[str], labels: Iterable[str], title: str | None = None,
-                          smoothing_factor: float = 0.9, skip_lines: int = 5):
+                          smoothing_factor: float = 0.9, skip_lines: int = 5, show_plot: bool = True):
     for filename, label in zip(filenames, labels):
         add_plot(filename, label, smoothing_factor, skip_lines=skip_lines)
 
@@ -28,11 +28,13 @@ def plot_tensorboard_loss(filenames: Iterable[str], labels: Iterable[str], title
     plt.xlabel("Number of steps")
     plt.ylabel("Loss")
     plt.grid(alpha=0.275)
-    plt.show()
+    if show_plot is True:
+        plt.show()
 
 
 if __name__ == "__main__":
     param_counts = ('1.1M', '3.7M', '8.3M')
     csv_files = [f"tensorboard_csv_data/{params}.csv" for params in param_counts]
-    plot_tensorboard_loss(csv_files, param_counts, skip_lines=10,
+    plot_tensorboard_loss(csv_files, param_counts, skip_lines=10, show_plot=False,
                           title="Training loss for the Transformer models")
+    plt.savefig("Transformer_loss.pdf")
