@@ -2,30 +2,26 @@ import sys
 from time import perf_counter
 from datasets import load_from_disk
 import torch
-from torch import nn, Tensor
+from torch import nn
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torch.amp import autocast, GradScaler
 import optuna
-from io_utils import create_vocabulary, map_story_to_tensor, save_vocabulary, load_vocabulary, TinyStories
+from io_utils import create_vocabulary, save_vocabulary, load_vocabulary, TinyStories
 from model_1 import TransformerModel, device, max_seq_len
 from model_2 import RNNModel, LSTMModel, GRUModel
 
 
-def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int = 1, max_num_batches: int | None = None,
-          batch_size: int = 32, scheduler_stepsize: int = 2500, scheduler_gamma: float = 0.9,
-          accumulation_steps: int = 1, max_grad_norm: float = None, flags: list[bool] = None,
-          accelerate: bool = False) -> list[float]:
+def train(data: TinyStories, model: nn.Module, loss_fn, optimizer: torch.optim.Optimizer, epochs: int = 1,
+          batch_size: int = 64, max_num_batches: int | None = None, scheduler_stepsize: int = 2500,
+          scheduler_gamma: float = 0.9, accelerate: bool = False, accumulation_steps: int = 1,
+          max_grad_norm: float = None, log_interval: int = 250, flags: list[bool] = None) -> list[float]:
     model.train()
-    log_interval = 250
     batch_loss = []
     writer = SummaryWriter()
     scheduler = StepLR(optimizer, step_size=scheduler_stepsize, gamma=scheduler_gamma)
     scaler = GradScaler(device)
-
-    # just for IDE
-    x: Tensor
 
     for epoch in range(1, epochs + 1):
         curr_loss = 0.0
@@ -64,7 +60,6 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
 
             if batch % log_interval == 0:
                 print(f"Batch: {batch:5}, curr. loss: {curr_loss / log_interval:.5f}")
-                # ToDO: Adjust the GUI implementation to receive only the loss (instead of a string containing the loss)
                 batch_loss.append(curr_loss / log_interval)
                 curr_loss = 0.0
 
@@ -74,115 +69,98 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer, epochs: int =
 
 
 @torch.no_grad()
-def evaluate(data: TinyStories, model: nn.Module, loss_fn, max_num_batches: int | None = None,
-             use_autocast: bool = True) -> float:
+def evaluate(data: TinyStories, model: nn.Module, loss_fn, batch_size: int = 64,
+             max_num_batches: int | None = None, use_autocast: bool = True) -> float:
     model.eval()
     total_loss = 0.0
-    dataloader = DataLoader(data, batch_size=64, collate_fn=data.get_batch, num_workers=2, shuffle=True,
-                            pin_memory=True)
+    dataloader = DataLoader(data, batch_size=batch_size, collate_fn=data.get_batch, num_workers=2, pin_memory=True)
     max_num_batches = min(max_num_batches, len(dataloader)) if max_num_batches is not None else len(dataloader)
 
     for batch, (x, y, lengths) in zip(range(1, max_num_batches + 1), dataloader):
         x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
-
         with autocast(device, enabled=use_autocast):
             pred = model(x, lengths)
             loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
-
         total_loss += loss.item()
+
     return total_loss / max_num_batches
 
 
-def get_batch(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Tensor, Tensor]:
-    """
-    Returns a single batch (input, target) for training.
-    Both input and target Tensor have sizes max_seq_len (for self-attention).
-    """
-    # ToDo: stack multiple input/target tensor for more efficient training using GPU
-    data = map_story_to_tensor(story_list[idx], vocab, tokenizer)
-    if len(data) < 2:
-        print("Unsuitable data found:", idx, data, story_list[idx], file=sys.stderr)
-    max_idx = min(max_seq_len, data.size(0) - 1)
-    return data[:max_idx], data[1:max_idx + 1]
-
-
-def get_sequence(story_list: list[str], idx: int, vocab, tokenizer) -> tuple[Tensor, Tensor]:
-    """
-    Returns a single batch (input, target) for training.
-    Input and target Tensor are independent of max_seq_len (the size is equal to number of tokens - 1)
-    """
-    data = map_story_to_tensor(story_list[idx], vocab, tokenizer)
-    return data[:-1], data[1:]
-
-
-def do_training(model_name: str = "model", max_num_batches: int | None = None, load_model: bool = True,
-                lr: float = 1e-3, batch_size: int = 32, load_vocab: bool = True, flags: list[bool] = None,
-                hyper_search: bool = False, epochs: int = 1, model_type: str = "transformer") -> list[float]:
+def training_setup(model_name: str = "model", load_vocab: bool = True, load_model: bool = True,
+                   model_type: str = "transformer", lr: float = 1e-3, epochs: int = 1, batch_size: int = 64,
+                   max_num_batches: int | None = None, flags: list[bool] = None,
+                   hyper_search: bool = False) -> list[float] | None:
     if hyper_search is True:
         study = optuna.create_study(direction='minimize')
         study.optimize(objective, n_trials=50)
         print(f"Best trial: {study.best_trial.value}")
         print(f"Best hyperparameters: {study.best_trial.params}")
-    else:
-        if load_vocab is True:
-            try:
-                vocabulary = load_vocabulary()
-            except FileNotFoundError as err:
-                print(f"Vocabulary (trained_models/vocabulary.pkl) does not exist!\n{err}", file=sys.stderr)
-                sys.exit(1)
-        else:
-            print("Creating vocabulary...")
-            dataset = load_from_disk("data/TinyStories")
-            train_stories = dataset["train"][:]["text"]
-            vocabulary = create_vocabulary(train_stories, 2048)
-            save_vocabulary(vocabulary)
+        return
 
-        if load_model is True:
-            try:
-                model = torch.load(f'trained_models/{model_name}.pth', map_location=device,
-                                   weights_only=False).to(device)
-            except FileNotFoundError as err:
-                print(f"Model/vocabulary does not exist!\n{err}", file=sys.stderr)
-                sys.exit(1)
-        else:
-            if model_type == "transformer":
-                model = TransformerModel(len(vocabulary), 192, 8, 6, 768,
-                                         padding_idx=vocabulary["<pad>"])
-            elif model_type == "lstm":
-                model = LSTMModel(len(vocabulary), padding_idx=vocabulary["<pad>"])
-            elif model_type == "rnn":
-                model = RNNModel(len(vocabulary), padding_idx=vocabulary["<pad>"])
-            else:
-                model = GRUModel(len(vocabulary), padding_idx=vocabulary["<pad>"])
-            model = model.to(device)
-
-        data = TinyStories(vocabulary, max_seq_len=max_seq_len, split="train")
-        loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
-        optimizer = torch.optim.AdamW(model.parameters(), lr)
-        params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-        print(f"Model ({params} parameters) and vocabulary ({len(vocabulary)} tokens) have been loaded")
-
-        t0 = perf_counter()
+    if load_vocab is True:
         try:
-            batch_loss = train(data, model, loss_fn, optimizer, epochs=epochs,
-                               max_num_batches=max_num_batches, flags=flags, batch_size=batch_size)
-        except KeyboardInterrupt:
-            print("Cancelling training, loss statistics will not be available")
-            batch_loss = []
-        t = perf_counter() - t0
-        torch.save(model, f'trained_models/{model_name}.pth')
-        print(f"Time:{t}")
+            vocabulary = load_vocabulary()
+        except FileNotFoundError as err:
+            print(f"Vocabulary (trained_models/vocabulary.pkl) does not exist!\n{err}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        if load_model is True:
+            print(f"Warning: Loading existing model with new vocabulary!", file=sys.stderr)
+        print("Creating vocabulary...")
+        dataset = load_from_disk("data/TinyStories")
+        train_stories = dataset["train"]["text"]
+        vocabulary = create_vocabulary(train_stories, max_words=2048)
+        save_vocabulary(vocabulary)
+    pad_idx = vocabulary["<pad>"]
 
-        return batch_loss
+    if load_model is True:
+        try:
+            model = torch.load(f'trained_models/{model_name}.pth', map_location=device, weights_only=False)
+        except FileNotFoundError as err:
+            print(f"Model 'trained_models/{model_name}.pth' does not exist!\n{err}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        model_type = model_type.lower()
+        if model_type == "transformer":
+            model = TransformerModel(len(vocabulary), 192, 8, 6, 768,
+                                     padding_idx=pad_idx)
+        elif model_type == "lstm":
+            model = LSTMModel(len(vocabulary), padding_idx=pad_idx)
+        elif model_type == "gru":
+            model = GRUModel(len(vocabulary), padding_idx=pad_idx)
+        else:
+            model = RNNModel(len(vocabulary), padding_idx=pad_idx)
+        model = model.to(device)
+
+    data = TinyStories(vocabulary, max_seq_len=max_seq_len, split="train")
+    loss_fn = nn.CrossEntropyLoss(ignore_index=pad_idx)
+    optimizer = torch.optim.AdamW(model.parameters(), lr)
+    params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"Model ({params} parameters) and vocabulary ({len(vocabulary)} tokens) have been loaded")
+
+    batch_loss = None
+    t0 = perf_counter()
+    try:
+        batch_loss = train(data, model, loss_fn, optimizer, epochs=epochs,
+                           max_num_batches=max_num_batches, batch_size=batch_size, flags=flags)
+    except KeyboardInterrupt:
+        print("Cancelling training...")
+    t = perf_counter() - t0
+    torch.save(model, f'trained_models/{model_name}.pth')
+    print(f"Training time: {t:.2f}")
+
+    return batch_loss
 
 
-def eval_setup(model_name: str = "model", max_num_batches: int | None = None):
+def evaluation_setup(model_name: str = "model", batch_size: int = 64, max_num_batches: int | None = None,) -> float:
     model = torch.load(f'trained_models/{model_name}.pth', map_location=device, weights_only=False).to(device)
     vocabulary = load_vocabulary()
     data = TinyStories(vocabulary, max_seq_len=max_seq_len, split="validation")
 
     loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
-    print(f"Evaluation loss: {evaluate(data, model, loss_fn, max_num_batches)}")
+    eval_loss = evaluate(data, model, loss_fn, batch_size, max_num_batches)
+    print(f"Evaluation loss: {eval_loss}")
+    return eval_loss
 
 
 def objective(trial):
@@ -206,15 +184,14 @@ def objective(trial):
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
     # Train model
-    batch_loss = train(data, model, loss_fn, optimizer, epochs=1, max_num_batches=100000, batch_size=batch_size)
-    newest_batch_loss = batch_loss[-8:]
-    return sum(newest_batch_loss) / len(newest_batch_loss)
+    _ = train(data, model, loss_fn, optimizer, epochs=1, max_num_batches=100000, batch_size=batch_size)
+    evaluate_data = TinyStories(vocabulary, max_seq_len=max_seq_len, split="validation")
+    return evaluate(evaluate_data, model, loss_fn)
 
 
 if __name__ == '__main__':
     model_name = "transformer_model"
-    loss_list = do_training(model_name=model_name, max_num_batches=None, load_model=False,
-                            load_vocab=True, hyper_search=False, model_type="transformer", lr=1e-3)
-    print(f"Loss list: {loss_list}")
+    loss_list = training_setup(model_name=model_name, max_num_batches=None, load_model=False,
+                               load_vocab=True, hyper_search=False, model_type="transformer", lr=1e-3)
     print("Starting evaluation...")
-    eval_setup(model_name)
+    evaluation_setup(model_name)

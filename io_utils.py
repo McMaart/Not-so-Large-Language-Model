@@ -10,7 +10,7 @@ import spacy
 from datasets import load_from_disk
 from data.preprocess_dataset import clean_dataset
 from model_1 import device, num_special_tokens
-from generate import generate_tokens, generate_tokens_beam, generate_tokens_beam_multinomial
+from generate_stories import generate_tokens, generate_tokens_beam, generate_tokens_beam_multinomial
 
 
 def load_tiny_stories(end: int, start: int = 0, split: str = "train") -> list[str]:
