@@ -17,6 +17,24 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer: torch.optim.O
           batch_size: int = 64, max_num_batches: int | None = None, scheduler_stepsize: int = 2500,
           scheduler_gamma: float = 0.9, accelerate: bool = False, accumulation_steps: int = 1,
           max_grad_norm: float = None, log_interval: int = 250, flags: list[bool] = None) -> list[float]:
+    """
+    Trains the given model, using the provided dataset.
+    :param data: The TinyStories dataset object for training.
+    :param model: The instance of the model to be trained.
+    :param loss_fn: The loss function used for training (e.g., nn.CrossEntropyLoss).
+    :param optimizer: The optimizer used for training the model (e.g., torch.optim.AdamW).
+    :param batch_size: The size of each batch.
+    :param max_num_batches: The maximum number of batches that will be used. If None, then all available batches
+     will be used.
+    :param scheduler_stepsize: The number of steps after which the learning rate scheduler updates the learning rate.
+    :param scheduler_gamma: The multiplicative factor of learning rate decay.
+    :param accelerate: If True, enables mixed precision training.
+    :param accumulation_steps: Number of steps to accumulate gradients before performing a backward pass.
+    :param max_grad_norm: The maximum norm of gradients. If None, then gradient clipping will be disabled.
+    :param log_interval: Every log_interval batches, the average loss of the last log_interval batches is logged.
+    The log created by TensorBoard is independant from this parameter (and potentially logs every batch).
+    :return: A list with the logged training losses.
+    """
     model.train()
     batch_loss = []
     writer = SummaryWriter()
@@ -62,6 +80,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer: torch.optim.O
                 print(f"Batch: {batch:5}, curr. loss: {curr_loss / log_interval:.5f}")
                 batch_loss.append(curr_loss / log_interval)
                 curr_loss = 0.0
+        max_num_batches -= len(dataloader)
 
     writer.flush()
     writer.close()
@@ -71,6 +90,18 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer: torch.optim.O
 @torch.no_grad()
 def evaluate(data: TinyStories, model: nn.Module, loss_fn, batch_size: int = 64,
              max_num_batches: int | None = None, use_autocast: bool = True) -> float:
+    """
+    Evaluates a trained model on a validation or test set.
+    :param data: The dataset used for evaluation. Should be an instance of the TinyStories validation or test split.
+    :param model: The instance of the model to be evaluated.
+    :param loss_fn: The loss function used for evaluation (e.g., nn.CrossEntropyLoss).
+    :param batch_size: The size of each batch used for the evaluation.
+    :param max_num_batches: The maximum number of batches that will be used. If None,
+    then all available batches will be used.
+    :param use_autocast: Whether to use Autocasting for the evaluation.
+     This can speed up computation time by performing specific operations in lower precision.
+    :return: The evaluation loss.
+    """
     model.eval()
     total_loss = 0.0
     dataloader = DataLoader(data, batch_size=batch_size, collate_fn=data.get_batch, num_workers=2, pin_memory=True)
@@ -78,6 +109,7 @@ def evaluate(data: TinyStories, model: nn.Module, loss_fn, batch_size: int = 64,
 
     for batch, (x, y, lengths) in zip(range(1, max_num_batches + 1), dataloader):
         x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
+
         with autocast(device, enabled=use_autocast):
             pred = model(x, lengths)
             loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
@@ -88,8 +120,26 @@ def evaluate(data: TinyStories, model: nn.Module, loss_fn, batch_size: int = 64,
 
 def training_setup(model_name: str = "model", load_vocab: bool = True, load_model: bool = True,
                    model_type: str = "transformer", lr: float = 1e-3, epochs: int = 1, batch_size: int = 64,
-                   max_num_batches: int | None = None, flags: list[bool] = None,
+                   max_num_batches: int | None = None, log_interval: int = 250, flags: list[bool] = None,
                    hyper_search: bool = False) -> list[float] | None:
+    """
+    Setup for training a new or existing model.
+    :param model_name: The name of the model to be trained. The model will be saved at
+    'trained_models/{model_name}.pth'.
+    :param load_vocab: Whether to load a pre-existing vocabulary. If True, the vocabulary will be loaded from
+    'trained_models/vocabulary.pkl'. If False, a new vocabulary will be created.
+    :param load_model: Whether to load a pre-existing model. If True, the model will be loaded from
+    'trained_models/{model_name}.pkl'. If False, a new model of type {model_type} will be created.
+    :param model_type: The type of the model that will be newly created. Options are 'transformer', 'rnn', 'gru' and
+    'lstm'. The parameter will be ignored if load_model is True.
+    :param lr: The initial learning rate.
+    :param epochs: The number of training epochs.
+    :param batch_size: The size of each training batch.
+    :param max_num_batches: The maximum number of batches to train on. If None, train on the full dataset.
+    :param log_interval: Every log_interval batches, the average loss of the last log_interval batches is logged.
+    Does not apply to the log created by TensorBoard.
+    :return: A list with the logged training losses. Returns None if the training was cancelled or hyper_search is True.
+    """
     if hyper_search is True:
         study = optuna.create_study(direction='minimize')
         study.optimize(objective, n_trials=50)
@@ -141,8 +191,8 @@ def training_setup(model_name: str = "model", load_vocab: bool = True, load_mode
     batch_loss = None
     t0 = perf_counter()
     try:
-        batch_loss = train(data, model, loss_fn, optimizer, epochs=epochs,
-                           max_num_batches=max_num_batches, batch_size=batch_size, flags=flags)
+        batch_loss = train(data, model, loss_fn, optimizer, epochs=epochs, max_num_batches=max_num_batches,
+                           batch_size=batch_size, log_interval=log_interval, flags=flags)
     except KeyboardInterrupt:
         print("Cancelling training...")
     t = perf_counter() - t0
@@ -152,10 +202,21 @@ def training_setup(model_name: str = "model", load_vocab: bool = True, load_mode
     return batch_loss
 
 
-def evaluation_setup(model_name: str = "model", batch_size: int = 64, max_num_batches: int | None = None,) -> float:
+def evaluation_setup(model_name: str = "model", batch_size: int = 64, max_num_batches: int | None = None,
+                     split: str = "validation") -> float:
+    """
+    Setup for evaluating a trained model on the validation or test split.
+    :param model_name: The name under which the trained model is stored
+    (the corresponding relative file path should be 'trained_models/{model_name}.pth')
+    :param batch_size: The batch size for evaluation.
+    :param max_num_batches: The maximum number of batches that will be used for the evaluation. If None,
+     then all available batches will be used.
+    :param split: The split used for evaluation. Options are 'validation' and 'test'.
+    :return: The evaluation loss.
+    """
     model = torch.load(f'trained_models/{model_name}.pth', map_location=device, weights_only=False).to(device)
     vocabulary = load_vocabulary()
-    data = TinyStories(vocabulary, max_seq_len=max_seq_len, split="validation")
+    data = TinyStories(vocabulary, max_seq_len=max_seq_len, split=split)
 
     loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
     eval_loss = evaluate(data, model, loss_fn, batch_size, max_num_batches)
@@ -190,7 +251,7 @@ def objective(trial):
 
 
 if __name__ == '__main__':
-    model_name = "transformer_model"
+    model_name = "transformer_8.3M"
     loss_list = training_setup(model_name=model_name, max_num_batches=None, load_model=False,
                                load_vocab=True, hyper_search=False, model_type="transformer", lr=1e-3)
     print("Starting evaluation...")
