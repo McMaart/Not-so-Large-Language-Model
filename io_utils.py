@@ -164,6 +164,11 @@ def tokens_to_story(token_list: list[str]) -> str:
     pattern = re.compile(r'",?\s+[\w ]*(' + "|".join(speech) + ')[\w ]*[^\w\s]')
 
     def lower_after_speech(match):
+        if re.search(r'"\s+The', match.group(0)):
+            if re.search(r'"\s+[\w ]*(' + "|".join(speech) + ')\.', match.group(0)):
+                pass
+            else:
+                return match.group(0)
         sub_match = re.search(r'",?\s+(\w)', match.group(0))
         if sub_match:
             lowered = sub_match.group(1).lower()
