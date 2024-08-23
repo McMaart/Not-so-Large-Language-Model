@@ -1,25 +1,4 @@
-"""
-Script for the automatic evaluation of the stories generated from our models with UHHGPT.
-For this script to work, the user must fulfill the following requirements:
-1. The user must have the Chrome browser installed and download a suitable version of the Chromedriver
-(see https://googlechromelabs.github.io/chrome-for-testing/). The chromedriver.exe file must be located in the PATH (or
-alternatively in this folder).
-2. The user must create an environment variable with the variable name "PASS_UNI". The value of this variable is
-the (seven-digit) name of the user account for the UHH (e.g. 'BAO1234'), followed by the corresponding password.
-Example of the value of the environment variable (for the user account 'BAO1234' with the password 'password420'):
-BAO1234Password420
-"""
-import sys
-import time
-from os import environ
-import numpy as np
-from selenium.common import NoSuchElementException
-from selenium.webdriver import Keys, Chrome, Firefox
-from selenium.webdriver.common.by import By
-from prompt_testing.parse_model_reply import parse_prompt_0
-import torch
 from io_utils import prompt_model
-np.set_printoptions(precision=4)
 
 
 def generate_multiple_stories(model_name: str, start_str: str, n: int = 5, length: int = 250, temperature: float = 1.0,
@@ -44,102 +23,36 @@ def generate_multiple_stories(model_name: str, start_str: str, n: int = 5, lengt
     return stories
 
 
-class ChromeDriver(Chrome):
-    def __init__(self, wait: int = 10):
-        super().__init__()
-        self.maximize_window()
-        self.implicitly_wait(wait)
+prompt_v1 = """
+The following story is a story written for children at the age of around 5 years old.
+Your task is to rate the story objectively.
 
-    def click_css_element(self, selector: str):
-        self.find_element(By.CSS_SELECTOR, selector).click()
+Story:
+{}
 
+Please rate the story in the following categories:
+- GRAMMAR (exclusively rate the grammar of the story)
+- SPELLING (exclusively rate the spelling of the story)
+- CONSISTENCY (exclusively rate the consistency of the story)
+- STORY (exclusively rate the story/plot of the story)
+- CREATIVITY (exclusively rate the creativity of the story)
+- STYLE (exclusively rate the linguistic style of the story)
 
-def get_response(driver: ChromeDriver, wait: int | float = 3, max_iter: int = 100):
-    prev_response = "NAN"
-    for _ in range(max_iter):
-        time.sleep(wait)
+Rate objectively and rate each category independently from the others.
+Rate each category with a score from 1 to 10, with 1 being the worst and 10 being the best.
 
-        cur_response = driver.find_element(By.CSS_SELECTOR, 'body > div > div.main > div.messages > div:nth-child(3) > '
-                                                            'div > div.message-text').text
-        if cur_response == prev_response:
-            return cur_response
-        prev_response = cur_response
+It is crucial that your response ends with the following format (substitute <YOUR_CATEGORY_SCORE> with the score you gave for the respective category) and does not include any other text afterwords:
 
+GRAMMAR: <YOUR_GRAMMAR_SCORE>
+SPELLING: <YOUR_SPELLING_SCORE>
+CONSISTENCY: <YOUR_CONSISTENCY_SCORE>
+STORY: <YOUR_STORY_SCORE>
+CREATIVITY: <YOUR_CREATIVITY_SCORE>
+STYLE: <YOUR_STYLE_SCORE>
+"""
 
-def setup() -> ChromeDriver:
-    # Login
-    driver = ChromeDriver()
-    driver.get("https://uhhgpt.uni-hamburg.de/login.php")
-    driver.click_css_element('body > div > aside > div.loginPanel > form > button')  # login button on title page
-    try:
-        user_elem = driver.find_element(By.CSS_SELECTOR, '#username')
-    except NoSuchElementException as exc:
-        print(exc, file=sys.stderr)
-        sys.exit(1)
-
-    user_elem.send_keys(environ.get('PASS_UNI')[:7])
-    pass_elem = driver.find_element(By.CSS_SELECTOR, '#password')
-    pass_elem.send_keys(environ.get('PASS_UNI')[7:])
-    driver.click_css_element('#inhalt > main > section.spalten > article > div:nth-child(2) > div > div > '
-                             'div.loginform > div.left > form > div.form-element-wrapper > button')  # confirm login
-    driver.click_css_element('#data-protection > div > button')  # accept terms of use
-
-    # Change to GPT-4o model
-    # choose the GPT-4o-model from the menu
-    driver.click_css_element('body > div > div.sidebar > div.menu > div.radiogroup > label:nth-child(2) > p')
-    driver.click_css_element('body > div > div.main > div.input-container > center > button')  # start new chat
-    return driver
-
-
-def get_ratings(driver: ChromeDriver, instruction: str, generated_stories: list[str]) -> list[list[int | None]]:
-    story_ratings = []
-    for story in generated_stories:
-        full_prompt = instruction.format(story)
-        prompt_elem = driver.find_element(By.CSS_SELECTOR, '#texreachat')
-        driver.execute_script("arguments[0].value = arguments[1];", prompt_elem, full_prompt)
-        prompt_elem.send_keys(Keys.RETURN)
-
-        answer = get_response(driver)
-        story_ratings.append(parse_prompt_0(answer))
-
-        driver.click_css_element('body > div > div.main > div.input-container > center > button')  # new chat
-        print(f"UHHGPT:\n{answer}", end="\n\n")
-
-    return story_ratings
-
-
-if __name__ == '__main__':
-    # ToDo: Import (/replace with) the best prompt
-    sample_prompt = """
-    The following story is a story written for children at the age of around 5 years old.
-    Your task is to rate the story objectively.
-
-    Story:
-    {}
-
-    Please rate the story in the following categories:
-    - GRAMMAR (exclusively rate the grammar of the story)
-    - SPELLING (exclusively rate the spelling of the story)
-    - CONSISTENCY (exclusively rate the consistency of the story)
-    - STORY (exclusively rate the story/plot of the story)
-    - CREATIVITY (exclusively rate the creativity of the story)
-    - STYLE (exclusively rate the linguistic style of the story)
-
-    Rate objectively and rate each category independently from the others.
-    Rate each category with a score from 1 to 10, with 1 being the worst and 10 being the best.
-
-    It is crucial that your response ends with the following format (substitute <YOUR_CATEGORY_SCORE> with the score you gave for the respective category) and does not include any other text afterwords:
-
-    GRAMMAR: <YOUR_GRAMMAR_SCORE>
-    SPELLING: <YOUR_SPELLING_SCORE>
-    CONSISTENCY: <YOUR_CONSISTENCY_SCORE>
-    STORY: <YOUR_STORY_SCORE>
-    CREATIVITY: <YOUR_CREATIVITY_SCORE>
-    STYLE: <YOUR_STYLE_SCORE>
-    """
-
-    #sample_prompt =
-    """The following story is a story written for children at the age of around 5 years old. Your task is to rate the story objectively.
+prompt_v2 = """
+The following story is a story written for children at the age of around 5 years old. Your task is to rate the story objectively.
 
     Story:
     Story:
@@ -317,9 +230,10 @@ STYLE: <YOUR_STYLE_SCORE>
 Remember: Ensure there is no additional text, explanations, or comments after the scores. """
 
 
-    #sample_story = """
-#Once upon a time, in a big house, there was a still, Alice somewhere. Every day, the somewhere would make a while run and make win strong. Inside, they found a standing shadow and promised it with any looks who wanted to know what was the tie and what was inside. The looks smiled each other kept the tells were now pick and fun. Fruit is some what it's replied to did. One day, a little girl named hat went to the spoon. She saw a little
-#"""
+if __name__ == '__main__':
+    from evaluation.uhhgpt_selenium import webdriver_setup, get_ratings
+    import numpy as np
+    np.set_printoptions(precision=4)
 
     model_name = "35M"  # Example model name
     start_str = ""
@@ -332,8 +246,8 @@ Remember: Ensure there is no additional text, explanations, or comments after th
 
     stories = generate_multiple_stories(model_name, start_str, n=n, length=length, temperature=temperature, method=method)
 
-    driver = setup()
-    ratings = get_ratings(driver, sample_prompt, stories)
+    driver = webdriver_setup()
+    ratings = get_ratings(driver, prompt_v1, stories)
     print(f"Rating list: {ratings}")
 
     rating_arr = np.array(ratings)

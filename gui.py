@@ -5,7 +5,7 @@ import training as m1
 import glob
 import os
 from io_utils import prompt_model
-from tests.uhhgpt_eval import setup, get_ratings
+from evaluation.uhhgpt_selenium import webdriver_setup, get_ratings
 
 ctk.set_default_color_theme("dark-blue")
 ctk.set_appearance_mode("system")
@@ -114,7 +114,7 @@ class Training(ctk.CTkFrame):
         match self.model_selection.get():
             case "Model 1":
                 self.training_info.insert("end", "MODEL 1!\n\n")
-                t, avg, len, l = m1.do_training(flag_list=self.flag_list)
+                t, avg, len, l = m1.training_setup(flag_list=self.flag_list)
                 # self.training_info.insert("end", f"{l}")
                 self.training_info.insert("end", f"\nModel 1 Training time: {t:.5}s ({t / len:.4}s per batch)\n")
                 self.training_info.insert("end", f"Average Loss: {avg:.5}\n")
@@ -220,7 +220,7 @@ class Interaction(ctk.CTkFrame):
         """
         from prompt_testing.parse_model_reply import categories
         if not hasattr(self, 'driver') or self.driver is None:
-            self.driver = setup()
+            self.driver = webdriver_setup()
         ratings = get_ratings(self.driver, eval_prompt, [self.history[-1][1]])[-1]
         for cat, score in zip(categories.values(), ratings):
             self.eval.insert("end", f"{cat}: {score}\n")
