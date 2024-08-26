@@ -13,37 +13,6 @@ from model_1 import device, num_special_tokens
 from generate_stories import generate_tokens, generate_tokens_beam, generate_tokens_beam_multinomial
 
 
-def load_tiny_stories(end: int, start: int = 0, split: str = "train") -> list[str]:
-    """
-    (Down-)Loads the TinyStories Dataset and returns the entries 'start' to 'end - 1' from the chosen split
-    (i.e., returns 'end - start' many stories).
-    :param end: The index of the story after the last story to be loaded from the dataset (story with index 'end' will
-        not be returned)
-    :param start: The index of the first story to be loaded from the dataset
-    :param split: Choice between 'train' or 'validation' split
-    :return: List of stories
-    """
-    return load_from_disk("data/TinyStories")[split][start:end]['text']
-
-
-def load_from_file(filename: str) -> list[str]:
-    """
-    Loads the dataset from 'filename'.
-    """
-    with open(filename, 'r', encoding="utf-8") as f:
-        return f.read().split('\n<end>\n\n')[:-1]
-
-
-def save_to_file(filename: str, story_list: list):
-    """
-    Saves a list of stories to the file 'filename'.
-    """
-    with open(filename, 'w', encoding="utf-8") as f:
-        for item in story_list:
-            item = "\n".join(item.split("\n\n"))
-            f.write(f"{item}\n<end>\n\n")
-
-
 class SpacyTokenizer:
     def __init__(self):
         self.tokenizer = spacy.blank('en')
@@ -52,8 +21,7 @@ class SpacyTokenizer:
         return [token.text for token in self.tokenizer(story)]
 
 
-def get_token_frequencies(story_list: list[str], tokenizer=SpacyTokenizer(),
-                          split_on_hyphen: bool = True) -> dict[str, int]:
+def get_token_frequencies(story_list: list[str], tokenizer=SpacyTokenizer()) -> dict[str, int]:
     """
     Returns a dict of all tokens and their absolute frequencies
     """
@@ -61,17 +29,8 @@ def get_token_frequencies(story_list: list[str], tokenizer=SpacyTokenizer(),
     for story in story_list:
         tokens = tokenizer(story.lower())
         for token in tokens:
-            token = token.strip("*")
-            if split_on_hyphen is True and "-" in token:
-                token_split = token.split("-")
-                vocabulary.setdefault("-", 0)
-                vocabulary["-"] += len(token_split) - 1
-                for split_token in token_split:
-                    vocabulary.setdefault(split_token, 0)
-                    vocabulary[split_token] += 1
-            else:
-                vocabulary.setdefault(token, 0)
-                vocabulary[token] += 1
+            vocabulary.setdefault(token, 0)
+            vocabulary[token] += 1
     return vocabulary
 
 
@@ -80,7 +39,7 @@ def create_vocabulary(story_list: list[str], tokenizer=SpacyTokenizer(),
     """
     Assigns an index to each word that appears in the list of stories
     """
-    vocab_freq = get_token_frequencies(story_list, tokenizer, split_on_hyphen=False)
+    vocab_freq = get_token_frequencies(story_list, tokenizer)
     if max_words is not None:
         vocab = {}
         for _, (k, v) in zip(range(max_words - num_special_tokens),
@@ -94,14 +53,6 @@ def create_vocabulary(story_list: list[str], tokenizer=SpacyTokenizer(),
     vocab_freq['<unk>'] = 0  # Placeholder for tokens that do not appear in the story
     vocab_freq['<pad>'] = 0  # Pad token for batching
     return {k: idx for idx, k in enumerate(vocab_freq.keys())}
-
-
-def map_story_to_tensor(story: str, vocab: dict, tokenizer) -> Tensor:
-    """
-    Maps a story to a Tensor of Integers, according to the index in the vocabulary
-    """
-    default = vocab["<unk>"]
-    return torch.tensor([vocab.get(token, default) for token in tokenizer(story)], dtype=torch.int32)
 
 
 def tokens_to_story(token_list: list[str]) -> str:
@@ -131,9 +82,6 @@ def tokens_to_story(token_list: list[str]) -> str:
     # Fix spaces around punctuation
     story = re.sub(r'\s([?.!,;:](?:\s|$))', r'\1', story)
 
-    # unify quotation marks
-    story = re.sub(r'“|”', '"', story)
-
     # capitalize first letter of each sentence
     story = story[0].upper() + story[1:]
 
@@ -156,16 +104,16 @@ def tokens_to_story(token_list: list[str]) -> str:
             in_quote = not in_quote
 
     story = ''.join(story_list)
-    
+
     # handle capitalization after closing quotes for hardcoded cases
     speech = ['said', 'explained', 'replied', 'responded', 'answered', 'shouted', 'whispered', 'called', 'asked', 'cried']
     speech += [word.capitalize() for word in speech]
-    
-    pattern = re.compile(r'",?\s+[\w ]*(' + "|".join(speech) + ')[\w ]*[^\w\s]')
+
+    pattern = re.compile(r'",?\s+[\w ]*(' + "|".join(speech) + r')[\w ]*[^\w\s]')
 
     def lower_after_speech(match):
         if re.search(r'"\s+The', match.group(0)):
-            if re.search(r'"\s+[\w ]*(' + "|".join(speech) + ')\.', match.group(0)):
+            if re.search(r'"\s+[\w ]*(' + "|".join(speech) + r')\.', match.group(0)):
                 pass
             else:
                 return match.group(0)
@@ -174,8 +122,8 @@ def tokens_to_story(token_list: list[str]) -> str:
             lowered = sub_match.group(1).lower()
             return match.group(0).replace(sub_match.group(1), lowered)
         return match.group(0)
-    
-    story = pattern.sub(lower_after_speech, story)    
+
+    story = pattern.sub(lower_after_speech, story)
 
     # names obtained from GPT-4o by providing list of vocabulary and asking for names:
     names = {'alice', 'amy', 'anna', 'ben', 'bella', 'benny', 'billy', 'bob', 'bobo', 'daisy', 'dave', 'emily',
@@ -188,7 +136,7 @@ def tokens_to_story(token_list: list[str]) -> str:
     story = re.sub(r'\b(' + '|'.join(names) + r')\b', lambda x: x.group().capitalize(), story)
 
     story = re.sub(r'\bi\b', r'I', story)  # Fix capitalization of 'i'
-    
+
     return story
 
 
@@ -239,9 +187,20 @@ def prompt_model(model_name: str, start_str: str, length: int = 250, temperature
 
 
 class TinyStories(Dataset):
+    """
+    Dataset class for handling the stories from the TinyStories dataset. This class provides the functionality to
+    load stories, to tokenize them and to create a batch for training/evaluation.
+    """
     def __init__(self, vocabulary: dict, tokenizer=SpacyTokenizer(), split: str = "train",
-                 dataset_path: str = "data/TinyStories", max_seq_len: int | None = None):
-        self.stories = load_from_disk(dataset_path)[split]
+                 dataset_path: str = "data/TinyStoriesV2", max_seq_len: int | None = None):
+        """
+        :param vocabulary: The vocabulary (a dictionary containing the mapping of token-strings to token-indices).
+        :param tokenizer: A tokenizer function.
+        :param split: The dataset split to use ("train", "validation", "test").
+        :param dataset_path: Path to the dataset directory.
+        :param max_seq_len: The maximum sequence length.
+        """
+        self.stories = load_from_disk(dataset_path)[split]["text"]
         self.vocab = vocabulary
         self.tokenizer = tokenizer
 
@@ -249,42 +208,72 @@ class TinyStories(Dataset):
         self.pad_token = self.vocab["<pad>"]
         self.eos_token = self.vocab.get("<eos>")
         self.bos_token = self.vocab.get("<bos>")
-        self.max_seq_len = max_seq_len if max_seq_len is not None else 10000
+        self.max_seq_len = max_seq_len if max_seq_len is not None else 8192
 
+        # only relevant for old versions of the vocabulary
         if self.eos_token is None:
             raise ValueError("<eos> token is not found in the vocabulary.")
         elif self.bos_token is None:
             raise ValueError("<bos> token is not found in the vocabulary.")
 
     def get_batch(self, sequences: list[Tensor]) -> tuple[Tensor, Tensor, Tensor]:
+        """
+        Creates a batch (in the batch_first format) from a list of stories. Shorter stories will be padded to and larger
+        stories will be cut off after max_seq_len tokens.
+        :param sequences: A list of Tensors (stories), each representing a sequence of token indices (i.e., the
+         __getitem__ method has to be applied to the individual stories first).
+        :return: A tuple containing
+            - A Tensor of shape (batch_size, max_seq_len), representing a batch of stories (excl. the last token)
+            - A Tensor shifted by one token of shape (batch_size, max_seq_len) (representing the 'reference story').
+            - A Tensor of the length of each story in the batch.
+        """
         lengths = torch.tensor([s.shape[0] - 1 for s in sequences])
         padded_seq = pad_sequence(sequences, batch_first=True, padding_value=self.pad_token)
         return padded_seq[:, :-1].contiguous(), padded_seq[:, 1:].contiguous(), lengths
 
-    def get_stories(self):
+    def get_stories(self) -> list[str]:
+        """
+        :return: The list of stories, with which this class object has been initialized.
+        """
         return self.stories
 
     def __getitem__(self, index: int) -> Tensor:
-        story = self.stories[index]['text']
+        """
+        :param index: The index of the story to be retrieved.
+        :return: A tensor of token indices representing the tokenized story.
+        """
+        # Note: The returned tensor will have a length up to max_seq_length+1, since the last/first token will be
+        # stripped for 'training' / 'reference' Tensor.
+        story = self.stories[index]
+        tokens = self.tokenizer(story.lower())
 
         token_list = [self.bos_token]
-        tokens = self.tokenizer(story.lower())
-        for _, token in zip(range(self.max_seq_len), tokens):
-            token_list.append(self.vocab.get(token, self.unk_token))
+        # append at most max_seq_len tokens to the token_list
+        token_list.extend(self.vocab.get(token, self.unk_token)
+                          for _, token in zip(range(self.max_seq_len), tokens))
 
         if len(token_list) <= self.max_seq_len:
             token_list.append(self.eos_token)
 
-        data = torch.tensor(token_list, dtype=torch.int64)
-        return data
+        return torch.tensor(token_list, dtype=torch.int64)
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """
+        :return: The number of stories in the dataset split
+        """
         return len(self.stories)
 
 
-def save_vocabulary(vocab: dict[str, int], filename: str = "trained_models/vocabulary.pkl"):
-    with open(filename, 'wb') as file:
-        pickle.dump(vocab, file)
+def save_vocabulary(vocabulary: dict[str, int], file_path: str = "trained_models/vocabulary.pkl"):
+    """
+    Saves a vocabulary dictionary (as a specified pickle file) to disk.
+    :param vocabulary: A vocabulary dictionary to save.
+     A key of this vocabulary should represent a token-string, while the value should represent the corresponding index
+     of the token (for the embedding).
+    :param file_path: The path to the pickle file where the vocabulary will be saved.
+    """
+    with open(file_path, 'wb') as file:
+        pickle.dump(vocabulary, file)
 
 
 def get_absolute_path(relative_path):
@@ -293,8 +282,14 @@ def get_absolute_path(relative_path):
     return abs_path
 
 
-def load_vocabulary(filename: str = "trained_models/vocabulary.pkl") -> dict[str, int]:
-    abs_filename = get_absolute_path(filename)
+def load_vocabulary(file_path: str = "trained_models/vocabulary.pkl") -> dict[str, int]:
+    """
+    Loads a vocabulary dictionary (from a specified file). Each key of this vocabulary is a token-string, while the
+    value represents the corresponding index (for the embedding).
+    :param file_path: The path to the vocabulary file, stored in the pickle format.
+    :return vocab: The loaded vocabulary dictionary.
+    """
+    abs_filename = get_absolute_path(file_path)
     if not os.path.exists(abs_filename):
         raise FileNotFoundError(f"Vocabulary file not found: {abs_filename}")
     with open(abs_filename, 'rb') as file:
@@ -302,12 +297,6 @@ def load_vocabulary(filename: str = "trained_models/vocabulary.pkl") -> dict[str
 
 
 if __name__ == "__main__":
-    # Load dataset
-    dataset = load_from_disk("data/TinyStories")
-    train_stories = dataset["train"][:]["text"]
-
-    # Create and save vocabulary
-    # vocab = create_vocabulary(train_stories, max_words=2048)
-    # save_vocabulary(vocab)
+    # Displays the current vocabulary
     loaded_vocab = load_vocabulary("trained_models/vocabulary.pkl")
-    print(f"Vocab with 2048 tokens: {loaded_vocab}")
+    print(f"Vocabulary:\n{loaded_vocab}")
