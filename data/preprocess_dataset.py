@@ -1,3 +1,7 @@
+"""
+File for cleaning up the 'raw' dataset (available at https://huggingface.co/datasets/roneneldan/TinyStories/tree/main),
+and creating training, validation and test split (ref. Subsection 2.2 in our project report).
+"""
 import os
 import sys
 import random
@@ -5,13 +9,14 @@ from typing import Iterable
 import pandas as pd
 from datasets import Dataset, DatasetDict, load_dataset
 
-# Note: Since python 3.7, the insertion order is preserved
+# Note: Since Python 3.7, the insertion order is preserved
 replacement_table = {
     '\u200b': '',  # Zero-width space
     '\xa0': '',  # Non-breaking space
     '\xad': '',  # Soft hyphen
     '\\': '',
     '*': '',
+    # unify representation of quotation marks
     '«': '"',
     '»': '"',
     '‘': "'",
@@ -19,14 +24,15 @@ replacement_table = {
     '”': '"',
     '“': '"',
     '\n': ' ',
-    '---': ' – ',
-    '--': ' – ',
-    ' – ': ' – ',
-    '—': ' – ',
+    # unify symbol representing a break of thought
+    '---': ' — ',
+    '--': ' — ',
+    ' - ': ' — ',
+    '–': ' — ',
     ',"': ', "',
     '…': '...',
 }
-allowed_non_ascii_symbols = {'–'}
+allowed_non_ascii_symbols = {'—'}
 
 
 def find_non_ascii_symbols(story: str) -> bool:

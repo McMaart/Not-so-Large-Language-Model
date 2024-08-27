@@ -1,3 +1,6 @@
+"""
+Implementation of the Transformer model and positional encoding (ref. Subsection 3.3 in our project report).
+"""
 import torch
 from torch import nn, Tensor
 from torchtune.modules import RotaryPositionalEmbeddings
@@ -14,8 +17,21 @@ num_special_non_eos_tokens = 3
 
 
 class TransformerModel(nn.Module):
+    """
+    Implementation of the Transformer model.
+    """
     def __init__(self, vocab_size: int, embed_size: int = 128, nhead: int = 4, num_layers: int = 4, dim_ff: int = 512,
                  dropout: float = 0.0, padding_idx: int | None = None, pos_enc_type: str = 'sinusoidal'):
+        """
+        :param vocab_size: The number of tokens in the vocabulary.
+        :param embed_size: The embedding dimension.
+        :param nhead: The number of heads in the multi-head attention mechanism.
+        :param num_layers: The number of layers of the Transformer.
+        :param dim_ff: The dimension of the feedforward layer.
+        :param dropout: The rate of dropout (applied after adding the positional encoding to the embedding).
+        :param padding_idx: The index of the padding token.
+        :param pos_enc_type: The type of the positional encoding used. Options are 'sinusoidal' and 'rope'.
+        """
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
@@ -30,11 +46,17 @@ class TransformerModel(nn.Module):
                                                            base=10_000)
 
         encoder_layer = nn.TransformerEncoderLayer(embed_size, nhead=nhead, dim_feedforward=dim_ff, dropout=dropout,
-                                                   batch_first=True, activation="gelu", norm_first=True)
+                                                   batch_first=True, activation="gelu", norm_first=False)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers, enable_nested_tensor=False)
         self.linear = nn.Linear(self.embed_size, self.vocab_size)
 
     def forward(self, x: Tensor, lengths: Tensor | None = None) -> Tensor:
+        """
+        Forward pass of the Transformer model.
+        :param x: Input Tensor of shape [batch_size, seq_len].
+        :param lengths: Lengths of the individual stories in the batch. Shape: [batch_size].
+        :return: Output tensor of shape [batch_size, seq_len, vocab_size].
+        """
         embedding: Tensor = self.embedding(x)
         if self.pos_enc_type == 'rope':
             embedding = embedding.view(embedding.size(0), embedding.size(1), self.nhead, -1)  # Reshape for multi-head attention
@@ -56,6 +78,9 @@ class TransformerModel(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
+    """
+    Implementation of the Sinusoidal Positional Encoding, proposed by Vaswani et al. ("Attention Is All You Need").
+    """
     def __init__(self, embed_size: int, dropout: float = 0.0, base: int = 10_000):
         super().__init__()
         pos_enc = torch.empty(max_seq_len, embed_size, dtype=torch.float)

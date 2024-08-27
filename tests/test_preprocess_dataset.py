@@ -26,7 +26,8 @@ class TestPreprocessDataset(unittest.TestCase):
 
     def test_find_non_ascii_symbols(self):
         story_with_non_ascii = "This is a test story with non-ascii character â."
-        story_with_allowed_non_ascii = "This is a test story with allowed non-ascii character –."
+        story_with_allowed_non_ascii = (f"This is a test story with allowed non-ascii character "
+                                        f"{" ".join(allowed_non_ascii_symbols)}.")
         story_without_non_ascii = "This is a plain ascii story."
 
         self.assertTrue(find_non_ascii_symbols(story_with_non_ascii))

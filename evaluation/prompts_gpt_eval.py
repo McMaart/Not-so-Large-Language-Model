@@ -55,7 +55,6 @@ prompt_v2 = """
 The following story is a story written for children at the age of around 5 years old. Your task is to rate the story objectively.
 
     Story:
-    Story:
     {}
 
 Please rate the story in the following categories:
@@ -251,5 +250,6 @@ if __name__ == '__main__':
     print(f"Rating list: {ratings}")
 
     rating_arr = np.array(ratings)
-    print(f"Avg. rating: {rating_arr.mean(axis=0)}")
-    print(f"Std:         {rating_arr.std(axis=0)}")
+    if None not in rating_arr:
+        print(f"Avg. rating: {rating_arr.mean(axis=0)}")
+        print(f"Std:         {rating_arr.std(axis=0)}")
