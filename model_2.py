@@ -1,5 +1,5 @@
 """
-RNN reference models
+Implementation of the RNN (vanilla-RNN, GRU and LSTM) baseline models (ref. Subsection 3.4).
 """
 import torch
 from torch import nn, Tensor
@@ -7,8 +7,19 @@ from torch.nn.utils import rnn
 
 
 class RNNBaseModel(nn.Module):
+    """
+    Superclass for implementing the RNN models.
+    """
     def __init__(self, vocab_size: int, embed_size: int, hidden_size: int, num_layers: int, dropout2: float,
                  padding_idx: int | None):
+        """
+        :param vocab_size: The number of tokens of the vocabulary.
+        :param embed_size: The embedding dimension.
+        :param hidden_size: The number of features for the hidden state.
+        :param num_layers: The number of layers.
+        :param dropout2: The dropout that is applied after the last RNN layer.
+        :param padding_idx: The index of the padding token.
+        """
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
@@ -20,10 +31,22 @@ class RNNBaseModel(nn.Module):
         self.linear = nn.Linear(self.hidden_size, self.vocab_size)
 
     def init_hidden(self, batch_size: int) -> Tensor:
+        """
+        Initializes the hidden state of an RNN model.
+        :param batch_size: The size of the batch.
+        :return: The initialized hidden state of shape [num_layers, batch_size, hidden_size].
+        """
         return torch.zeros(self.num_layers, batch_size, self.hidden_size, device=next(self.parameters()).device,
                            requires_grad=False)
 
     def _get_packed_embedding(self, x: Tensor, lengths: Tensor | None = None):
+        """
+        Returns the embedding for the input tensor.
+        If the lengths of the sequences are provided, returns a PackedSequence.
+        :param x: Input tensor (the token indices).
+        :param lengths: The lengths of the sequences in the batch.
+        :return: If lengths is None, returns the embedded sequence as Tensor. Else, a PackedSequence is returned.
+        """
         embedding = self.embedding(x)
         if lengths is None:
             return embedding
@@ -85,32 +108,3 @@ class LSTMModel(RNNBaseModel):
 
         out, _ = self.lstm(embedding, (h, c))
         return self._get_forward_output(out, lengths)
-
-
-if __name__ == "__main__":
-    # from eval import calculate_rouge_scores, get_stories, max_rouge_score
-    from io_utils import prompt_model
-
-    prompt = "Once"
-    length = 100
-    num_stories = 1
-
-    story = prompt_model("5M_GRU", prompt, length)
-    print(story)
-    # print(max_rouge_score(story, prompt))
-
-    # stories = [prompt_model("rnn_model", prompt, length) for _ in range(num_stories)]
-    # for story in stories:
-    #     print(story)
-    #     print()
-
-    # actual_stories = get_stories(prompt, 10000)
-    # print(len(stories))
-    # print(len(actual_stories))
-
-    # scores = calculate_rouge_scores(stories, actual_stories[:num_stories])
-    # print(scores)
-    # print(f"ROUGE-1: {scores['rouge-1']}")
-    # print(f"ROUGE-2: {scores['rouge-2']}")
-    # print(f"ROUGE-L: {scores['rouge-l']}")
-    # print(f"ROUGE-L: {scores['rouge-l']}")
