@@ -1,5 +1,5 @@
 from parse_model_reply import parse_model_reply, categories
-from tests.ollama_eval import get_llama_response
+from evaluation.ollama_eval import get_llama_response
 from sklearn.metrics import mean_squared_error
 import numpy as np
 

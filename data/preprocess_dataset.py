@@ -99,8 +99,8 @@ def create_dataset(use_v2: bool = True, low_memory: bool = False, validation_siz
     """
     if use_v2 is True:
         dataset_name = "TinyStoriesV2"
-        train_txt_file = "TinyStoriesV2-train.txt"
-        test_txt_file = "TinyStoriesV2-valid.txt"
+        train_txt_file = "TinyStoriesV2-GPT4-train.txt"
+        test_txt_file = "TinyStoriesV2-GPT4-valid.txt"
     else:
         dataset_name = "TinyStories"
         train_txt_file = "TinyStories-train.txt"
@@ -110,7 +110,7 @@ def create_dataset(use_v2: bool = True, low_memory: bool = False, validation_siz
         print(f"The file {test_txt_file} does not exist!", file=sys.stderr)
         sys.exit(1)
 
-    # Create training and validation stories
+    # Create training and validation split
     print("Loading the raw training and validation stories...")
     story_list = [story.strip() for story in load_raw_stories(train_txt_file)[:-1]]
     initial_story_count = len(story_list)
@@ -134,12 +134,13 @@ def create_dataset(use_v2: bool = True, low_memory: bool = False, validation_siz
     train_dataframe = pd.DataFrame(train_stories, columns=["text"])
     val_dataframe = pd.DataFrame(val_stories, columns=["text"])
 
-    # Create test stories
+    # Create test split
     story_list = [story.strip() for story in load_raw_stories(test_txt_file)[1:]]
     test_stories = clean_dataset(story_list, is_test_split=True)
     print(f"Number of test stories: {len(test_stories)}")
     test_dataframe = pd.DataFrame(test_stories, columns=["text"])
 
+    # Save dataset
     if low_memory is True:
         data_files = {'train': f"{dataset_name}-train.csv",
                       'validation': f"{dataset_name}-valid.csv",
@@ -161,4 +162,4 @@ def create_dataset(use_v2: bool = True, low_memory: bool = False, validation_siz
 
 
 if __name__ == '__main__':
-    create_dataset()
+    create_dataset(use_v2=False)

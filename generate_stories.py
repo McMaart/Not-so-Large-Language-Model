@@ -1,3 +1,7 @@
+"""
+Functions for generating tokens using a trained model, which are then combined into a story.
+For prompting to a model, see section below line 155.
+"""
 import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
@@ -26,9 +30,9 @@ def generate_tokens(model: nn.Module, token_tensor: Tensor, length: int = 250, t
         else:
             probs = F.softmax(output * (1 / temperature), dim=-1)
             pred = torch.multinomial(probs, 1)
-        token_tensor = torch.cat((token_tensor, pred), 1)
         if pred.item() == eos_token:
             return token_tensor
+        token_tensor = torch.cat((token_tensor, pred), 1)
     return token_tensor
 
 

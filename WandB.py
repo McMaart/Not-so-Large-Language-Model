@@ -33,8 +33,8 @@ def train_rnn_sweep(data, vocabulary, validation_data, project_name, num_epochs=
             'dropout': {'values': [0.1005]},
             'learning_rate': {'values': [0.0006]},
             'batch_size': {'values': [64]},
-            'opti_stepsize': {'values': [2500]},
-            'opti_gamma': {'values': [0.75]}
+            'scheduler_stepsize': {'values': [2500]},
+            'scheduler_gamma': {'values': [0.75]}
         }
     }
 
@@ -65,8 +65,8 @@ def train_lstm_sweep(data, vocabulary, validation_data, project_name, num_epochs
             'dropout': {'values': [0.1005]},
             'learning_rate': {'values': [0.0011]},
             'batch_size': {'values': [64]},
-            'opti_stepsize': {'values': [2500]},
-            'opti_gamma': {'values': [0.78]}
+            'scheduler_stepsize': {'values': [2500]},
+            'scheduler_gamma': {'values': [0.78]}
         }
     }
 
@@ -97,8 +97,8 @@ def train_gru_sweep(data, vocabulary, validation_data, project_name, num_epochs=
             'dropout': {'values': [0.1005]},
             'learning_rate': {'values': [0.0011]},
             'batch_size': {'values': [64]},
-            'opti_stepsize': {'values': [2500]},
-            'opti_gamma': {'values': [0.78]}
+            'scheduler_stepsize': {'values': [2500]},
+            'scheduler_gamma': {'values': [0.78]}
         }
     }
 
@@ -165,8 +165,8 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
     with run:
         config = wandb.config
 
-        # Log opti_stepsize and opti_gamma
-        wandb.log({"opti_stepsize": config.opti_stepsize, "opti_gamma": config.opti_gamma})
+        # Log scheduler_stepsize and scheduler_gamma
+        wandb.log({"scheduler_stepsize": config.scheduler_stepsize, "scheduler_gamma": config.scheduler_gamma})
 
         # Update the run name to include model type and relevant hyperparameters
         if config.model_type == 'transformer':
@@ -243,7 +243,7 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
             max_grad_norm = None
             avg_loss, batch_losses = train(data=data, model=model, loss_fn=loss_fn, optimizer=optimizer,
                                            max_num_batches=max_num_batches, batch_size=config.batch_size,
-                                           scheduler_stepsize=config.opti_stepsize, scheduler_gamma=config.opti_gamma,
+                                           scheduler_stepsize=config.scheduler_stepsize, scheduler_gamma=config.scheduler_gamma,
                                            accumulation_steps=accumulation_steps, max_grad_norm=max_grad_norm)
 
             total_batches += len(batch_losses)  # Update total steps
@@ -302,8 +302,8 @@ def train_transformer_sweep(data, vocabulary, validation_data, project_name, num
             'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0049, 'max': 0.0075},
             'batch_size': {'values': [64]},
             'pos_enc_type': {'values': ['rope']},
-            'opti_stepsize': {'values': [2000, 2500, 5000, 7500, 10000, 12500, 15000, 20000]},
-            'opti_gamma': {'distribution': 'uniform', 'min': 0.5, 'max': 0.9}
+            'scheduler_stepsize': {'values': [2000, 2500, 5000, 7500, 10000, 12500, 15000, 20000]},
+            'scheduler_gamma': {'distribution': 'uniform', 'min': 0.5, 'max': 0.9}
         }
     }
 
@@ -337,8 +337,8 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
             'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0009, 'max': 0.007},
             'batch_size': {'values': [64]},
             'pos_enc_type': {'values': ['sinusoidal', 'rope']},
-            'opti_stepsize': {'values': [2500, 5000, 10000]},
-            'opti_gamma': {'values': [0.85, 0.87, 0.9]}
+            'scheduler_stepsize': {'values': [2500, 5000, 10000]},
+            'scheduler_gamma': {'values': [0.85, 0.87, 0.9]}
         }
     }
 
@@ -356,8 +356,8 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
             'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0003, 'max': 0.005},
             'batch_size': {'values': [64]},
             'pos_enc_type': {'values': ['rope']},
-            'opti_stepsize': {'values': [2500, 5000, 10000]},
-            'opti_gamma': {'values': [0.85, 0.87, 0.9]}
+            'scheduler_stepsize': {'values': [2500, 5000, 10000]},
+            'scheduler_gamma': {'values': [0.85, 0.87, 0.9]}
         }
     }
 
@@ -375,8 +375,8 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
             'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0004, 'max': 0.003},
             'batch_size': {'values': [64]},
             'pos_enc_type': {'values': ['rope']},
-            'opti_stepsize': {'values': [2500, 5000, 10000]},
-            'opti_gamma': {'values': [0.85, 0.87, 0.9]}
+            'scheduler_stepsize': {'values': [2500, 5000, 10000]},
+            'scheduler_gamma': {'values': [0.85, 0.87, 0.9]}
         }
     }
 
@@ -394,8 +394,8 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
             'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0002, 'max': 0.001},
             'batch_size': {'values': [64]},
             'pos_enc_type': {'values': ['rope']},
-            'opti_stepsize': {'values': [2500, 5000, 10000]},
-            'opti_gamma': {'values': [0.85, 0.87, 0.9]}
+            'scheduler_stepsize': {'values': [2500, 5000, 10000]},
+            'scheduler_gamma': {'values': [0.85, 0.87, 0.9]}
         }
     }
 
@@ -440,8 +440,8 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
                     'learning_rate': {'distribution': 'log_uniform_values', 'min': 0.0009, 'max': 0.003},
                     'batch_size': {'value': 128},
                     'pos_enc_type': {'values': ['sinusoidal', 'rope']},
-                    'opti_stepsize': {'values': [2500, 5000, 10000]},
-                    'opti_gamma': {'values': [0.85, 0.87, 0.9]}
+                    'scheduler_stepsize': {'values': [2500, 5000, 10000]},
+                    'scheduler_gamma': {'values': [0.85, 0.87, 0.9]}
                 }
             }
 
@@ -485,8 +485,8 @@ def train_transformer_single(data, vocabulary, validation_data, project_name, nu
         'learning_rate': 0.0006402,
         'batch_size': 128,
         'pos_enc_type': 'sinusoidal',
-        'opti_stepsize': 2500,
-        'opti_gamma': 0.7997
+        'scheduler_stepsize': 2500,
+        'scheduler_gamma': 0.7997
     }
 
     # Train the model with the specified configuration
