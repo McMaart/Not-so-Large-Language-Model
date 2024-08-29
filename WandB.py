@@ -11,7 +11,17 @@ from torch.optim import AdamW
 from torchtext.data import get_tokenizer
 
 def train_rnn_sweep(data, vocabulary, validation_data, project_name, num_epochs=1):
-    # Define the sweep configuration for RNN
+    """
+    Defines the hyperparameter sweep configuration for RNN models and runs the sweep.
+
+    :param data: Training data.
+    :param vocabulary: Vocabulary object.
+    :param validation_data: Validation data.
+    :param project_name: Name of the WandB project.
+    :param num_epochs: Number of epochs to train.
+
+    :return: None
+    """
     sweep_configuration = {
         'method': 'bayes',
         'metric': {'name': 'eval_loss', 'goal': 'minimize'},
@@ -28,13 +38,22 @@ def train_rnn_sweep(data, vocabulary, validation_data, project_name, num_epochs=
         }
     }
 
+    # Initialize and start the sweep agent
     sweep_id = wandb.sweep(sweep=sweep_configuration, project=project_name)
-
-    # Start the sweep agent
     wandb.agent(sweep_id, function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name, num_epochs))
 
 def train_lstm_sweep(data, vocabulary, validation_data, project_name, num_epochs=1):
-    # Define the sweep configuration for LSTM
+    """
+    Defines the hyperparameter sweep configuration for LSTM models and runs the sweep.
+
+    :param data: Training data.
+    :param vocabulary: Vocabulary object.
+    :param validation_data: Validation data.
+    :param project_name: Name of the WandB project.
+    :param num_epochs: Number of epochs to train.
+
+    :return: None
+    """
     sweep_configuration = {
         'method': 'bayes',
         'metric': {'name': 'eval_loss', 'goal': 'minimize'},
@@ -51,13 +70,22 @@ def train_lstm_sweep(data, vocabulary, validation_data, project_name, num_epochs
         }
     }
 
+    # Initialize and start the sweep agent
     sweep_id = wandb.sweep(sweep=sweep_configuration, project=project_name)
-
-    # Start the sweep agent
     wandb.agent(sweep_id, function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name, num_epochs))
 
 def train_gru_sweep(data, vocabulary, validation_data, project_name, num_epochs=1):
-    # Define the sweep configuration for GRU
+    """
+    Defines the hyperparameter sweep configuration for GRU models and runs the sweep.
+
+    :param data: Training data.
+    :param vocabulary: Vocabulary object.
+    :param validation_data: Validation data.
+    :param project_name: Name of the WandB project.
+    :param num_epochs: Number of epochs to train.
+
+    :return: None
+    """
     sweep_configuration = {
         'method': 'bayes',
         'metric': {'name': 'eval_loss', 'goal': 'minimize'},
@@ -74,14 +102,21 @@ def train_gru_sweep(data, vocabulary, validation_data, project_name, num_epochs=
         }
     }
 
+    # Initialize and start the sweep agent
     sweep_id = wandb.sweep(sweep=sweep_configuration, project=project_name)
-
-    # Start the sweep agent
     wandb.agent(sweep_id, function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name, num_epochs))
 
-
-# Function to handle wandb initialization with retries
 def init_wandb_with_retries(config, project_name, max_retries=3, delay=5):
+    """
+    Initialize a WandB run with retries in case of failure.
+
+    :param config: Configuration dictionary for the run.
+    :param project_name: Name of the WandB project.
+    :param max_retries: Maximum number of retry attempts.
+    :param delay: Delay between retries in seconds.
+
+    :return: Initialized WandB run object.
+    """
     retries = 0
     while retries < max_retries:
         try:
@@ -95,23 +130,37 @@ def init_wandb_with_retries(config, project_name, max_retries=3, delay=5):
             else:
                 raise e
 
-# Load dataset and prepare vocabulary once
-
 def prepare_data(vocab_path):
+    """
+    Load and prepare the training and validation datasets.
 
-    # Use the tokenizer and vocabulary directly
-    #tokenizer = get_tokenizer('basic_english')
+    :param vocab_path: Path to the vocabulary file.
+
+    :return: train_data (TinyStories): Training dataset.
+    :return: val_data (TinyStories): Validation dataset.
+    :return: vocabulary (Vocabulary): Loaded vocabulary object.
+    """
     tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
     vocabulary = load_vocabulary(vocab_path)
 
-    # Create the TinyStories dataset objects with the loaded datasets
     train_data = TinyStories(vocabulary, tokenizer, max_seq_len=256, split="train")
     val_data = TinyStories(vocabulary, max_seq_len=256, split="validation")
 
     return train_data, val_data, vocabulary
 
-# Define the function to train the model
 def train_function(config, data, vocabulary, validation_data, project_name, num_epochs=1):
+    """
+    Train a model with the given configuration and data.
+
+    :param config: Configuration for the model and training.
+    :param data: Training data.
+    :param vocabulary: Vocabulary object.
+    :param validation_data: Validation data.
+    :param project_name: Name of the WandB project.
+    :param num_epochs: Number of epochs to train.
+
+    :return: None
+    """
     run = init_wandb_with_retries(config=config, project_name=project_name)
     with run:
         config = wandb.config
@@ -129,6 +178,7 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
 
         wandb.run.name = run_name
 
+        # Initialize the appropriate model based on the model type
         if config.model_type == 'transformer':
             model = TransformerModel(
                 vocab_size=len(vocabulary),
@@ -171,7 +221,7 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
         loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
         optimizer = AdamW(model.parameters(), lr=config.learning_rate)
 
-        # Number of parameters
+        # Log the number of model parameters
         params = sum(p.numel() for p in model.parameters() if p.requires_grad)
         wandb.log({"num_parameters": params})
         print(f"Model ({params} parameters) and vocabulary ({len(vocabulary)} tokens) have been loaded")
@@ -180,7 +230,7 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
 
         total_batches = 0  # Initialize total steps counter
 
-        # Train the model for multiple epochs
+        # Train the model for the specified number of epochs
         for epoch in range(num_epochs):
             print(f"Epoch {epoch+1}/{num_epochs}")
 
@@ -191,7 +241,7 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
             max_num_batches = 200000  # Define max number of batches
             accumulation_steps = 1
             max_grad_norm = None
-            avg_loss, batch_losses = train(data=data, model=model,loss_fn=loss_fn, optimizer=optimizer,
+            avg_loss, batch_losses = train(data=data, model=model, loss_fn=loss_fn, optimizer=optimizer,
                                            max_num_batches=max_num_batches, batch_size=config.batch_size,
                                            scheduler_stepsize=config.opti_stepsize, scheduler_gamma=config.opti_gamma,
                                            accumulation_steps=accumulation_steps, max_grad_norm=max_grad_norm)
@@ -208,7 +258,7 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
 
             # Optionally log batch losses for finer granularity
             for batch_idx, batch_loss in enumerate(batch_losses):
-                total_batches += 250  # log_intervall in train() from training.py!
+                total_batches += 250  # log_interval in train() from training.py
                 wandb.log({"# batches": total_batches, "batch_loss": batch_loss, "epoch": epoch + 1})
 
         # Evaluate the model on the validation set after all epochs
@@ -216,7 +266,7 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
         eval_loss = evaluate(validation_data, model, loss_fn, max_num_batches=100000)
         wandb.log({"eval_loss": eval_loss})
 
-
+        # Save the last model
         torch.save(model, f'trained_models/last_model.pth')
         print(f"Last model saved with eval loss: {eval_loss}")
 
@@ -226,9 +276,18 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
             torch.save(model, f'trained_models/best_model.pth')
             print(f"New best model saved with eval loss: {eval_loss}")
 
-# Define the function to execute for each sweep trial
 def train_transformer_sweep(data, vocabulary, validation_data, project_name, num_epochs=1):
-    # Define the sweep configuration
+    """
+    Defines the hyperparameter sweep configuration for Transformer models and runs the sweep.
+
+    :param data: Training data.
+    :param vocabulary: Vocabulary object.
+    :param validation_data: Validation data.
+    :param project_name: Name of the WandB project.
+    :param num_epochs: Number of epochs to train.
+
+    :return: None
+    """
     sweep_configuration = {
         'method': 'bayes',
         'metric': {'name': 'eval_loss', 'goal': 'minimize'},
@@ -248,16 +307,22 @@ def train_transformer_sweep(data, vocabulary, validation_data, project_name, num
         }
     }
 
+    # Initialize and start the sweep agent
     sweep_id = wandb.sweep(sweep=sweep_configuration, project=project_name)
-
-    # Start the sweep agent
     wandb.agent(sweep_id, function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name, num_epochs))
 
-
-
-
-# Define the function to execute multiple sweeps
 def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project_name, num_epochs=1):
+    """
+    Runs multiple hyperparameter sweeps for Transformer models with different configurations.
+
+    :param data: Training data.
+    :param vocabulary: Vocabulary object.
+    :param validation_data: Validation data.
+    :param project_name: Name of the WandB project.
+    :param num_epochs: Number of epochs to train.
+
+    :return: None
+    """
     sweep_configuration_1M = {
         'method': 'bayes',
         'metric': {'name': 'eval_loss', 'goal': 'minimize'},
@@ -295,6 +360,7 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
             'opti_gamma': {'values': [0.85, 0.87, 0.9]}
         }
     }
+
     sweep_configuration_10M = {
         'method': 'bayes',
         'metric': {'name': 'eval_loss', 'goal': 'minimize'},
@@ -333,6 +399,7 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
         }
     }
 
+    # Define a function to run structured sweeps with predefined configurations
     def train_structured_Tsweep(data, vocabulary, validation_data, project_name, num_epochs=1):
         sweep_configs = [
             {
@@ -357,6 +424,7 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
             }
         ]
 
+        # Run sweeps for each configuration
         for config in sweep_configs:
             sweep_configuration = {
                 'method': 'bayes',
@@ -381,6 +449,7 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
             wandb.agent(sweep_id, function=lambda config=None: train_function(config, data, vocabulary, validation_data,
                                                                               project_name, num_epochs))
 
+    # Store all sweep configurations in a dictionary
     sweep_configs = {
         '1M': sweep_configuration_1M,
         '5M': sweep_configuration_5M,
@@ -388,14 +457,26 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
         '15M': sweep_configuration_15M
     }
 
+    # Run sweeps for each configuration
     for sweep_name, config in sweep_configs.items():
         sweep_id = wandb.sweep(sweep=config, project=f'{project_name}_{sweep_name}')
         wandb.agent(sweep_id, function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name, num_epochs))
 
 def train_transformer_single(data, vocabulary, validation_data, project_name, num_epochs=1):
-    # Set the configuration manually
+    """
+    Train a single Transformer model with manually defined hyperparameters.
+
+    :param data: Training data.
+    :param vocabulary: Vocabulary object.
+    :param validation_data: Validation data.
+    :param project_name: Name of the WandB project.
+    :param num_epochs: Number of epochs to train.
+
+    :return: None
+    """
+    # Manually set the configuration for the single model run
     config = {
-        'model_type': 'transformer',  # Correct this to directly set the value
+        'model_type': 'transformer',
         'embed_size': 1024,
         'nhead': 8,
         'num_layers': 3,
@@ -403,16 +484,16 @@ def train_transformer_single(data, vocabulary, validation_data, project_name, nu
         'dropout': 0.09304,
         'learning_rate': 0.0006402,
         'batch_size': 128,
-        'pos_enc_type': 'sinusoidal',  # 'rope' or 'sinusoidal'
+        'pos_enc_type': 'sinusoidal',
         'opti_stepsize': 2500,
         'opti_gamma': 0.7997
     }
 
+    # Train the model with the specified configuration
     train_function(config, data, vocabulary, validation_data, project_name, num_epochs)
 
-
 if __name__ == "__main__":
-    # Check if user is logged in
+    # Check if user is logged in to WandB
     if not wandb.login():
         print("Please log in to your Weights and Biases account using `wandb login` command.")
         exit(1)
@@ -428,12 +509,13 @@ if __name__ == "__main__":
     project_name = 'ml_llm_project_GPT4'
 
     # Number of epochs to train
-    num_epochs = 4  # Set the desired number of epochs
+    num_epochs = 1  # Set the desired number of epochs
 
     # Global variable to track the best evaluation loss
     global best_eval_loss
     best_eval_loss = float('inf')
 
+    # Execute the chosen run type
     match run_type:
         case 'single':
             train_transformer_single(train_data, vocabulary, validation_data, project_name, num_epochs)

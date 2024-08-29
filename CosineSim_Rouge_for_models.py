@@ -22,16 +22,46 @@ MAX_SEQUENCE_LENGTH = 256
 
 
 def generate_story(prompt, model_name, method="default", max_length=250, temperature=1.0, beam_width=5, top_k=25):
+    """
+    Generate a story based on a prompt using a specified model and method.
+
+    :param prompt: The prompt text to generate the story.
+    :param model_name: The name of the model to use for generation.
+    :param method: The generation method (e.g., "default", "beam").
+    :param max_length: The maximum length of the generated story.
+    :param temperature: The temperature parameter for text generation.
+    :param beam_width: The beam width for beam search generation.
+    :param top_k: The top_k parameter for generation.
+
+    :return: The generated story (str).
+    """
     return prompt_model(model_name, prompt, length=max_length, temperature=temperature, method=method,
                         beam_width=beam_width, top_k=top_k)
 
 
 def calculate_cosine_similarity(text1, text2, vectorizer):
+    """
+    Calculate the cosine similarity between two texts.
+
+    :param text1: The first text to compare.
+    :param text2: The second text to compare.
+    :param vectorizer: The TF-IDF vectorizer used to transform the texts.
+
+    :return: cosine_similarity (float): The cosine similarity score between the two texts.
+    """
     tfidf_matrix = vectorizer.transform([text1, text2])
     return cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
 
 
 def calculate_rouge(reference, generated):
+    """
+    Calculate the ROUGE score between a reference and generated text.
+
+    :param reference: The reference text.
+    :param generated: The generated text.
+
+    :return: scores (dict): A dictionary containing ROUGE scores ('rouge1', 'rouge2', 'rougeL').
+    """
     rouge_types = ['rouge1', 'rouge2', 'rougeL']
     scorer = rouge_scorer.RougeScorer(rouge_types, use_stemmer=True)
     scores = scorer.score(reference, generated)
@@ -40,6 +70,24 @@ def calculate_rouge(reference, generated):
 
 def evaluate_model(model_name, prompts, completions, entire_dataset, method="default", beam_width=5, top_k=50,
                    temperature=1.0):
+    """
+    Evaluate a model's performance by calculating cosine similarity and ROUGE scores for generated stories.
+
+    :param model_name: The name of the model to evaluate.
+    :param prompts: The list of prompts used to generate stories.
+    :param completions: The list of reference completions for comparison.
+    :param entire_dataset: The entire dataset used to fit the vectorizer.
+    :param method: The generation method (e.g., "default", "beam").
+    :param beam_width: The beam width for beam search generation.
+    :param top_k: The top_k parameter for generation.
+    :param temperature: The temperature parameter for text generation.
+
+    :return:
+        avg_cosim (float): The average cosine similarity across all generated stories.
+        std_cosim (float): The standard deviation of cosine similarity scores.
+        avg_rouge (dict): A dictionary containing average ROUGE scores ('rouge1', 'rouge2', 'rougeL').
+        std_rouge (dict): A dictionary containing the standard deviation of ROUGE scores ('rouge1', 'rouge2', 'rougeL').
+    """
     # Use the SpaCy tokenizer
     tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
 
@@ -88,6 +136,20 @@ def evaluate_model(model_name, prompts, completions, entire_dataset, method="def
 
 
 def save_scores_to_file(model_name, avg_cosim, std_cosim, avg_rouge, std_rouge, method, temperature, num_stories):
+    """
+    Save the evaluation scores to a file.
+
+    :param model_name: The name of the model being evaluated.
+    :param avg_cosim: The average cosine similarity score.
+    :param std_cosim: The standard deviation of cosine similarity scores.
+    :param avg_rouge: A dictionary containing average ROUGE scores ('rouge1', 'rouge2', 'rougeL').
+    :param std_rouge: A dictionary containing the standard deviation of ROUGE scores ('rouge1', 'rouge2', 'rougeL').
+    :param method: The generation method (e.g., "default", "beam").
+    :param temperature: The temperature parameter for text generation.
+    :param num_stories: The number of stories evaluated.
+
+    :return: None
+    """
     filename = f"{model_name}_{method}_cosine_rouge_scores.txt"
     with open(filename, 'a') as f:  # Changed from 'w' to 'a' to append results
         f.write("\n")
@@ -106,14 +168,17 @@ def save_scores_to_file(model_name, avg_cosim, std_cosim, avg_rouge, std_rouge, 
 
 
 def main():
-    model_name = "35MGPT4"  # Replace with your actual model name
+    """
+    Main function to evaluate a model's performance on a set of prompts and completions.
+    """
+    model_name = "transformer_1.1M"  # Replace with your actual model name
     dataset_path = 'data/TinyStories'  # Path to the dataset
     method = ""  # Choose the generation method: default, beam, beam_multinomial
-    temperature = 0.75  # Set the temperature for generation
+    temperature = 0.7  # Set the temperature for generation
     beam_width = 5  # Set the beam width for beam search
     top_k = 25  # Set the top_k for beam_multinomial
 
-    num_stories = 100
+    num_stories = 2
 
     # Load the dataset
     dataset = load_from_disk(dataset_path)['train']['text']

@@ -234,28 +234,49 @@ def evaluation_setup(model_name: str = "model", use_v2: bool = True, batch_size:
 
 
 def objective(trial):
+    """
+    Defines the objective function for hyperparameter optimization using Optuna.
+
+    :param trial: A single trial of hyperparameter suggestions provided by Optuna.
+
+    :return: evaluation_score (float): The evaluation score (e.g., loss) of the model on the validation set.
+    """
+
     # Defines hyperparameter search space
-    embed_size = trial.suggest_categorical('embed_size', [256, 512, 768])
-    nhead = trial.suggest_categorical('nhead', [4, 8])
-    num_layers = trial.suggest_int('num_layers', 1, 2)
-    learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-3, log=True)
-    batch_size = trial.suggest_categorical('batch_size', [32, 64, 128, 256])
-    dim_ff = trial.suggest_int('dim_ff', 512, 4096, step=256)
-    dropout = trial.suggest_float('dropout', 0.1, 0.5)
-    pos_enc_type = trial.suggest_categorical('pos_enc_type', ['sinusoidal', 'rope'])
+    embed_size = trial.suggest_categorical('embed_size',
+                                           [256, 512, 768])  # Choose embedding size from predefined options
+    nhead = trial.suggest_categorical('nhead', [4, 8])  # Choose number of attention heads
+    num_layers = trial.suggest_int('num_layers', 1, 2)  # Choose number of transformer layers
+    learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-3, log=True)  # Choose learning rate (log scale)
+    batch_size = trial.suggest_categorical('batch_size',
+                                           [32, 64, 128, 256])  # Choose batch size from predefined options
+    dim_ff = trial.suggest_int('dim_ff', 512, 4096, step=256)  # Choose feedforward network dimension
+    dropout = trial.suggest_float('dropout', 0.1, 0.5)  # Choose dropout rate
+    pos_enc_type = trial.suggest_categorical('pos_enc_type', ['sinusoidal', 'rope'])  # Choose positional encoding type
 
     # Load data
-    vocabulary = load_vocabulary()
-    data = TinyStories(vocabulary, max_seq_len=max_seq_len)
+    vocabulary = load_vocabulary()  # Load the vocabulary
+    data = TinyStories(vocabulary,
+                       max_seq_len=max_seq_len)  # Load the TinyStories dataset with the specified max sequence length
 
+    # Initialize the model with the suggested hyperparameters
     model = TransformerModel(len(vocabulary), embed_size, nhead, num_layers, dim_ff=dim_ff, dropout=dropout,
                              pos_enc_type=pos_enc_type).to(device)
-    loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])
-    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+
+    # Define the loss function and optimizer
+    loss_fn = nn.CrossEntropyLoss(ignore_index=vocabulary["<pad>"])  # Use cross-entropy loss, ignoring padding token
+    optimizer = torch.optim.AdamW(model.parameters(),
+                                  lr=learning_rate)  # Use AdamW optimizer with suggested learning rate
 
     # Train model
-    _ = train(data, model, loss_fn, optimizer, epochs=1, max_num_batches=100000, batch_size=batch_size)
-    evaluate_data = TinyStories(vocabulary, max_seq_len=max_seq_len, split="validation")
+    _ = train(data, model, loss_fn, optimizer, epochs=1, max_num_batches=100000,
+              batch_size=batch_size)  # Train the model for one epoch
+
+    # Load validation data for evaluation
+    evaluate_data = TinyStories(vocabulary, max_seq_len=max_seq_len,
+                                split="validation")  # Load the validation split of the dataset
+
+    # Evaluate the model and return the evaluation score
     return evaluate(evaluate_data, model, loss_fn)
 
 

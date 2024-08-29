@@ -5,19 +5,28 @@ from io_utils import (
     create_vocabulary,
     save_vocabulary,
     load_vocabulary,
-    get_tokenizer,
-    get_token_frequencies
+    get_token_frequencies,
+    SpacyTokenizer
 )
 import matplotlib.pyplot as plt
 
+
 def calculate_token_coverage(stories, tokenizer):
+    """
+    Calculate the cumulative token coverage.
+
+    :param stories: List of texts to analyze.
+    :param tokenizer: Function to tokenize the stories.
+
+    :return: cumulative_coverage (list): List of cumulative coverage percentages for tokens.
+    """
     token_frequencies = get_token_frequencies(stories, tokenizer)
 
     # Sort tokens by frequency in descending order
     sorted_tokens = sorted(token_frequencies.items(), key=lambda item: item[1], reverse=True)
     total_tokens = sum(token_frequencies.values())
 
-    # Calculate cumulative coverage
+    # Calculate cumulative coverage of tokens
     cumulative_coverage = []
     cumulative_count = 0
     for token, count in sorted_tokens:
@@ -26,7 +35,23 @@ def calculate_token_coverage(stories, tokenizer):
 
     return cumulative_coverage
 
+
 def calculate_statistics(stories, tokenizer):
+    """
+    Calculate various statistics for a given set of stories.
+
+    :param stories: List of texts to analyze.
+    :param tokenizer: Function to tokenize the stories.
+
+    :return: total_tokens (int): Total number of tokens across all stories.
+    :return: unique_tokens (int): Number of unique tokens.
+    :return: avg_seq_length (float): Average number of tokens per story.
+    :return: std_dev_seq_length (float): Standard deviation of sequence lengths.
+    :return: token_counts (list): List of token counts per story.
+    :return: lower_50_percent_max_frequency (int): Max frequency in the lower 50% of token frequencies.
+    :return: lower_25_percent_max_frequency (int): Max frequency in the lower 25% of token frequencies.
+    :return: token_coverage (list): Cumulative token coverage.
+    """
     token_counts = [len(tokenizer(story)) for story in stories]
     total_tokens = sum(token_counts)
     all_tokens = [token for story in stories for token in tokenizer(story)]
@@ -55,6 +80,7 @@ def calculate_statistics(stories, tokenizer):
 
     return total_tokens, unique_tokens, avg_seq_length, std_dev_seq_length, token_counts, lower_50_percent_max_frequency, lower_25_percent_max_frequency, token_coverage
 
+
 if __name__ == "__main__":
     # Load datasets
     dataset = load_from_disk("data/TinyStories")
@@ -63,13 +89,13 @@ if __name__ == "__main__":
     validation_stories = dataset["validation"][:]["text"]
 
     # Create and save vocabulary
-    vocab = create_vocabulary(train_stories, get_tokenizer('spacy', language='en_core_web_sm'), 2048)
+    vocab = create_vocabulary(train_stories, SpacyTokenizer(), 2048)
     save_vocabulary(vocab)
     loaded_vocab = load_vocabulary("trained_models/vocabulary.pkl")
     print(f"Vocab with 2048 tokens: {loaded_vocab}")
 
     # Tokenizer
-    tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
+    tokenizer = SpacyTokenizer()
 
     # Calculate statistics for training set
     train_stats = calculate_statistics(train_stories, tokenizer)
@@ -145,7 +171,8 @@ if __name__ == "__main__":
 
     peak_frequency_validation = max(validation_token_counts)
     peak_bin_validation = validation_token_counts[np.argmax(validation_token_counts)]
-    print(f"Peak frequency in validation set: {peak_frequency_validation} in bin starting at {peak_bin_validation} tokens")
+    print(
+        f"Peak frequency in validation set: {peak_frequency_validation} in bin starting at {peak_bin_validation} tokens")
 
     # Plot coverage graph with enhanced visibility
     plt.figure(figsize=(10, 6), dpi=300)

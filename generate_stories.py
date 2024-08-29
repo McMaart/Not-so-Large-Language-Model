@@ -7,6 +7,17 @@ from model_1 import num_special_non_eos_tokens, device
 @torch.no_grad()
 def generate_tokens(model: nn.Module, token_tensor: Tensor, length: int = 250, temperature: float = 1.0,
                     eos_token: int = None) -> Tensor:
+    """
+    Generate a sequence of tokens using a given model.
+
+    :param model: The model used for token generation.
+    :param token_tensor: The initial tensor containing input tokens.
+    :param length: The maximum length of the generated sequence.
+    :param temperature: The temperature parameter for sampling.
+    :param eos_token: The token representing the end of the sequence.
+
+    :return: token_tensor (Tensor): The tensor containing the generated sequence of tokens.
+    """
     model.eval()
     for _ in range(len(token_tensor[0]), length + 1):
         output = model(token_tensor)[:, -1, :-num_special_non_eos_tokens]
@@ -24,6 +35,18 @@ def generate_tokens(model: nn.Module, token_tensor: Tensor, length: int = 250, t
 @torch.no_grad()
 def generate_tokens_beam(model: nn.Module, input_tensor: Tensor, beam_width: int, length: int = 250,
                          temperature: float = 1.0, eos_token: int = None) -> Tensor:
+    """
+    Generate a sequence of tokens using beam search with a given model.
+
+    :param model: The model used for token generation.
+    :param input_tensor: The initial tensor containing input tokens.
+    :param beam_width: The number of beams for beam search.
+    :param length: The maximum length of the generated sequence.
+    :param temperature: The temperature parameter for sampling.
+    :param eos_token: The token representing the end of the sequence.
+
+    :return: best_sequence (Tensor): The tensor containing the best sequence of tokens generated.
+    """
     model.eval()
     sequences = [(input_tensor.squeeze(0).tolist(), 0.0)]  # List of sequences with their scores
     completed_sequences = []
@@ -70,6 +93,19 @@ def generate_tokens_beam(model: nn.Module, input_tensor: Tensor, beam_width: int
 @torch.no_grad()
 def generate_tokens_beam_multinomial(model: nn.Module, input_tensor: Tensor, beam_width: int, length: int = 250,
                                      temperature: float = 1.0, eos_token: int = None, top_k: int = 50) -> Tensor:
+    """
+    Generate a sequence of tokens using beam search with multinomial sampling.
+
+    :param model: The model used for token generation.
+    :param input_tensor: The initial tensor containing input tokens.
+    :param beam_width: The number of beams for beam search.
+    :param length: The maximum length of the generated sequence.
+    :param temperature: The temperature parameter for sampling.
+    :param eos_token: The token representing the end of the sequence.
+    :param top_k: The number of top tokens considered for sampling.
+
+    :return: best_sequence (Tensor): The tensor containing the best sequence of tokens generated.
+    """
     model.eval()
     sequences = [[(input_tensor.squeeze(0).tolist(), 0.0)]]
     completed_sequences = []
@@ -105,7 +141,7 @@ def generate_tokens_beam_multinomial(model: nn.Module, input_tensor: Tensor, bea
         ordered = sorted(all_candidates, key=lambda tup: tup[1], reverse=True)
         sequences = [ordered[i:i + beam_width] for i in range(0, len(ordered), beam_width)]
 
-        if all(seq[-1] == eos_token or len(seq) >= length for beam in sequences for seq, _ in beam):  # Cap sequence length
+        if all(seq[-1] == eos_token or len(seq) >= length for beam in sequences for seq, _ in beam):
             break
 
     best_sequence = max(completed_sequences, key=lambda tup: tup[1])[0] if completed_sequences else sequences[0][0][0]
@@ -117,5 +153,5 @@ if __name__ == '__main__':
 
     method = ''  # Choose the generation method: default, beam, beam_multinomial
     string = ''
-    story = prompt_model("transformer_model", string, 255, 0.7, method, beam_width=5)
+    story = prompt_model("transformer_8.3M", string, 255, 0.7, method, beam_width=5)
     print(story)

@@ -99,8 +99,8 @@ def create_dataset(use_v2: bool = True, low_memory: bool = False, validation_siz
     """
     if use_v2 is True:
         dataset_name = "TinyStoriesV2"
-        train_txt_file = "TinyStoriesV2-GPT4-train.txt"
-        test_txt_file = "TinyStoriesV2-GPT4-valid.txt"
+        train_txt_file = "TinyStoriesV2-train.txt"
+        test_txt_file = "TinyStoriesV2-valid.txt"
     else:
         dataset_name = "TinyStories"
         train_txt_file = "TinyStories-train.txt"
