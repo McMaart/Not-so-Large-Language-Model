@@ -54,14 +54,26 @@ class RNNBaseModel(nn.Module):
             return rnn.pack_padded_sequence(embedding, lengths.cpu(), batch_first=True, enforce_sorted=False)
 
     def _get_forward_output(self, rnn_out: Tensor | rnn.PackedSequence, lengths: Tensor | None):
+        """
+        Unpacks the RNN layer output (if necessary), and applies the dropout and linear layer.
+        :param rnn_out: The output from the RNN (can be a Tensor or PackedSequence).
+        :param lengths: Tensor containing the lengths of the sequences in the batch.
+         Will be used for unpacking a PackedSequence.
+        :return: The final output tensor of shape [batch_size, seq_len, vocab_size].
+        """
         if lengths is not None:
             rnn_out, _ = rnn.pad_packed_sequence(rnn_out, batch_first=True)
         rnn_out = self.dropout(rnn_out)
         return self.linear(rnn_out)
 
 
+# For the following classes, the input should be a Tensor of shape [batch_size, seq_len, embed_size]
+# For more details, see implementation of the RNNBaseModel above.
 class RNNModel(RNNBaseModel):
-    def __init__(self, vocab_size: int, embed_size: int = 512, hidden_size: int = 576, num_layers: int = 2,
+    """
+    Implementation of the vanilla-RNN model.
+    """
+    def __init__(self, vocab_size: int, embed_size: int = 608, hidden_size: int = 1152, num_layers: int = 2,
                  dropout_rnn: float = 0.15, dropout2: float = 0.0, padding_idx: int | None = None):
 
         super().__init__(vocab_size, embed_size, hidden_size, num_layers, dropout2, padding_idx)
@@ -78,6 +90,9 @@ class RNNModel(RNNBaseModel):
 
 
 class GRUModel(RNNBaseModel):
+    """
+    Implementation of the GRU model.
+    """
     def __init__(self, vocab_size: int, embed_size: int = 384, hidden_size: int = 512, num_layers: int = 1,
                  dropout_gru: float = 0.05, dropout2: float = 0.0, padding_idx: int | None = None):
 
@@ -95,6 +110,9 @@ class GRUModel(RNNBaseModel):
 
 
 class LSTMModel(RNNBaseModel):
+    """
+    Implementation of the LSTM model.
+    """
     def __init__(self, vocab_size: int, embed_size: int = 320, hidden_size: int = 512, num_layers: int = 1,
                  dropout_lstm: float = 0.1, dropout2: float = 0.0, padding_idx: int | None = None):
 

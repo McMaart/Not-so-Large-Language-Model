@@ -162,4 +162,4 @@ def create_dataset(use_v2: bool = True, low_memory: bool = False, validation_siz
 
 
 if __name__ == '__main__':
-    create_dataset(use_v2=False)
+    create_dataset()

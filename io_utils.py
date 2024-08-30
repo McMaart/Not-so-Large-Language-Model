@@ -14,30 +14,46 @@ from generate_stories import generate_tokens, generate_tokens_beam, generate_tok
 
 
 class SpacyTokenizer:
+    """
+    Wrapper around the SpaCy blank english tokenizer.
+    """
     def __init__(self):
         self.tokenizer = spacy.blank('en')
 
-    def __call__(self, story: str):
+    def __call__(self, story: str) -> list[str]:
+        """
+        Tokenizes a story into a list of word-level tokens.
+        :param story: The story to be tokenized.
+        :return: The list of tokens.
+        """
         return [token.text for token in self.tokenizer(story)]
 
 
 def get_token_frequencies(story_list: list[str], tokenizer=SpacyTokenizer()) -> dict[str, int]:
     """
-    Returns a dict of all tokens and their absolute frequencies
+    Returns a dictionary which contains all tokens appearing in story_list, and their absolute frequencies.
+    :param story_list: The list of stores (e.g., the training dataset).
+    :param tokenizer: The tokenizer for tokenizing the story.
+    :return: The dictionary with string-tokens as keys and their frequencies as values.
     """
-    vocabulary = {}
+    frequencies = {}
     for story in story_list:
         tokens = tokenizer(story.lower())
         for token in tokens:
-            vocabulary.setdefault(token, 0)
-            vocabulary[token] += 1
-    return vocabulary
+            frequencies.setdefault(token, 0)
+            frequencies[token] += 1
+    return frequencies
 
 
 def create_vocabulary(story_list: list[str], tokenizer=SpacyTokenizer(),
                       max_words: int | None = None) -> dict[str, int]:
     """
-    Assigns an index to each word that appears in the list of stories
+    Creates a vocabulary (a mapping of string-tokens to indices) from a list of stories, containing the max_words-4 most
+    frequent words. Also adds <eos>, <bos>, <pad> and <unk> tokens to the vocabulary.
+    :param story_list: The list of stores (e.g., the training dataset).
+    :param tokenizer: The tokenizer for tokenizing the story.
+    :param max_words: The maximum number of words that the vocabulary may contain.
+    :return: The created vocabulary.
     """
     vocab_freq = get_token_frequencies(story_list, tokenizer)
     if max_words is not None:
@@ -142,6 +158,17 @@ def tokens_to_story(token_list: list[str]) -> str:
 
 def prompt_model(model_name: str, start_str: str, length: int = 250, temperature: float = 1.0, method: str = "default",
                  beam_width: int = 5, top_k: int = 30) -> str:
+    """
+
+    :param model_name: The name of the model to load (e.g., 'transformer_8.3M').
+    :param start_str: The beginning of the prompt.
+    :param length: The maximum length of the generated sequence (in tokens).
+    :param temperature: The temperature used for sampling.
+    :param method: The generation method. Options are 'default', 'beam', or 'beam_multinomial'.
+    :param beam_width: The beam width for beam search methods.
+    :param top_k: The number of top tokens to consider during multinomial sampling.
+    :return: The generated story (as a string).
+    """
     vocab = load_vocabulary()
     vocab_rev = {v: k for k, v in vocab.items()}
     tokenizer = SpacyTokenizer()

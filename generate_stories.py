@@ -155,7 +155,9 @@ def generate_tokens_beam_multinomial(model: nn.Module, input_tensor: Tensor, bea
 if __name__ == '__main__':
     from io_utils import prompt_model
 
-    method = ''  # Choose the generation method: default, beam, beam_multinomial
-    string = ''
-    story = prompt_model("transformer_8.3M", string, 255, 0.7, method, beam_width=5)
+    model_name = "transformer_3.7M"  # Name of the model, must be located in trained_models/
+    method = 'default'  # Choose the generation method: default, beam, beam_multinomial
+    start_string = ''  # Choose start string (an empty string generates a new story from the very beginning)
+    story = prompt_model(model_name=model_name, start_str=start_string, length=255, temperature=0.0,
+                         method=method, beam_width=5)
     print(story)
