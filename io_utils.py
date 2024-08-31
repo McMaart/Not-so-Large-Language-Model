@@ -75,6 +75,11 @@ def create_vocabulary(story_list: list[str], tokenizer=SpacyTokenizer(),
 
 
 def tokens_to_story(token_list: list[str]) -> str:
+    """
+    Formats a list of tokens into a story formatted with correct punctuation and capitalization.
+    :param token_list: The list of tokens to be formatted into a story.
+    :return: The formatted story (as a string).
+    """
     story = " ".join(token_list)
 
     # Fix contraction, possessive, 'd, 're
@@ -101,16 +106,14 @@ def tokens_to_story(token_list: list[str]) -> str:
     # Fix spaces around punctuation
     story = re.sub(r'\s([?.!,;:](?:\s|$))', r'\1', story)
 
-    # capitalize first letter of each sentence
+    # capitalize first letter of the story
     story = story[0].upper() + story[1:]
 
+    # capitalize first letter after punctuation
     story = re.sub(r'([.!?"]\s*)([a-z])', lambda x: x.group(1) + x.group(2).upper(), story)
 
     # handle space before and after " based on appearance (cannot handle nested quotes)
     in_quote = False
-    # loop through all characters in the story and delete unnecessary spaces
-    # if closing quote: delete space before quote
-    # if opening quote: delete space after quote
     story_list = list(story)
     for i, char in enumerate(story_list):
         if char == '"':
@@ -124,7 +127,7 @@ def tokens_to_story(token_list: list[str]) -> str:
 
     story = ''.join(story_list)
 
-    # handle capitalization after closing quotes for hardcoded cases
+    # handle capitalization after closing quotes for hardcoded cases of speech
     speech = ['said', 'explained', 'replied', 'responded', 'answered', 'shouted', 'whispered', 'called', 'asked', 'cried']
     speech += [word.capitalize() for word in speech]
 
