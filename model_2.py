@@ -74,7 +74,7 @@ class RNNModel(RNNBaseModel):
     Implementation of the vanilla-RNN model.
     """
     def __init__(self, vocab_size: int, embed_size: int = 608, hidden_size: int = 1152, num_layers: int = 2,
-                 dropout_rnn: float = 0.15, dropout2: float = 0.0, padding_idx: int | None = None):
+                 dropout_rnn: float = 0.0, dropout2: float = 0.0, padding_idx: int | None = None):
 
         super().__init__(vocab_size, embed_size, hidden_size, num_layers, dropout2, padding_idx)
         self.rnn = nn.RNN(self.embed_size, self.hidden_size, self.num_layers, batch_first=True,
@@ -94,7 +94,7 @@ class GRUModel(RNNBaseModel):
     Implementation of the GRU model.
     """
     def __init__(self, vocab_size: int, embed_size: int = 384, hidden_size: int = 512, num_layers: int = 1,
-                 dropout_gru: float = 0.05, dropout2: float = 0.0, padding_idx: int | None = None):
+                 dropout_gru: float = 0.0, dropout2: float = 0.0, padding_idx: int | None = None):
 
         super().__init__(vocab_size, embed_size, hidden_size, num_layers, dropout2, padding_idx)
         self.gru = nn.GRU(self.embed_size, self.hidden_size, self.num_layers, batch_first=True,
@@ -114,7 +114,7 @@ class LSTMModel(RNNBaseModel):
     Implementation of the LSTM model.
     """
     def __init__(self, vocab_size: int, embed_size: int = 320, hidden_size: int = 512, num_layers: int = 1,
-                 dropout_lstm: float = 0.1, dropout2: float = 0.0, padding_idx: int | None = None):
+                 dropout_lstm: float = 0.0, dropout2: float = 0.0, padding_idx: int | None = None):
 
         super().__init__(vocab_size, embed_size, hidden_size, num_layers, dropout2, padding_idx)
         self.lstm = nn.LSTM(self.embed_size, self.hidden_size, self.num_layers, batch_first=True,

@@ -5,7 +5,7 @@ from io_utils import SpacyTokenizer
 
 
 def cosine_sim(generated_story: str, reference_stories: list[str], tokenizer=SpacyTokenizer()):
-    vectorizer = TfidfVectorizer(tokenizer=tokenizer, token_pattern=None)
+    vectorizer = TfidfVectorizer()
     max_sim = 0
     max_idx = 0
 

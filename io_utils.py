@@ -1,3 +1,6 @@
+"""
+Functions for creating a vocabulary, tokenization and postprocessing (ref. Section 3.1 and Section 3.5 in our report).
+"""
 import sys
 import os
 import re
@@ -159,12 +162,12 @@ def tokens_to_story(token_list: list[str]) -> str:
 def prompt_model(model_name: str, start_str: str, length: int = 250, temperature: float = 1.0, method: str = "default",
                  beam_width: int = 5, top_k: int = 30) -> str:
     """
-
+    Generates a story continuation using a specified model and method.
     :param model_name: The name of the model to load (e.g., 'transformer_8.3M').
-    :param start_str: The beginning of the prompt.
+    :param start_str: The beginning of the story.
     :param length: The maximum length of the generated sequence (in tokens).
     :param temperature: The temperature used for sampling.
-    :param method: The generation method. Options are 'default', 'beam', or 'beam_multinomial'.
+    :param method: The generation method. Options are 'default', 'beam', and 'beam_multinomial'.
     :param beam_width: The beam width for beam search methods.
     :param top_k: The number of top tokens to consider during multinomial sampling.
     :return: The generated story (as a string).

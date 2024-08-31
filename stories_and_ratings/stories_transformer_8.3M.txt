@@ -13,8 +13,8 @@ Max. ROUGE-2 F1-score to story in the training set: 0.36363636363636365
 
 Story 3: The sun was shining and it was a beautiful day. Little Timmy was walking in the park with his mom. He was wearing his favorite pants so he could stay safe. He saw a big tree with lots of branches and he decided to climb it. As he climbed the tree, he noticed a strange looking thing. It was a snake! He was scared, but he remembered his mom's words. He started to run away. Just then, a friendly voice said, "Don't be scared, little one. I'm here to help you." Timmy looked around and saw a small boy standing right in front of the tree. He was relieved. Timmy said, "Thank you!" The boy smiled and said, "You're welcome." Timmy felt happy and safe as he watched the boy play. He was glad he didn't have to make it scared of the snake.
 Rating: [8, 10, 7, 5, 6, 6]
-Max. ROUGE-2 precision score to story in the training set: 0.2635135135135135
-Max. ROUGE-2 F1-score to story in the training set:
+Max. ROUGE-2 precision score to story in the training set: 0.3108108108108108
+Max. ROUGE-2 F1-score to story in the training set: 0.25306122448979596
 
 Story 4: One day, a little boy named Tim went for a walk. He saw a big, impressive tree. The tree had many pretty flowers. Tim wanted to pick the flowers and give them to his mom. Tim walked to the tree and picked the flowers. He was very happy. But then, something happened! A big wind came and blew all the flowers away. Tim was sad. He did not know what to do. Just then, a kind bird saw Tim. The bird flew high up and caught the flowers in its beak. The bird gave the flowers back to Tim. Tim was so happy! He said thank you to the bird. Tim and the bird became good friends.
 Rating: [10, 10, 8, 6, 6, 6]

@@ -56,7 +56,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer: torch.optim.O
 
             if accelerate is True:
                 with autocast(device):  # Enable mixed precision
-                    pred = model(x, lengths)  # Enable mixed precision
+                    pred = model(x, lengths if type(model) is TransformerModel else None)
                     loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))  # Enable mixed precision
 
                 scaler.scale(loss).backward()  # Scale the loss - Enable mixed precision
@@ -68,7 +68,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer: torch.optim.O
                     scaler.update()  # Update the scaler - Enable mixed precision
                     scheduler.step()  # Step the scheduler
             else:
-                pred = model(x, lengths)
+                pred = model(x, lengths if type(model) is TransformerModel else None)
                 loss = loss_fn(pred.view(-1, model.vocab_size), y.view(-1))
                 loss.backward()
                 optimizer.step()
@@ -178,7 +178,7 @@ def training_setup(model_name: str = "model", use_v2: bool = True, load_vocab: b
     else:
         model_type = model_type.lower()
         if model_type == "transformer":
-            model = TransformerModel(len(vocabulary), 192, 8, 6, 768,
+            model = TransformerModel(len(vocabulary), embed_size=384, nhead=8, num_layers=4, dim_ff=1408,
                                      padding_idx=pad_idx)
         elif model_type == "lstm":
             model = LSTMModel(len(vocabulary), padding_idx=pad_idx)
