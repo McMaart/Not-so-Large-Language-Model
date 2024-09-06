@@ -2,7 +2,6 @@ import unittest
 from data.preprocess_dataset import (
     find_non_ascii_symbols,
     clean_dataset,
-    replacement_table,
     allowed_non_ascii_symbols
 )
 

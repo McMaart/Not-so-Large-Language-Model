@@ -12,8 +12,8 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.amp import autocast, GradScaler
 import optuna
 from io_utils import create_vocabulary, save_vocabulary, load_vocabulary, TinyStories
-from models.model_1 import TransformerModel, device, max_seq_len
-from models.model_2 import RNNModel, LSTMModel, GRUModel
+from models.transformer_model import TransformerModel, device, max_seq_len
+from models.rnn_models import RNNModel, LSTMModel, GRUModel
 
 
 def train(data: TinyStories, model: nn.Module, loss_fn, optimizer: torch.optim.Optimizer, epochs: int = 1,

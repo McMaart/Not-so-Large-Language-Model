@@ -1,7 +1,7 @@
 import wandb
 from time import perf_counter, sleep
-from models.model_1 import TransformerModel, device
-from models.model_2 import RNNModel, LSTMModel, GRUModel
+from models.transformer_model import TransformerModel, device
+from models.rnn_models import RNNModel, LSTMModel, GRUModel
 from training import train, evaluate
 from io_utils import TinyStories, load_vocabulary
 import torch

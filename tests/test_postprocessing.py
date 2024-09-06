@@ -1,3 +1,6 @@
+"""
+Tests for the postprocessing.
+"""
 import sys
 import unittest
 from io_utils import load_vocabulary, TinyStories, tokens_to_story
@@ -21,6 +24,10 @@ class TestPostProcessing(unittest.TestCase):
                                     41807, 41817, 41820, 41824, 41828,]
 
     def test_postprocessing(self):
+        """
+        Tests whether for a number of stories in the training set, the reconstructed story is identical to the orginal
+        story.
+        """
         for i in self.stories_without_unk:
             story_str = self.stories[i]
             input_tensor = self.data[i]

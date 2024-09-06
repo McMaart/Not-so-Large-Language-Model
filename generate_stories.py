@@ -5,7 +5,7 @@ For prompting to a model, see section below line 155.
 import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
-from models.model_1 import num_special_non_eos_tokens, device
+from models.transformer_model import num_special_non_eos_tokens, device
 
 
 @torch.no_grad()

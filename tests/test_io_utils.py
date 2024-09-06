@@ -1,14 +1,10 @@
-import pickle
 import unittest
 from unittest.mock import patch, mock_open
-import torch
-from torch import Tensor
 from io_utils import (
     get_token_frequencies,
     create_vocabulary,
     tokens_to_story,
     save_vocabulary,
-    load_vocabulary,
 )
 
 
