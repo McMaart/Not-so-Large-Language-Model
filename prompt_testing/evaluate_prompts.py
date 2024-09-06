@@ -3,6 +3,7 @@ from evaluation.ollama_eval import get_llama_response
 from sklearn.metrics import mean_squared_error
 import numpy as np
 
+
 def load_prompts() -> list[str]:
     with open("prompts.txt", "r") as f:
         prompts = f.read().split("#PROMPT#SEPERATOR#")
@@ -10,6 +11,7 @@ def load_prompts() -> list[str]:
             prompts[i] = prompts[i].strip()
             prompts[i] = "\n".join(prompts[i].split("\n")[1:])
     return prompts
+
 
 def load_stories_and_ratings() -> list[tuple[str, dict[str, list[int]]]]:
     story_w_rating = []
@@ -27,18 +29,19 @@ def load_stories_and_ratings() -> list[tuple[str, dict[str, list[int]]]]:
             ratings = ratings.split("\n")
 
             for line in ratings:
-              for category in categories.values():
-                  if line.startswith(category + ":"):
-                      rating[category].append(int(line.split(":")[1].strip()))
+                for category in categories.values():
+                    if line.startswith(category + ":"):
+                        rating[category].append(int(line.split(":")[1].strip()))
 
             story_w_rating.append((story, rating))
     return story_w_rating
 
+
 def evaluate_prompts():
     prompts = load_prompts()
     story_w_rating = load_stories_and_ratings()
-    true_ratings = [] # n_stories X n_categories X 3
-    predicted_ratings = [] # n_stories X n_prompts X n_categories
+    true_ratings = []  # n_stories X n_categories X 3
+    predicted_ratings = []  # n_stories X n_prompts X n_categories
 
     for story_idx, (story, rating) in enumerate(story_w_rating):
         true_ratings.append(list(rating.values()))
@@ -61,8 +64,10 @@ def evaluate_prompts():
             for category_idx in range(n_categories):
                 # This line might me wrong:
                 # avg_rmse[prompt_idx, category_idx] += mean_squared_error(true_ratings[story_idx][category_idx], predicted_ratings[story_idx][prompt_idx][category_idx], squared=False)
-                for rating_idx in range(3):  
-                    avg_rmse[prompt_idx, category_idx] += mean_squared_error([true_ratings[story_idx][category_idx][rating_idx]], [predicted_ratings[story_idx][prompt_idx][category_idx]], squared=False)
+                for rating_idx in range(3):
+                    avg_rmse[prompt_idx, category_idx] += mean_squared_error(
+                        [true_ratings[story_idx][category_idx][rating_idx]],
+                        [predicted_ratings[story_idx][prompt_idx][category_idx]], squared=False)
 
     avg_rmse /= (n_stories * 3)  # Divide by n_stories * 3 to get average RMSE
 
@@ -78,10 +83,7 @@ def evaluate_prompts():
         print(f"{category}: {prompts[best_prompts[i]]}")
     print("Overall best prompt:")
     print(prompts[np.argmin(avg_rmse.sum(axis=1))])
-      
+
 
 if __name__ == "__main__":
     evaluate_prompts()
-
-
-

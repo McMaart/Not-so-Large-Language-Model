@@ -81,5 +81,6 @@ class TestIOUtils(unittest.TestCase):
         self.assertEqual(vocab, {'this': 0, 'is': 1, 'a': 2, 'test': 3})
     """
 
+
 if __name__ == '__main__':
     unittest.main()

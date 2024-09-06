@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from time import sleep
 
+
 # Function to log in to WandB with retries
 def login_to_wandb(max_retries=3, delay=5):
     """
@@ -29,6 +30,7 @@ def login_to_wandb(max_retries=3, delay=5):
             else:
                 print("Failed to log in after multiple attempts. Exiting...")
                 exit(1)
+
 
 # Function to retrieve WandB run data from multiple projects
 def get_wandb_run_data(entity, project_names, run_ids=None, limit=None):
@@ -81,6 +83,7 @@ def get_wandb_run_data(entity, project_names, run_ids=None, limit=None):
 
     return run_df
 
+
 # Function to format the training time
 def format_training_time(seconds):
     """
@@ -98,6 +101,7 @@ def format_training_time(seconds):
         return f"{int(hours)}h {int(minutes)}m {int(seconds)}s"
     else:
         return f"{int(minutes)}m {int(seconds)}s"
+
 
 # Function to plot WandB run data as lines
 def plot_wandb_data(run_df, plot_info):
@@ -141,6 +145,7 @@ def plot_wandb_data(run_df, plot_info):
     plt.legend()
     plt.show()
 
+
 # Function to plot WandB run data as scatter plot
 def plot_wandb_scatter(run_df):
     """
@@ -171,6 +176,7 @@ def plot_wandb_scatter(run_df):
     plt.grid(True)
     plt.show()
 
+
 # Function to plot model size vs training time
 def plot_model_training_time(run_df):
     """
@@ -196,6 +202,7 @@ def plot_model_training_time(run_df):
     plt.grid(True)
     plt.show()
 
+
 # Function to list run IDs for specific projects
 def list_run_ids(entity, project_names):
     """
@@ -213,6 +220,7 @@ def list_run_ids(entity, project_names):
         for run in runs:
             print(f"Project: {project_name}, Run ID: {run.id}, Name: {run.name}")
 
+
 # Function to list all available projects
 def list_projects(entity):
     """
@@ -226,6 +234,7 @@ def list_projects(entity):
     projects = api.projects(entity=entity)  # Retrieve all projects for the entity
     project_names = [project.name for project in projects]  # Extract project names
     return project_names
+
 
 # Main function to execute the data retrieval and plotting
 def main():
@@ -254,10 +263,12 @@ def main():
     else:
         project_names = ['ml_llm_project']  # Default project
 
-    plot_choice = input("Enter 'line' to plot line chart, 'scatter' to plot scatter chart, or 'model_time' to plot model training time: ").strip().lower()
+    plot_choice = input(
+        "Enter 'line' to plot line chart, 'scatter' to plot scatter chart, or 'model_time' to plot model training time: ").strip().lower()
 
     if plot_choice == 'line':
-        plot_info = input("Enter 'eval_loss', 'training_time', or 'both' to include in the plot labels: ").strip().lower()
+        plot_info = input(
+            "Enter 'eval_loss', 'training_time', or 'both' to include in the plot labels: ").strip().lower()
         if plot_info not in ['eval_loss', 'training_time', 'both']:
             print("Invalid choice. Exiting.")
             exit(1)
@@ -324,6 +335,7 @@ def main():
 
     else:
         print("Invalid choice. Exiting.")
+
 
 if __name__ == "__main__":
     main()

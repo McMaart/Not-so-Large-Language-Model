@@ -9,6 +9,7 @@ import torch.nn as nn
 from torch.optim import AdamW
 from torchtext.data import get_tokenizer
 
+
 def train_rnn_sweep(data, vocabulary, validation_data, project_name, num_epochs=1):
     """
     Defines the hyperparameter sweep configuration for RNN models and runs the sweep.
@@ -39,7 +40,10 @@ def train_rnn_sweep(data, vocabulary, validation_data, project_name, num_epochs=
 
     # Initialize and start the sweep agent
     sweep_id = wandb.sweep(sweep=sweep_configuration, project=project_name)
-    wandb.agent(sweep_id, function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name, num_epochs))
+    wandb.agent(sweep_id,
+                function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name,
+                                                            num_epochs))
+
 
 def train_lstm_sweep(data, vocabulary, validation_data, project_name, num_epochs=1):
     """
@@ -71,7 +75,10 @@ def train_lstm_sweep(data, vocabulary, validation_data, project_name, num_epochs
 
     # Initialize and start the sweep agent
     sweep_id = wandb.sweep(sweep=sweep_configuration, project=project_name)
-    wandb.agent(sweep_id, function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name, num_epochs))
+    wandb.agent(sweep_id,
+                function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name,
+                                                            num_epochs))
+
 
 def train_gru_sweep(data, vocabulary, validation_data, project_name, num_epochs=1):
     """
@@ -103,7 +110,10 @@ def train_gru_sweep(data, vocabulary, validation_data, project_name, num_epochs=
 
     # Initialize and start the sweep agent
     sweep_id = wandb.sweep(sweep=sweep_configuration, project=project_name)
-    wandb.agent(sweep_id, function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name, num_epochs))
+    wandb.agent(sweep_id,
+                function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name,
+                                                            num_epochs))
+
 
 def init_wandb_with_retries(config, project_name, max_retries=3, delay=5):
     """
@@ -129,6 +139,7 @@ def init_wandb_with_retries(config, project_name, max_retries=3, delay=5):
             else:
                 raise e
 
+
 def prepare_data(vocab_path):
     """
     Load and prepare the training and validation datasets.
@@ -146,6 +157,7 @@ def prepare_data(vocab_path):
     val_data = TinyStories(vocabulary, max_seq_len=256, split="validation")
 
     return train_data, val_data, vocabulary
+
 
 def train_function(config, data, vocabulary, validation_data, project_name, num_epochs=1):
     """
@@ -231,7 +243,7 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
 
         # Train the model for the specified number of epochs
         for epoch in range(num_epochs):
-            print(f"Epoch {epoch+1}/{num_epochs}")
+            print(f"Epoch {epoch + 1}/{num_epochs}")
 
             # Measure the start time
             start_time = perf_counter()
@@ -242,7 +254,8 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
             max_grad_norm = None
             avg_loss, batch_losses = train(data=data, model=model, loss_fn=loss_fn, optimizer=optimizer,
                                            max_num_batches=max_num_batches, batch_size=config.batch_size,
-                                           scheduler_stepsize=config.scheduler_stepsize, scheduler_gamma=config.scheduler_gamma,
+                                           scheduler_stepsize=config.scheduler_stepsize,
+                                           scheduler_gamma=config.scheduler_gamma,
                                            accumulation_steps=accumulation_steps, max_grad_norm=max_grad_norm)
 
             total_batches += len(batch_losses)  # Update total steps
@@ -274,6 +287,7 @@ def train_function(config, data, vocabulary, validation_data, project_name, num_
             best_eval_loss = eval_loss
             torch.save(model, f'trained_models/best_model.pth')
             print(f"New best model saved with eval loss: {eval_loss}")
+
 
 def train_transformer_sweep(data, vocabulary, validation_data, project_name, num_epochs=1):
     """
@@ -308,7 +322,10 @@ def train_transformer_sweep(data, vocabulary, validation_data, project_name, num
 
     # Initialize and start the sweep agent
     sweep_id = wandb.sweep(sweep=sweep_configuration, project=project_name)
-    wandb.agent(sweep_id, function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name, num_epochs))
+    wandb.agent(sweep_id,
+                function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name,
+                                                            num_epochs))
+
 
 def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project_name, num_epochs=1):
     """
@@ -459,7 +476,10 @@ def train_transformer_multiple_sweeps(data, vocabulary, validation_data, project
     # Run sweeps for each configuration
     for sweep_name, config in sweep_configs.items():
         sweep_id = wandb.sweep(sweep=config, project=f'{project_name}_{sweep_name}')
-        wandb.agent(sweep_id, function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name, num_epochs))
+        wandb.agent(sweep_id,
+                    function=lambda config=None: train_function(config, data, vocabulary, validation_data, project_name,
+                                                                num_epochs))
+
 
 def train_transformer_single(data, vocabulary, validation_data, project_name, num_epochs=1):
     """
@@ -490,6 +510,7 @@ def train_transformer_single(data, vocabulary, validation_data, project_name, nu
 
     # Train the model with the specified configuration
     train_function(config, data, vocabulary, validation_data, project_name, num_epochs)
+
 
 if __name__ == "__main__":
     # Check if user is logged in to WandB

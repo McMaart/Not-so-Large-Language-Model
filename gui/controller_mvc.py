@@ -2,7 +2,7 @@ from threading import Thread
 from datasets import load_from_disk
 import gui_mvc
 import training
-from models import model_1
+from models.transformer_model import TransformerModel
 import datetime
 from io_utils import load_vocabulary, SpacyTokenizer
 from time import perf_counter
@@ -23,13 +23,13 @@ class Controller:
 
         training_thread = Thread(target=self.run_model)
         training_thread.start()
-        #self.run_model()
+        # self.run_model()
 
         self.view.training.training_info.insert("end", f"Model saved at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         end = datetime.datetime.now()
         self.view.training.training_info.insert("end", "Training time: " + str(end - start) + "\n\n")
-       #self.view.training.is_training = False
-       # self.view.training.start_training_button.configure(text="Start Training")
+        # self.view.training.is_training = False
+        # self.view.training.start_training_button.configure(text="Start Training")
         return
 
     def cancel_training(self):
@@ -51,7 +51,7 @@ class Controller:
                 tokenizer = SpacyTokenizer()
 
                 # model = torch.load('trained_models/model.pth').to(device)
-                model = model_1.TransformerModel(len(vocabulary)).to(device)
+                model = TransformerModel(len(vocabulary)).to(device)
                 loss_fn = training.nn.CrossEntropyLoss()
                 optimizer = torch.optim.Adam(model.parameters(), learning_rate)
 
@@ -102,4 +102,4 @@ if __name__ == '__main__':
     # c.setup_callbacks()
     gui_thread = Thread(target=c.view.mainloop())
     gui_thread.start()
-    #c.view.mainloop()
+    # c.view.mainloop()

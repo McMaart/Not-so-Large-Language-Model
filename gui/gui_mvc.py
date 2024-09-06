@@ -155,8 +155,9 @@ class Interaction(ctk.CTkFrame):
 
 
 if __name__ == "__main__":
-    from gui import controller_mvc as c
-    from models import model_1
+    from controller_mvc import Controller
+    from models.transformer_model import TransformerModel
 
-    app = GUI(c.Controller(model_1))
+    m = TransformerModel(2048)
+    app = GUI(Controller(m))
     app.mainloop()

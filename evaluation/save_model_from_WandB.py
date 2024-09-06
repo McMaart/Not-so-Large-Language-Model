@@ -3,6 +3,7 @@ import torch
 import os
 from time import sleep
 
+
 # Ensure wandb login with retries
 def login_to_wandb(max_retries=3, delay=5):
     """
@@ -30,6 +31,7 @@ def login_to_wandb(max_retries=3, delay=5):
             else:
                 print("Failed to log in after multiple attempts. Exiting...")
                 exit(1)
+
 
 # Function to save the best model from a project based on the number of parameters
 def save_best_model(entity, project_name, filename):
@@ -71,6 +73,7 @@ def save_best_model(entity, project_name, filename):
     else:
         print(f"No valid runs found for project {project_name}. Skipping...")
 
+
 def main():
     """
     Main function to log in to WandB and save the best models from multiple projects.
@@ -90,6 +93,7 @@ def main():
     # Iterate through each project and save the best model
     for project_name, filename in projects_and_files.items():
         save_best_model(entity, project_name, filename)
+
 
 if __name__ == "__main__":
     main()

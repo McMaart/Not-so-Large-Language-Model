@@ -4,12 +4,12 @@
   Both models will be implemented in PyTorch. The goal is to compare the effectiveness of these models in generating coherent and creative stories that adhere to the vocabulary limitations by using appropriate evaluation criteria.
   This project is based on: “TinyStories: How Small Can Language Models Be and Still Speak Coherent English?” (Ronen Eldan, Yuanzhi Li, Microsoft Research, 2023)
 
-3. Objectives:
+2. Objectives:
     1. Develop Two Language Models,
     2. Efficiency
     3. Interactive Platform
    
-5. Technical Requirements
+3. Technical Requirements
     1. Data: TinyStories dataset (size: 2.2M stories, # different word types:1500, 4500, 20000, length sentences: short), data set creation with GPT 4 and limited vocabulary.
        Preprocessing: Tokenization, vocabulary restriction, and conversion into suitable formats for model training.
     2. Models
@@ -24,7 +24,7 @@
       - PyTorch for implementing machine learning models.
       - Git for version control, hosted on GitHub.
       - Venv environments for managing dependencies and ensuring consistency across development setups. Hint: Conda does not automatically work with customtkinter
-6. Project Milestones
+4. Project Milestones
     1.	Project Setup and Data Preparation:
         Set up version control,
         Data collection and preprocessing,
@@ -37,13 +37,13 @@
         Integration of the models with the application,
         Begin internal testing and iterations based on team feedback,
 
-7. Evaluation Metrics
+5. Evaluation Metrics
     1.	Model Performance: Runtime, Accuracy (syntactically, semantically valid), Creativity (new outputs or how new? e.g. Cosine distance to the closest example from training data)
     2.  Operational Metrics: Response times, system reliability, error rates
 
-8. Potential Challenges
+6. Potential Challenges
     1.	Model Bias and Sensitivity
     2.  Data Quality and Diversity: Building a dataset that is diverse and representative while adhering to vocabulary restrictions.
 
-9. Resources: 3 developers, 
-    Computation: “Runs on Laptop” (more specific technical details once the models are trained)
+7. Resources: 3 developers, 
+    Computation: “Runs on Laptop”

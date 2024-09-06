@@ -5,9 +5,8 @@ from datasets import load_from_disk
 from rouge_score import rouge_scorer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from io_utils import prompt_model
+from io_utils import prompt_model, SpacyTokenizer
 import torch
-from torchtext.data import get_tokenizer
 
 # Ensure the correct device is used (GPU if available, otherwise CPU)
 device = (
@@ -88,7 +87,7 @@ def evaluate_model(model_name, prompts, completions, entire_dataset, method="def
         std_rouge (dict): A dictionary containing the standard deviation of ROUGE scores ('rouge1', 'rouge2', 'rougeL').
     """
     # Use the SpaCy tokenizer
-    tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
+    tokenizer = SpacyTokenizer()
 
     # Fit the vectorizer on the entire dataset
     print("Fitting vectorizer on the entire dataset...")

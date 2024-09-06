@@ -8,8 +8,6 @@ from CosineSim_Rouge_for_models import (
     save_scores_to_file
 )
 from sklearn.feature_extraction.text import TfidfVectorizer
-import numpy as np
-import torch
 
 
 class TestCosineSimRougeForModels(unittest.TestCase):

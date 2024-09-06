@@ -19,8 +19,8 @@ class TestPreprocessDataset(unittest.TestCase):
             "Another story with multiple spaces and stars to remove. This is also longer than 50.",
             "Normal story with no issues."
         ]
-        self.cleaned_stories_min_length_50 = ["Another story with multiple spaces and stars to remove. This is also longer than 50."
-        ]
+        self.cleaned_stories_min_length_50 = ["Another story with multiple spaces and stars to remove. This is also "
+                                              "longer than 50."]
         self.min_length = 6
 
     def test_find_non_ascii_symbols(self):

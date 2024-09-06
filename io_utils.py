@@ -58,20 +58,18 @@ def create_vocabulary(story_list: list[str], tokenizer=SpacyTokenizer(),
     :param max_words: The maximum number of words that the vocabulary may contain.
     :return: The created vocabulary.
     """
-    vocab_freq = get_token_frequencies(story_list, tokenizer)
+    vocab = get_token_frequencies(story_list, tokenizer)
     if max_words is not None:
-        vocab = {}
-        for _, (k, v) in zip(range(max_words - num_special_tokens),
-                             sorted(vocab_freq.items(), key=lambda item: item[1], reverse=True)):
-            vocab[k] = v
-        vocab_freq = vocab
+        # Vocabulary containing the most frequent max_words - num_special_tokens tokens
+        vocab = {k: None for _, (k, v) in zip(range(max_words - num_special_tokens),
+                 sorted(vocab.items(), key=lambda item: item[1], reverse=True))}
 
     # Note: <eos> must have a lower index in the vocabulary than the other tokens
-    vocab_freq["<eos>"] = 0  # end of sequence token
-    vocab_freq['<bos>'] = 0  # begin of sequence token
-    vocab_freq['<unk>'] = 0  # Placeholder for tokens that do not appear in the story
-    vocab_freq['<pad>'] = 0  # Pad token for batching
-    return {k: idx for idx, k in enumerate(vocab_freq.keys())}
+    vocab["<eos>"] = None  # end of sequence token
+    vocab['<bos>'] = None  # begin of sequence token
+    vocab['<unk>'] = None  # Placeholder for tokens that do not appear in the story
+    vocab['<pad>'] = None  # Pad token for batching
+    return {k: idx for idx, k in enumerate(vocab.keys())}
 
 
 def tokens_to_story(token_list: list[str]) -> str:
@@ -128,7 +126,8 @@ def tokens_to_story(token_list: list[str]) -> str:
     story = ''.join(story_list)
 
     # handle capitalization after closing quotes for hardcoded cases of speech
-    speech = ['said', 'explained', 'replied', 'responded', 'answered', 'shouted', 'whispered', 'called', 'asked', 'cried']
+    speech = ['said', 'explained', 'replied', 'responded', 'answered', 'shouted', 'whispered', 'called', 'asked',
+              'cried']
     speech += [word.capitalize() for word in speech]
 
     pattern = re.compile(r'",?\s+[\w ]*(' + "|".join(speech) + r')[\w ]*[^\w\s]')
@@ -150,9 +149,9 @@ def tokens_to_story(token_list: list[str]) -> str:
     # names obtained from GPT-4o by providing list of vocabulary and asking for names:
     names = {'alice', 'amy', 'anna', 'ben', 'bella', 'benny', 'billy', 'bob', 'bobo', 'daisy', 'dave', 'emily',
              'emma', 'ellie', 'ella', 'george', 'jack', 'jake', 'jane', 'jen', 'jenny', 'jim', 'jimmy', 'joe',
-             'john', 'johnny', 'kitty', 'leo', 'lila', 'lily', 'lisa', 'lola', 'lucy', 'mandy', 'mark', 'mary', 'max', 'mia',
-             'mike', 'molly', 'pete', 'peter', 'polly', 'rex', 'sally', 'sam', 'sammy', 'sara', 'sarah', 'sophie', 'sue',
-             'susie', 'tim', 'timmy', 'tom', 'tommy', 'toby'}
+             'john', 'johnny', 'kitty', 'leo', 'lila', 'lily', 'lisa', 'lola', 'lucy', 'mandy', 'mark', 'mary', 'max',
+             'mia', 'mike', 'molly', 'pete', 'peter', 'polly', 'rex', 'sally', 'sam', 'sammy', 'sara', 'sarah',
+             'sophie', 'sue', 'susie', 'tim', 'timmy', 'tom', 'tommy', 'toby'}
 
     # replace names with capitalized names
     story = re.sub(r'\b(' + '|'.join(names) + r')\b', lambda x: x.group().capitalize(), story)
@@ -212,10 +211,7 @@ def prompt_model(model_name: str, start_str: str, length: int = 250, temperature
         print(f"Batch size must be 1, got {tl.size(0)}", file=sys.stderr)
     tl = tl[:, 1:]  # Strip <bos> token
 
-    token_list = []
-    for val in tl[0]:
-        token = vocab_rev[val.item()]
-        token_list.append(token)
+    token_list = [vocab_rev[val.item()] for val in tl[0]]
     return tokens_to_story(token_list)
 
 

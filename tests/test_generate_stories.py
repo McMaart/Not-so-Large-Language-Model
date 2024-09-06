@@ -34,13 +34,16 @@ class TestGenerateStories(unittest.TestCase):
 
     def test_generate_tokens_beam(self):
         # Test beam search token generation
-        result = generate_tokens_beam(self.mock_model, self.token_tensor, beam_width=3, length=10, eos_token=self.eos_token)
+        result = generate_tokens_beam(self.mock_model, self.token_tensor, beam_width=3, length=10,
+                                      eos_token=self.eos_token)
         self.assertTrue(result.shape[1] <= 10)
 
     def test_generate_tokens_beam_multinomial(self):
         # Test beam search with multinomial sampling
-        result = generate_tokens_beam_multinomial(self.mock_model, self.token_tensor, beam_width=3, length=10, eos_token=self.eos_token, top_k=5)
+        result = generate_tokens_beam_multinomial(self.mock_model, self.token_tensor, beam_width=3, length=10,
+                                                  eos_token=self.eos_token, top_k=5)
         self.assertTrue(result.shape[1] <= 10)
+
 
 if __name__ == '__main__':
     unittest.main()
