@@ -64,7 +64,7 @@ def save_best_model(entity, project_name, filename):
     if best_run is not None:
         model_file = best_run.config.get('model_path', 'trained_models/last_model.pth')  # Default to 'last_model.pth'
         if os.path.exists(model_file):
-            torch.save(torch.load(model_file), os.path.join('trained_models', filename))  # Save the model
+            torch.save(torch.load(model_file), os.path.join('../trained_models', filename))  # Save the model
             print(f"Best model from project {project_name} saved as {filename}")
         else:
             print(f"Model file {model_file} does not exist. Skipping...")

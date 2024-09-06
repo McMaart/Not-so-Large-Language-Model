@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import MagicMock
-import gui
+from gui import gui
 
 
 class TestGUIComponents(unittest.TestCase):

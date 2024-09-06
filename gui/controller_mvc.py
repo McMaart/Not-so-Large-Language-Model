@@ -2,7 +2,7 @@ from threading import Thread
 from datasets import load_from_disk
 import gui_mvc
 import training
-import model_1
+from models import model_1
 import datetime
 from io_utils import load_vocabulary, SpacyTokenizer
 from time import perf_counter
@@ -45,7 +45,7 @@ class Controller:
 
             case "Model 1":
                 self.view.training.training_info.insert("end", "MODEL 1!\n\n")
-                stories = load_from_disk("data/TinyStoriesV2")
+                stories = load_from_disk("../data/TinyStoriesV2")
                 vocabulary = load_vocabulary()
                 vocabulary_rev = {k: v for v, k in vocabulary.items()}
                 tokenizer = SpacyTokenizer()

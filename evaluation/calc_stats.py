@@ -83,7 +83,7 @@ def calculate_statistics(stories, tokenizer):
 
 if __name__ == "__main__":
     # Load datasets
-    dataset = load_from_disk("data/TinyStories")
+    dataset = load_from_disk("../data/TinyStories")
     train_stories = dataset["train"][:]["text"]
     test_stories = dataset["test"][:]["text"]
     validation_stories = dataset["validation"][:]["text"]
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     # Create and save vocabulary
     vocab = create_vocabulary(train_stories, SpacyTokenizer(), 2048)
     save_vocabulary(vocab)
-    loaded_vocab = load_vocabulary("trained_models/vocabulary.pkl")
+    loaded_vocab = load_vocabulary("../trained_models/vocabulary.pkl")
     print(f"Vocab with 2048 tokens: {loaded_vocab}")
 
     # Tokenizer

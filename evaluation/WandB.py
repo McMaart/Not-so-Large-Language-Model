@@ -1,8 +1,7 @@
-from datasets import load_from_disk
 import wandb
 from time import perf_counter, sleep
-from model_1 import TransformerModel, device
-from model_2 import RNNModel, LSTMModel, GRUModel
+from models.model_1 import TransformerModel, device
+from models.model_2 import RNNModel, LSTMModel, GRUModel
 from training import train, evaluate
 from io_utils import TinyStories, load_vocabulary
 import torch
@@ -499,7 +498,7 @@ if __name__ == "__main__":
         exit(1)
 
     # Prepare data once
-    vocab_path = "trained_models/vocabulary.pkl"
+    vocab_path = "../trained_models/vocabulary.pkl"
     train_data, validation_data, vocabulary = prepare_data(vocab_path)
 
     # Choose the run type

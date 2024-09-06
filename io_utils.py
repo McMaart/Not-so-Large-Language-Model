@@ -12,7 +12,7 @@ from torch.utils.data import Dataset
 import spacy
 from datasets import load_from_disk
 from data.preprocess_dataset import clean_dataset
-from model_1 import device, num_special_tokens
+from models.model_1 import device, num_special_tokens
 from generate_stories import generate_tokens, generate_tokens_beam, generate_tokens_beam_multinomial
 
 

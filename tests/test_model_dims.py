@@ -5,8 +5,8 @@ import unittest
 import torch
 from torch import Tensor
 from torch.nn.utils.rnn import pad_sequence
-from model_1 import TransformerModel, device, PositionalEncoding
-from model_2 import RNNModel, LSTMModel, GRUModel
+from models.model_1 import TransformerModel, device, PositionalEncoding
+from models.model_2 import RNNModel, LSTMModel, GRUModel
 
 
 def generate_batch_with_lengths(batch_size: int, vocab_size: int, max_seq_len: int) -> tuple[Tensor, Tensor]:

@@ -172,7 +172,7 @@ def main():
     Main function to evaluate a model's performance on a set of prompts and completions.
     """
     model_name = "transformer_1.1M"  # Replace with your actual model name
-    dataset_path = 'data/TinyStories'  # Path to the dataset
+    dataset_path = '../data/TinyStories'  # Path to the dataset
     method = ""  # Choose the generation method: default, beam, beam_multinomial
     temperature = 0.7  # Set the temperature for generation
     beam_width = 5  # Set the beam width for beam search

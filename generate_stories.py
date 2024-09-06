@@ -5,7 +5,7 @@ For prompting to a model, see section below line 155.
 import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
-from model_1 import num_special_non_eos_tokens, device
+from models.model_1 import num_special_non_eos_tokens, device
 
 
 @torch.no_grad()
@@ -154,10 +154,11 @@ def generate_tokens_beam_multinomial(model: nn.Module, input_tensor: Tensor, bea
 
 if __name__ == '__main__':
     from io_utils import prompt_model
+    from evaluation.prompts_for_completions import *
 
     model_name = "transformer_3.7M"  # Name of the model, must be located in trained_models/
     method = 'default'  # Choose the generation method: default, beam, beam_multinomial
-    start_string = ''  # Choose start string (an empty string generates a new story from the very beginning)
+    start_string = c_prompt6  # Choose start string (an empty string generates a new story from the very beginning)
     story = prompt_model(model_name=model_name, start_str=start_string, length=255, temperature=0.0,
                          method=method, beam_width=5)
     print(story)

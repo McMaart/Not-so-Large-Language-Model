@@ -3,11 +3,13 @@ backup/
 playground/
 data/TinyStories*.csv
 evaluation/tensorboard_csv_data/
+presentation/
 
 # disable temporarily
 trained_models/
 data/TinyStories*.txt
 evaluation/*.pdf
+models_from_eldan/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

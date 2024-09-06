@@ -12,8 +12,8 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.amp import autocast, GradScaler
 import optuna
 from io_utils import create_vocabulary, save_vocabulary, load_vocabulary, TinyStories
-from model_1 import TransformerModel, device, max_seq_len
-from model_2 import RNNModel, LSTMModel, GRUModel
+from models.model_1 import TransformerModel, device, max_seq_len
+from models.model_2 import RNNModel, LSTMModel, GRUModel
 
 
 def train(data: TinyStories, model: nn.Module, loss_fn, optimizer: torch.optim.Optimizer, epochs: int = 1,
@@ -26,6 +26,7 @@ def train(data: TinyStories, model: nn.Module, loss_fn, optimizer: torch.optim.O
     :param model: The instance of the model to be trained.
     :param loss_fn: The loss function used for training (e.g., nn.CrossEntropyLoss).
     :param optimizer: The optimizer used for training the model (e.g., torch.optim.AdamW).
+    :param epochs: The number of training epochs.
     :param batch_size: The size of each batch.
     :param max_num_batches: The maximum number of batches that will be used. If None, then all available batches
      will be used.

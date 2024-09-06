@@ -98,7 +98,7 @@ class Interaction(ctk.CTkFrame):
         self.grid_columnconfigure(3, weight=4)
         self.grid_columnconfigure(4, weight=1)
 
-        self.models = glob.glob(os.path.join("trained_models", "*.pth"))
+        self.models = glob.glob(os.path.join("../trained_models", "*.pth"))
         # self.models = ["Model 1", "Model 2", "Model 3"]
 
         # Prompt and response history
@@ -155,8 +155,8 @@ class Interaction(ctk.CTkFrame):
 
 
 if __name__ == "__main__":
-    import controller_mvc.py as c
-    import model_1
+    from gui import controller_mvc as c
+    from models import model_1
 
     app = GUI(c.Controller(model_1))
     app.mainloop()
