@@ -5,6 +5,7 @@ from io_utils import (
     create_vocabulary,
     tokens_to_story,
     save_vocabulary,
+    SpacyTokenizer
 )
 
 
@@ -18,9 +19,9 @@ class TestIOUtils(unittest.TestCase):
         Test calculating token frequencies.
         """
         story_list = ["This is a test.", "This is another test."]
-        tokenizer = lambda x: x.lower().split()
+        tokenizer = SpacyTokenizer()
         frequencies = get_token_frequencies(story_list, tokenizer)
-        expected_frequencies = {'this': 2, 'is': 2, 'a': 1, 'test.': 2, 'another': 1}
+        expected_frequencies = {'this': 2, 'is': 2, 'a': 1, 'test': 2, 'another': 1, '.': 2}
         self.assertEqual(frequencies, expected_frequencies)
 
     def test_get_token_frequencies_empty(self):
@@ -28,7 +29,7 @@ class TestIOUtils(unittest.TestCase):
         Test token frequencies for an empty list.
         """
         story_list = []
-        tokenizer = lambda x: x.split()
+        tokenizer = SpacyTokenizer()
         frequencies = get_token_frequencies(story_list, tokenizer)
         expected_frequencies = {}
         self.assertEqual(frequencies, expected_frequencies)
@@ -38,11 +39,11 @@ class TestIOUtils(unittest.TestCase):
         Test creating a vocabulary from stories.
         """
         story_list = ["This is a test.", "This is another test."]
-        tokenizer = lambda x: x.lower().split()
-        vocab = create_vocabulary(story_list, tokenizer, max_words=9)
+        tokenizer = SpacyTokenizer()
+        vocab = create_vocabulary(story_list, tokenizer, max_words=10)
 
         # Check that the expected keys exist in the vocabulary, including 'another'
-        expected_vocab_keys = {'this', 'is', 'test.', 'a', 'another', '<eos>', '<bos>', '<unk>', '<pad>'}
+        expected_vocab_keys = {'this', 'is', 'test', '.', 'a', 'another', '<eos>', '<bos>', '<unk>', '<pad>'}
         self.assertEqual(set(vocab.keys()), expected_vocab_keys)
 
     def test_tokens_to_story(self):

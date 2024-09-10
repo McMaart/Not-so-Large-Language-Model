@@ -61,15 +61,18 @@ def create_vocabulary(story_list: list[str], tokenizer=SpacyTokenizer(),
     vocab = get_token_frequencies(story_list, tokenizer)
     if max_words is not None:
         # Vocabulary containing the most frequent max_words - num_special_tokens tokens
-        vocab = {k: None for _, (k, v) in zip(range(max_words - num_special_tokens),
+        vocab = {k: idx for idx, (k, _) in zip(range(max_words - num_special_tokens),
                  sorted(vocab.items(), key=lambda item: item[1], reverse=True))}
+    else:
+        vocab = {k: idx for idx, k in enumerate(vocab.keys())}
 
+    cur_len = len(vocab)
     # Note: <eos> must have a lower index in the vocabulary than the other tokens
-    vocab["<eos>"] = None  # end of sequence token
-    vocab['<bos>'] = None  # begin of sequence token
-    vocab['<unk>'] = None  # Placeholder for tokens that do not appear in the story
-    vocab['<pad>'] = None  # Pad token for batching
-    return {k: idx for idx, k in enumerate(vocab.keys())}
+    vocab['<eos>'] = cur_len      # end of sequence token
+    vocab['<bos>'] = cur_len + 1  # begin of sequence token
+    vocab['<unk>'] = cur_len + 2  # Placeholder for tokens that do not appear in the story
+    vocab['<pad>'] = cur_len + 3  # Pad token for batching
+    return vocab
 
 
 def tokens_to_story(token_list: list[str]) -> str:
@@ -229,7 +232,7 @@ class TinyStories(Dataset):
         :param dataset_path: Path to the dataset directory.
         :param max_seq_len: The maximum sequence length.
         """
-        self.stories = load_from_disk(dataset_path)[split]["text"]
+        self.stories = load_from_disk(dataset_path)[split]
         self.vocab = vocabulary
         self.tokenizer = tokenizer
 
@@ -264,7 +267,7 @@ class TinyStories(Dataset):
         """
         :return: The list of stories, with which this class object has been initialized.
         """
-        return self.stories
+        return self.stories["text"]
 
     def __getitem__(self, index: int) -> Tensor:
         """
@@ -273,7 +276,7 @@ class TinyStories(Dataset):
         """
         # Note: The returned tensor will have a length up to max_seq_length+1, since the last/first token will be
         # stripped for 'training' / 'reference' Tensor.
-        story = self.stories[index]
+        story = self.stories[index]["text"]
         tokens = self.tokenizer(story.lower())
 
         token_list = [self.bos_token]

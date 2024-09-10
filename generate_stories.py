@@ -2,10 +2,11 @@
 Functions for generating tokens using a trained model, which are then combined into a story.
 For prompting to a model, see section below line 155.
 """
+import sys
 import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
-from models.transformer_model import num_special_non_eos_tokens, device
+from models.transformer_model import num_special_non_eos_tokens, device, TransformerModel, max_seq_len
 
 
 @torch.no_grad()
@@ -13,15 +14,17 @@ def generate_tokens(model: nn.Module, token_tensor: Tensor, length: int = 250, t
                     eos_token: int = None) -> Tensor:
     """
     Generate a sequence of tokens using a given model.
-
     :param model: The model used for token generation.
     :param token_tensor: The initial tensor containing input tokens.
     :param length: The maximum length of the generated sequence.
     :param temperature: The temperature parameter for sampling.
     :param eos_token: The token representing the end of the sequence.
-
     :return: token_tensor (Tensor): The tensor containing the generated sequence of tokens.
     """
+    if type(model) is TransformerModel and length > max_seq_len:
+        length = max_seq_len
+        print(f"Length greater than maximum sequence length, setting length to {max_seq_len}", file=sys.stderr)
+
     model.eval()
     for _ in range(len(token_tensor[0]), length + 1):
         output = model(token_tensor)[:, -1, :-num_special_non_eos_tokens]
@@ -41,14 +44,12 @@ def generate_tokens_beam(model: nn.Module, input_tensor: Tensor, beam_width: int
                          temperature: float = 1.0, eos_token: int = None) -> Tensor:
     """
     Generate a sequence of tokens using beam search with a given model.
-
     :param model: The model used for token generation.
     :param input_tensor: The initial tensor containing input tokens.
     :param beam_width: The number of beams for beam search.
     :param length: The maximum length of the generated sequence.
     :param temperature: The temperature parameter for sampling.
     :param eos_token: The token representing the end of the sequence.
-
     :return: best_sequence (Tensor): The tensor containing the best sequence of tokens generated.
     """
     model.eval()
@@ -99,7 +100,6 @@ def generate_tokens_beam_multinomial(model: nn.Module, input_tensor: Tensor, bea
                                      temperature: float = 1.0, eos_token: int = None, top_k: int = 50) -> Tensor:
     """
     Generate a sequence of tokens using beam search with multinomial sampling.
-
     :param model: The model used for token generation.
     :param input_tensor: The initial tensor containing input tokens.
     :param beam_width: The number of beams for beam search.
@@ -107,7 +107,6 @@ def generate_tokens_beam_multinomial(model: nn.Module, input_tensor: Tensor, bea
     :param temperature: The temperature parameter for sampling.
     :param eos_token: The token representing the end of the sequence.
     :param top_k: The number of top tokens considered for sampling.
-
     :return: best_sequence (Tensor): The tensor containing the best sequence of tokens generated.
     """
     model.eval()
@@ -156,9 +155,9 @@ if __name__ == '__main__':
     from io_utils import prompt_model
     from evaluation.prompts_for_completions import *
 
-    model_name = "transformer_3.7M"  # Name of the model, must be located in trained_models/
+    model_name = "transformer_8.3M_V2"  # Name of the model, must be located in trained_models/
     method = 'default'  # Choose the generation method: default, beam, beam_multinomial
     start_string = c_prompt6  # Choose start string (an empty string generates a new story from the very beginning)
-    story = prompt_model(model_name=model_name, start_str=start_string, length=255, temperature=0.0,
+    story = prompt_model(model_name=model_name, start_str=start_string, length=256, temperature=0.0,
                          method=method, beam_width=5)
     print(story)
